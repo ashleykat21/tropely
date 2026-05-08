@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, buddyReadsTable, buddyMembersTable, buddyMessagesTable, profilesTable } from "@workspace/db";
 import { eq, inArray, and } from "drizzle-orm";
 import { requireAuth, errMsg, type AuthedRequest } from "../middlewares/authMiddleware";
+import { moderateContent } from "../utils/contentFilter";
 
 const router = Router();
 
@@ -178,6 +179,21 @@ router.post("/buddy-reads/:id/messages", requireAuth, async (req, res) => {
     const id = req.params.id as string;
     if (!(await assertMember(id, userId))) { res.status(403).json({ error: "Forbidden" }); return; }
     const { content, pageAt, chapter } = req.body as { content: string; pageAt?: number; chapter?: number | null };
+
+    const [profile] = await db
+      .select({ isUnder16: profilesTable.isUnder16, familyAccount: profilesTable.familyAccount })
+      .from(profilesTable)
+      .where(eq(profilesTable.userId, userId))
+      .limit(1);
+    const needsModeration = profile?.isUnder16 || profile?.familyAccount;
+    if (needsModeration) {
+      const { safe, reason } = moderateContent(content);
+      if (!safe) {
+        res.status(422).json({ error: reason ?? "Message not allowed in family-safe mode." });
+        return;
+      }
+    }
+
     const [msg] = await db
       .insert(buddyMessagesTable)
       .values({ buddyReadId: id, userId, content, pageAt: pageAt ?? 0, chapter: chapter ?? null })

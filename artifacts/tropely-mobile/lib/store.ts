@@ -88,6 +88,7 @@ interface AppState {
   shelfTheme: string;
   achievementFlair: string | null;
   familyAccount: boolean | null;
+  isUnder16: boolean | null;
 
   addBook: (b: Omit<Book, "id" | "addedAt" | "progress">) => string;
   updateBook: (id: string, patch: Partial<Book>) => void;
@@ -116,6 +117,7 @@ interface AppState {
   setShelfTheme: (theme: string) => void;
   setAchievementFlair: (id: string | null) => void;
   setFamilyAccount: (v: boolean) => void;
+  setIsUnder16: (v: boolean) => void;
 
   reconcileFreeze: () => void;
 }
@@ -138,6 +140,7 @@ export const useStore = create<AppState>()(
       shelfTheme: "darkWalnut",
       achievementFlair: null,
       familyAccount: null,
+      isUnder16: null,
 
       addBook: (b) => {
         const id = genId();
@@ -252,6 +255,7 @@ export const useStore = create<AppState>()(
       setShelfTheme: (theme) => set({ shelfTheme: theme }),
       setAchievementFlair: (id) => set({ achievementFlair: id }),
       setFamilyAccount: (v) => set({ familyAccount: v }),
+      setIsUnder16: (v) => set({ isUnder16: v }),
 
       reconcileFreeze: () => {
         const { sessions, freeze } = get();

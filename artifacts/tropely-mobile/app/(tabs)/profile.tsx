@@ -262,6 +262,8 @@ export default function ProfileScreen() {
   const setAchievementFlair = useStore((s) => s.setAchievementFlair);
   const familyAccount     = useStore((s) => s.familyAccount);
   const setFamilyAccount  = useStore((s) => s.setFamilyAccount);
+  const isUnder16         = useStore((s) => s.isUnder16);
+  const setIsUnder16      = useStore((s) => s.setIsUnder16);
 
   const finished   = books.filter((b) => b.shelf === "finished").length;
   const totalPages = sessions.reduce((sum, s) => sum + s.pagesRead, 0);
@@ -474,7 +476,7 @@ export default function ProfileScreen() {
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
                   {familyAccount
-                    ? "Buddy Reads and shared shelves are enabled."
+                    ? "Chat moderation and safe messaging are active."
                     : "Enable to read together with your family."}
                 </Text>
               </View>
@@ -486,6 +488,31 @@ export default function ProfileScreen() {
                 }}
                 trackColor={{ false: colors.border, true: colors.primary + "60" }}
                 thumbColor={familyAccount ? colors.primary : colors.mutedForeground}
+              />
+            </View>
+            {/* Under-16 toggle */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              paddingHorizontal: 16, paddingVertical: 14,
+              borderTopWidth: 1, borderTopColor: colors.border }}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
+                  Under 16 profile 🔒
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
+                  {isUnder16
+                    ? "Chat moderation is on. Inappropriate messages are blocked."
+                    : "Turn on for readers under 16. Enables stricter chat filtering."}
+                </Text>
+              </View>
+              <Switch
+                value={isUnder16 === true}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setIsUnder16(v);
+                  if (v) setFamilyAccount(true);
+                }}
+                trackColor={{ false: colors.border, true: colors.primary + "60" }}
+                thumbColor={isUnder16 ? colors.primary : colors.mutedForeground}
               />
             </View>
           </View>
