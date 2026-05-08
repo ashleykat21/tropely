@@ -16,6 +16,7 @@ import feedbackRouter from "./feedback";
 import reportsRouter from "./reports";
 import accountRouter from "./account";
 import twinsRouter from "./twins";
+import avatarRouter from "./avatar";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(feedbackRouter);
 router.use(reportsRouter);
 router.use(accountRouter);
 router.use(twinsRouter);
+router.use(avatarRouter);
 
 export default router;

@@ -15,7 +15,7 @@ async function getHeaders(extra?: Record<string, string>): Promise<Record<string
   };
 }
 
-function baseUrl(): string {
+export function baseUrl(): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
   return domain ? `https://${domain}` : "";
 }

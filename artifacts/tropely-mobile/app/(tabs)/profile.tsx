@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -21,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { computeStreak } from "@/lib/streak";
 import { useStore } from "@/lib/store";
-import { apiDelete, apiGet, apiPatch } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/lib/api";
 
 const TAB_BAR_HEIGHT = 84;
 
@@ -274,11 +275,17 @@ export default function ProfileScreen() {
   const [showFlairPicker, setShowFlairPicker] = useState(false);
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  const [serverAvatarUrl, setServerAvatarUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const locationSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    apiGet<{ city?: string | null; country?: string | null }>("/api/profiles/me")
-      .then((p) => { setCity(p.city ?? ""); setCountry(p.country ?? ""); })
+    apiGet<{ city?: string | null; country?: string | null; avatarUrl?: string | null }>("/api/profiles/me")
+      .then((p) => {
+        setCity(p.city ?? "");
+        setCountry(p.country ?? "");
+        if (p.avatarUrl) setServerAvatarUrl(p.avatarUrl);
+      })
       .catch(() => {});
   }, []);
 
@@ -320,8 +327,21 @@ export default function ProfileScreen() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setProfilePicture(result.assets[0].uri);
+      const localUri = result.assets[0].uri;
+      setProfilePicture(localUri);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setUploadingPhoto(true);
+      try {
+        const { uploadURL, objectPath } = await apiPost<{ uploadURL: string; objectPath: string }>("/api/avatar/upload-url", {});
+        const imageBlob = await fetch(localUri).then((r) => r.blob());
+        await fetch(uploadURL, { method: "PUT", body: imageBlob, headers: { "Content-Type": "image/jpeg" } });
+        await apiPatch("/api/profiles/me", { avatarUrl: objectPath });
+        setServerAvatarUrl(objectPath);
+      } catch {
+        // local preview still shows — upload failed silently
+      } finally {
+        setUploadingPhoto(false);
+      }
     }
   }
 
@@ -384,18 +404,23 @@ export default function ProfileScreen() {
       >
         {/* ── Avatar header ── */}
         <View style={[st.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
-          <TouchableOpacity onPress={pickPhoto} activeOpacity={0.8}>
-            <View style={[st.avatarRing, { borderColor: colors.primary + "60" }]}>
-              {profilePicture ? (
-                <Image source={{ uri: profilePicture }} style={st.avatarImage} />
+          <TouchableOpacity onPress={pickPhoto} activeOpacity={0.8} disabled={uploadingPhoto}>
+            <View style={[st.avatarRing, { borderColor: colors.primary + "60", opacity: uploadingPhoto ? 0.6 : 1 }]}>
+              {(serverAvatarUrl || profilePicture) ? (
+                <Image
+                  source={{ uri: serverAvatarUrl ? `${baseUrl()}/api/storage${serverAvatarUrl}` : profilePicture! }}
+                  style={st.avatarImage}
+                />
               ) : (
                 <View style={[st.avatarFallback, { backgroundColor: colors.primary + "30" }]}>
                   <Text style={[st.avatarText, { color: colors.primary }]}>{initial}</Text>
                 </View>
               )}
             </View>
-            <View style={[st.cameraBtn, { backgroundColor: colors.primary }]}>
-              <Feather name="camera" size={11} color="#fff" />
+            <View style={[st.cameraBtn, { backgroundColor: uploadingPhoto ? colors.mutedForeground : colors.primary }]}>
+              {uploadingPhoto
+                ? <ActivityIndicator size={10} color="#fff" />
+                : <Feather name="camera" size={11} color="#fff" />}
             </View>
           </TouchableOpacity>
 
