@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { computeStreak } from "@/lib/streak";
 import { useStore } from "@/lib/store";
+import { apiDelete } from "@/lib/api";
 
 const TAB_BAR_HEIGHT = 84;
 
@@ -242,7 +243,7 @@ function FlairPicker({
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
+  const { signOut, getToken } = useAuth();
   const { user } = useUser();
 
   const books             = useStore((s) => s.books);
@@ -318,6 +319,42 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This will permanently delete your account, all your books, reading sessions, journal entries, and chat history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete my account",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you absolutely sure?",
+              "All your data will be gone forever.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, delete everything",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                      await apiDelete("/api/account/me");
+                      signOut();
+                    } catch {
+                      Alert.alert("Error", "Could not delete your account. Please try again or contact support.");
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   const initial = (user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0] ?? "?").toUpperCase();
@@ -523,6 +560,13 @@ export default function ProfileScreen() {
           onPress={handleSignOut}
         >
           <Text style={[st.signOutTxt, { color: colors.destructive }]}>Sign out</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[st.signOutBtn, { borderColor: colors.destructive + "20", marginTop: 10, marginBottom: 4 }]}
+          onPress={handleDeleteAccount}
+        >
+          <Text style={[st.signOutTxt, { color: colors.destructive + "99", fontSize: 13 }]}>Delete account</Text>
         </TouchableOpacity>
       </ScrollView>
 

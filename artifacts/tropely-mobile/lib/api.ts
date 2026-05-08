@@ -48,6 +48,15 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function apiDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${baseUrl()}${path}`, {
+    method: "DELETE",
+    headers: await getHeaders(),
+  });
+  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
 export interface OLSearchResult {
   key: string;
   title: string;

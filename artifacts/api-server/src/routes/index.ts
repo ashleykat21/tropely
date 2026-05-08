@@ -14,6 +14,7 @@ import utilitiesRouter from "./utilities";
 import moodRecsRouter from "./moodRecs";
 import feedbackRouter from "./feedback";
 import reportsRouter from "./reports";
+import accountRouter from "./account";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(utilitiesRouter);
 router.use(moodRecsRouter);
 router.use(feedbackRouter);
 router.use(reportsRouter);
+router.use(accountRouter);
 
 export default router;
