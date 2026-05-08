@@ -2,7 +2,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -20,7 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { computeStreak } from "@/lib/streak";
 import { useStore } from "@/lib/store";
-import { apiDelete } from "@/lib/api";
+import { apiDelete, apiGet, apiPatch } from "@/lib/api";
 
 const TAB_BAR_HEIGHT = 84;
 
@@ -271,6 +272,22 @@ export default function ProfileScreen() {
   const streak     = computeStreak(sessions, freeze);
 
   const [showFlairPicker, setShowFlairPicker] = useState(false);
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const locationSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    apiGet<{ city?: string | null; country?: string | null }>("/api/profiles/me")
+      .then((p) => { setCity(p.city ?? ""); setCountry(p.country ?? ""); })
+      .catch(() => {});
+  }, []);
+
+  const saveLocation = (newCity: string, newCountry: string) => {
+    if (locationSaveTimer.current) clearTimeout(locationSaveTimer.current);
+    locationSaveTimer.current = setTimeout(() => {
+      apiPatch("/api/profiles/me", { city: newCity.trim() || null, country: newCountry.trim() || null }).catch(() => {});
+    }, 800);
+  };
 
   // ── Achievements ────────────────────────────────────────────────────────────
   const achievements: Achievement[] = [
@@ -504,6 +521,27 @@ export default function ProfileScreen() {
                 ? new Date(user.createdAt).toLocaleDateString("en", { month: "long", year: "numeric" })
                 : "—"}
             />
+            {/* Location — for Reading Twins */}
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground }}>LOCATION · for Reading Twins 👯</Text>
+              <TextInput
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, fontFamily: "Inter_400Regular", color: colors.foreground }}
+                placeholder="City (e.g. London)"
+                placeholderTextColor={colors.mutedForeground}
+                value={city}
+                onChangeText={(v) => { setCity(v); saveLocation(v, country); }}
+              />
+              <TextInput
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, fontFamily: "Inter_400Regular", color: colors.foreground }}
+                placeholder="Country (e.g. United Kingdom)"
+                placeholderTextColor={colors.mutedForeground}
+                value={country}
+                onChangeText={(v) => { setCountry(v); saveLocation(city, v); }}
+              />
+              <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground, lineHeight: 16 }}>
+                Only your city and country are stored — no GPS used. Helps match you with nearby readers.
+              </Text>
+            </View>
             {/* Family account toggle */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
               paddingHorizontal: 16, paddingVertical: 14 }}>

@@ -221,6 +221,7 @@ function AddModal({
 export default function DiscoverScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OLSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -278,6 +279,26 @@ export default function DiscoverScreen() {
     <View style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>Discover</Text>
+
+        {/* ── Reading Twins banner ── */}
+        <TouchableOpacity
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/twins"); }}
+          style={{
+            flexDirection: "row", alignItems: "center", gap: 12,
+            backgroundColor: colors.card, borderWidth: 1, borderColor: colors.primary + "40",
+            borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14,
+          }}
+        >
+          <Text style={{ fontSize: 26 }}>👯</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: colors.foreground }}>Reading Twins</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
+              Find readers who match your taste — nearby or worldwide
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
+
         <View style={s.searchRow}>
           <TextInput
             style={s.input}

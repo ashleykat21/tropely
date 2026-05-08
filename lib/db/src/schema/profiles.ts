@@ -8,6 +8,8 @@ export const profilesTable = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   moodSignature: text("mood_signature"),
   auth: text("auth"),
+  city: text("city"),
+  country: text("country"),
   familyAccount: boolean("family_account").notNull().default(false),
   isUnder16: boolean("is_under_16").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

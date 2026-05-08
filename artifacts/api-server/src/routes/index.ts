@@ -15,6 +15,7 @@ import moodRecsRouter from "./moodRecs";
 import feedbackRouter from "./feedback";
 import reportsRouter from "./reports";
 import accountRouter from "./account";
+import twinsRouter from "./twins";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(moodRecsRouter);
 router.use(feedbackRouter);
 router.use(reportsRouter);
 router.use(accountRouter);
+router.use(twinsRouter);
 
 export default router;
