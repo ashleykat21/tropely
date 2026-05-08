@@ -20,6 +20,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "node": "20.19.0",
       "env": {
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_b3JpZW50ZWQtY3Jvdy0xMi5jbGVyay5hY2NvdW50cy5kZXYk",
         "EXPO_PUBLIC_DOMAIN": "tropely-production.up.railway.app"
