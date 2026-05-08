@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -89,8 +90,38 @@ function Tag({ label, color }: { label: string; color: string }) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function ReaderCard({ r }: { r: typeof READERS[0] }) {
   const col = sCol(r.status);
+
+  function handleLongPress() {
+    Alert.alert(r.name, "What would you like to do?", [
+      {
+        text: "🚫 Block user",
+        style: "destructive",
+        onPress: () =>
+          Alert.alert("Block " + r.name + "?", "They won't be able to see your activity and you won't see theirs.", [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Block",
+              style: "destructive",
+              onPress: () => Alert.alert("Blocked", r.name + " has been blocked."),
+            },
+          ]),
+      },
+      {
+        text: "⚑ Report user",
+        onPress: () =>
+          Alert.alert("Report " + r.name, "Select a reason:", [
+            { text: "Cancel", style: "cancel" },
+            { text: "Harassment or bullying", onPress: () => Alert.alert("Reported", "Thank you. We'll review this report.") },
+            { text: "Inappropriate content", onPress: () => Alert.alert("Reported", "Thank you. We'll review this report.") },
+            { text: "Spam", onPress: () => Alert.alert("Reported", "Thank you. We'll review this report.") },
+          ]),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
   return (
-    <View style={s.readerCard}>
+    <TouchableOpacity style={s.readerCard} onLongPress={handleLongPress} activeOpacity={0.85}>
       <View style={[s.avatar, { backgroundColor: col+"30", borderColor: col+"80" }]}>
         <Text style={[s.avatarTxt, { color: col }]}>{r.initials}</Text>
       </View>
@@ -102,7 +133,7 @@ function ReaderCard({ r }: { r: typeof READERS[0] }) {
         <Text style={[s.readerSub, { color: C.gold }]}>🔥 {r.streak}</Text>
         <Text style={s.readerSub}>{r.pct}%</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
