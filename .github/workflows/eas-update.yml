@@ -37,10 +37,11 @@ jobs:
       - name: Push EAS Update
         working-directory: artifacts/tropely-mobile
         run: |
+          MSG="${{ github.event.inputs.message || 'OTA update' }}"
           npx eas-cli update \
             --channel production \
             --environment production \
-            --message "${{ github.event.inputs.message || github.event.head_commit.message }}" \
+            --message "$MSG" \
             --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
