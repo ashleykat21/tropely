@@ -2,7 +2,7 @@
 # Installs dependencies and runs esbuild to produce a self-contained bundle.
 FROM node:20-slim AS builder
 
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10.26.1
 
 WORKDIR /app
 
