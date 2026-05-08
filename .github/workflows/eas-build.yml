@@ -6,25 +6,19 @@ on:
       platform:
         description: "Platform to build"
         required: true
-        default: "all"
+        default: "android"
         type: choice
-        options: [all, android, ios]
+        options: [android, ios, all]
       profile:
         description: "Build profile"
         required: true
         default: "production"
         type: choice
         options: [production, preview, development]
-  push:
-    branches: [main]
-    paths:
-      - "artifacts/tropely-mobile/**"
-      - "lib/**"
-      - "pnpm-lock.yaml"
 
 jobs:
   build:
-    name: EAS Build (${{ github.event.inputs.platform || 'all' }})
+    name: EAS Build (${{ github.event.inputs.platform }})
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -35,20 +29,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Build with EAS
         working-directory: artifacts/tropely-mobile
         run: |
-          npx eas-cli build \
-            --platform ${{ github.event.inputs.platform || 'all' }} \
-            --profile ${{ github.event.inputs.profile || 'production' }} \
+          eas build \
+            --platform ${{ github.event.inputs.platform }} \
+            --profile ${{ github.event.inputs.profile }} \
             --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

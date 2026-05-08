@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       message:
-        description: "Update message shown in EAS dashboard"
-        required: true
-        default: "Bug fix"
+        description: "Update message"
+        required: false
+        default: "OTA update"
   push:
     branches: [main]
     paths:
@@ -32,16 +32,18 @@ jobs:
           version: 9
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
 
       - name: Push EAS Update
         working-directory: artifacts/tropely-mobile
         run: |
-          MSG="${{ github.event.inputs.message || 'OTA update' }}"
-          npx eas-cli update \
+          eas update \
             --channel production \
             --environment production \
-            --message "$MSG" \
+            --message "${{ github.event.inputs.message || 'OTA update' }}" \
             --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
