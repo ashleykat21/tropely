@@ -1,0 +1,15 @@
+{
+  "name": "Tropely — Read by emotion",
+  "short_name": "Tropely",
+  "description": "A mood-based book tracker that adapts to how your story feels.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1620",
+  "theme_color": "#1a1620",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

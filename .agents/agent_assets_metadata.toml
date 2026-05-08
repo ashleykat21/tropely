@@ -1,0 +1,31 @@
+uploads = []
+
+[[generated]]
+id = "rvzKDu5VH_INqgPSLY1K2"
+uri = "file://artifacts/feltly/public/logo5-transparent.png"
+type = "image"
+title = "feltly logo with tagline"
+
+[[generated]]
+id = "DFLduRotifYBejGbmjzsv"
+uri = "file://artifacts/feltly/public/logo6-transparent.png"
+type = "image"
+title = "feltly new logo variation"
+
+[[generated]]
+id = "4yetxklsbm3bH2rIO4_E3"
+uri = "file://artifacts/tropely-mobile/assets/images/icon.png"
+type = "image"
+title = "tropely app icon"
+
+[[generated]]
+id = "DudTxmXFsKrWbrKQ7e6D1"
+uri = "file://artifacts/tropely-mobile/assets/images/splash.png"
+type = "image"
+title = "tropely splash"
+
+[[outputs]]
+id = "B4aEvS_aA3556Ifg3faOW"
+uri = "file://.local/tropely-expo-conversion.md"
+type = "text"
+title = "Tropely → Expo Native Conversion Guide"

@@ -1,0 +1,267 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&display=swap');
+
+/* Register typed custom properties so CSS can interpolate them as numbers/percentages */
+@property --mood-h {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 180;
+}
+@property --mood-s {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 30%;
+}
+@property --mood-l {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 55%;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base palette — warm cream editorial */
+    --background: 34 38% 91%;
+    --foreground: 25 30% 12%;
+
+    --card: 36 44% 95%;
+    --card-foreground: 25 30% 12%;
+
+    --popover: 36 44% 95%;
+    --popover-foreground: 25 30% 12%;
+
+    --primary: 25 30% 12%;
+    --primary-foreground: 34 38% 91%;
+
+    --secondary: 33 26% 86%;
+    --secondary-foreground: 25 30% 12%;
+
+    --muted: 33 22% 88%;
+    --muted-foreground: 25 14% 36%;
+
+    --accent: 18 60% 55%;
+    --accent-foreground: 34 38% 91%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 34 38% 91%;
+
+    --border: 28 20% 80%;
+    --input: 28 20% 80%;
+    --ring: 18 60% 55%;
+
+    --radius: 1rem;
+
+    /* Mood palette — drives dynamic UI */
+    --mood-h: 180;
+    --mood-s: 30%;
+    --mood-l: 55%;
+
+    --mood-tint: hsl(var(--mood-h) var(--mood-s) 92%);
+    --mood-soft: hsl(var(--mood-h) var(--mood-s) 80%);
+    --mood-strong: hsl(var(--mood-h) calc(var(--mood-s) + 10%) 38%);
+    --mood-ink: hsl(var(--mood-h) 30% 14%);
+
+    --gradient-mood: radial-gradient(
+        170% 110% at 0% 0%,
+        hsl(var(--mood-h) calc(var(--mood-s) + 25%) 68% / 1.0) 0%,
+        transparent 52%
+      ),
+      radial-gradient(
+        150% 110% at 100% 100%,
+        hsl(var(--mood-h) calc(var(--mood-s) + 30%) 62% / 0.95) 0%,
+        transparent 48%
+      ),
+      radial-gradient(
+        90% 70% at 55% 40%,
+        hsl(var(--mood-h) calc(var(--mood-s) + 10%) 78% / 0.7) 0%,
+        transparent 65%
+      ),
+      linear-gradient(160deg, hsl(34 38% 91%) 0%, hsl(32 36% 86%) 100%);
+
+    --shadow-soft: 0 1px 2px hsl(25 30% 12% / 0.04),
+      0 8px 24px -8px hsl(25 30% 12% / 0.08);
+    --shadow-book: 0 2px 4px hsl(25 30% 12% / 0.08),
+      0 20px 40px -12px hsl(25 30% 12% / 0.25);
+
+    --transition-mood: background 1.2s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.6s ease, border-color 0.6s ease;
+
+    /* Reader typography scale */
+    --read-scale: 1;
+    --read-leading: 1.65;
+    --read-paragraph-gap: 0.85em;
+    --read-measure: 68ch;
+
+    --type-display: calc(2.6rem * var(--read-scale));
+    --type-title: calc(1.5rem * var(--read-scale));
+    --type-body: calc(1rem * var(--read-scale));
+    --type-caption: calc(0.78rem * var(--read-scale));
+
+    /* Card density */
+    --density-card-pad: 1.25rem;
+    --density-row-gap: 0.75rem;
+  }
+
+  /* Density variants — applied via [data-density] on <html> */
+  html[data-density="compact"] {
+    --density-card-pad: 0.85rem;
+    --density-row-gap: 0.5rem;
+    --read-leading: 1.55;
+    --read-paragraph-gap: 0.6em;
+  }
+  html[data-density="comfortable"] {
+    --density-card-pad: 1.5rem;
+    --density-row-gap: 1rem;
+    --read-leading: 1.75;
+    --read-paragraph-gap: 1em;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html, body, #root {
+    min-height: 100%;
+  }
+  /* Animate the typed custom properties on the root so every gradient
+     that consumes them morphs smoothly when the trope/mood changes */
+  html {
+    transition:
+      --mood-h 1.4s cubic-bezier(0.4, 0, 0.2, 1),
+      --mood-s 1.4s cubic-bezier(0.4, 0, 0.2, 1),
+      --mood-l 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  body {
+    @apply text-foreground;
+    background: var(--gradient-mood);
+    background-attachment: fixed;
+    transition: var(--transition-mood);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    font-size: var(--type-body);
+    line-height: 1.55;
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    letter-spacing: -0.02em;
+  }
+  /* Visible, calm focus ring across all interactive elements */
+  :where(a, button, input, textarea, select, [role="button"], [role="switch"]):focus-visible {
+    outline: 2px solid var(--mood-strong);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  /* Honor reduced-motion for the slow mood morph and decorative animations */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      transition: none !important;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .grain {
+    position: relative;
+  }
+  .grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    border-radius: inherit;
+  }
+  .mood-surface {
+    position: relative;
+    background: linear-gradient(
+      135deg,
+      var(--mood-tint) 0%,
+      hsl(var(--mood-h) var(--mood-s) 96%) 100%
+    );
+    transition: var(--transition-mood);
+  }
+  /* Adaptive contrast veil — keeps body text legible no matter how dark or
+     saturated --mood-* gets. Sits above the mood gradient but below content. */
+  .mood-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      hsl(36 44% 96% / 0.35) 0%,
+      hsl(36 44% 96% / 0.55) 100%
+    );
+    border-radius: inherit;
+    z-index: 0;
+  }
+  /* Lift in-flow children above the contrast veil without overriding
+     intentionally absolute/fixed/sticky descendants (e.g., spine
+     progress fills, decorative overlays). */
+  .mood-surface > :where(:not([style*="position: absolute"]):not([style*="position:absolute"]):not(.absolute):not(.fixed):not(.sticky)) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Long-form reading container — used for book summaries, OCR'd
+     highlights, and journal entries. Comfortable measure + leading. */
+  .prose-reader {
+    max-width: var(--read-measure);
+    font-size: var(--type-body);
+    line-height: var(--read-leading);
+    color: hsl(var(--foreground));
+  }
+  .prose-reader > p + p,
+  .prose-reader > * + p {
+    margin-top: var(--read-paragraph-gap);
+  }
+  .prose-reader p {
+    line-height: var(--read-leading);
+  }
+
+  /* Calm pull-quote treatment for highlights & quotes */
+  .pull-quote {
+    font-family: 'Fraunces', Georgia, serif;
+    font-style: italic;
+    font-size: calc(1.125rem * var(--read-scale));
+    line-height: 1.5;
+    color: hsl(var(--foreground) / 0.92);
+    border-left: 3px solid var(--mood-strong);
+    padding-left: 1rem;
+    margin: 0.25rem 0;
+  }
+
+  /* Group section heading used between cards/lists */
+  .group-heading {
+    font-size: var(--type-caption);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Density-aware card padding and stacked-row gap. Applied to a handful
+     of long-form container surfaces (BookDetail, Journal, Profile) so the
+     compact/comfortable toggle has a visible spatial effect, not just
+     line-height. */
+  .reader-card {
+    padding: var(--density-card-pad);
+  }
+  .reader-stack > * + * {
+    margin-top: var(--density-row-gap);
+  }
+}

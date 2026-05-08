@@ -1,0 +1,13 @@
+[build]
+  command = """
+    pnpm install && cd artifacts/feltly && pnpm run build && ls dist/index.html
+  """
+  publish = "artifacts/feltly/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

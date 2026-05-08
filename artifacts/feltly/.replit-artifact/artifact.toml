@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Feltly"
+version = "1.0.0"
+id = "artifacts/feltly"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18808
+
+[services.development]
+run = "pnpm --filter @workspace/feltly run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/feltly", "run", "build" ]
+publicDir = "artifacts/feltly/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18808"
+BASE_PATH = "/"

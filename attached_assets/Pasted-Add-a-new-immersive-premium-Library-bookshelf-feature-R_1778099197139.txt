@@ -1,0 +1,63 @@
+Add a new immersive premium Library bookshelf feature.
+
+Replace the current library book display with a physical bookshelf-style experience for premium users only.
+
+Premium requirements:
+- The immersive bookshelf experience should only be available to premium subscribers.
+- Non-premium users should continue seeing the current standard library layout.
+- If a non-premium user taps or tries to access bookshelf customization/features:
+  - Show a premium upgrade prompt/modal.
+  - Explain that immersive bookshelf mode is a premium feature.
+- Do not break the existing premium subscription/paywall logic.
+
+Core bookshelf requirements:
+- Each library section/tab should show books standing upright on shelves like physical book spines.
+- Keep the existing library tabs/filters fully functional.
+- Books should remain grouped by the current library sections.
+- Each book spine should be tappable/clickable.
+- When the user taps a book:
+  - Animate it so the book appears to pull out from the shelf.
+  - Show a larger front-cover preview/modal.
+- The preview should include:
+  - Book cover
+  - Title
+  - Author if available
+  - Close button
+- Tapping outside the preview or pressing close should return the book back into the shelf.
+- Keep everything optimized for mobile/iPhone first.
+
+Bookshelf styling:
+- Warm cozy bookshelf aesthetic.
+- Wooden shelf background.
+- Slight 3D book spine appearance.
+- Smooth pull-out animation.
+- Rounded corners and soft shadows.
+- Match Tropely’s emotional/cozy reading aesthetic.
+
+Bookshelf customization feature:
+- Add a “Customize Shelf” button in the Library area for premium users.
+- Allow premium users to customize bookshelf appearance.
+
+Shelf style options:
+- Classic wood
+- Light oak
+- Dark walnut
+- Cozy pastel
+- Minimal cream
+
+Book spine style options:
+- Colorful
+- Neutral
+- Mood-based colors
+- Genre-based colors (if genre data exists)
+
+Persistence requirements:
+- Save bookshelf customization per user if a user preferences/settings system already exists.
+- Otherwise use localStorage for now.
+
+Technical requirements:
+- Use the existing book data and existing cover image fields.
+- Keep current authentication, backend, Clerk, Supabase, Netlify, and payment logic untouched.
+- This is primarily a frontend UI/UX enhancement.
+- Keep performance smooth on mobile devices.
+- Do not break existing navigation or shelf interactions.

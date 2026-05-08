@@ -1,0 +1,198 @@
+Redo and stabilize my Expo React Native migration and build an original Tropely Buddy Reads prototype.
+
+Goal:
+Create a clean Expo-native setup that runs on iPhone using EAS development build. Do not permanently delete my existing app logic. Stabilize Expo first, then implement a native Buddy Reads screen.
+
+Important:
+- Do not copy another app’s UI exactly.
+- Build an original Tropely version.
+- Focus on cozy social reading rooms, milestone-based chapter reading, spoiler-safe discussion, reactions, polls, live reader presence, and group progress.
+
+Step 1: Stabilize Expo setup
+- Fix package.json so Expo native dependencies are in dependencies, not devDependencies.
+- Remove eas-cli from project dependencies/devDependencies if present.
+- Use Expo SDK 55-compatible versions:
+  - expo ^55.0.23
+  - expo-dev-client ^55.0.32
+  - react ^19.1.0
+  - react-dom ^19.1.0
+  - react-native ^0.83.6
+  - react-native-web ^0.21.2
+  - typescript ~5.9.2
+- Make sure package.json is valid JSON.
+- Make sure .gitignore includes:
+  dist/
+  node_modules/
+  ios/
+  android/
+  .expo/
+
+Step 2: Clean native entry point
+Replace root App.tsx with a stable native app shell using only:
+- View
+- Text
+- ScrollView
+- Pressable
+- StyleSheet
+- SafeAreaView
+
+Do not import web-only libraries.
+Use static mock data only.
+No backend changes.
+No database changes.
+No external UI libraries.
+No navigation library unless already installed.
+
+Step 3: Build the Tropely Buddy Reads screen
+
+Create one polished native screen with this structure:
+
+1. Header
+- App name: Tropely
+- Page title: Buddy Reads
+- Subtitle: “Read together, react together, finish together.”
+
+2. Current Buddy Read Card
+Show:
+- Book title
+- Author
+- Group progress percentage
+- Current group goal
+- Deadline
+- CTA button: “Join Reading Room”
+
+3. Active Readers Strip
+Horizontal scrolling cards showing:
+- Reader name
+- Current chapter
+- Status: Reading now, On pace, Behind, Finished chapter
+- Streak indicator
+- Small progress percentage
+
+4. Milestone-Based Chapter Read Section
+Create milestone cards like:
+- Milestone 1
+- Milestone 2
+- Remaining Chapters
+- Final Reflection
+
+Each milestone should include:
+- deadline pill
+- collapse/expand visual button
+- chapter rows/cards
+
+Each chapter item should show:
+- chapter number/title
+- read status: Not started, Reading, Finished
+- comment count
+- reaction count
+- top reaction emoji
+- lock/unlock state
+- CTA:
+  - Start Chapter
+  - Mark Finished
+  - Open Discussion
+
+Behavior:
+- Reached chapters are unlocked.
+- Future chapters are locked to prevent spoilers.
+- Locked chapters should show:
+  “Finish Chapter __ to unlock”
+- Finished chapters unlock comments, reactions, predictions, polls, and quote sharing.
+
+5. Richer Chapter Cards
+Do not make plain rows only. Add social context:
+- top emotion/reaction
+- active reader count
+- theory count
+- most saved quote indicator
+- “reading now” marker when applicable
+
+Example chapter details:
+- “🔥 Most reacted”
+- “12 readers active”
+- “14 theories”
+- “Most saved quote”
+
+6. Spoiler-Safe Discussion Preview
+Show chapter discussion cards:
+- Chapter 4 unlocked
+- Chapter 5 unlocked
+- Chapter 6 locked
+
+Locked discussion cards should be visually disabled with opacity and a lock label.
+
+7. Chapter Check-Ins
+Create prompt cards:
+- Favorite quote?
+- Biggest prediction?
+- Rate this chapter
+- Who do you trust least?
+
+8. Quick Reactions Row
+Buttons:
+💜 👋 🔥 📚 🤯 😭 👀
+
+9. Predictions and Polls
+Add sample poll cards:
+- Who is hiding something?
+- Was that character telling the truth?
+- What happens next?
+
+Each poll should show sample options and vote percentages.
+
+10. Reading Room Preview
+Add a section showing what opens when tapping a chapter:
+- live discussion
+- reactions
+- predictions
+- quote sharing
+- chapter check-ins
+
+11. End-of-Book Recap Preview
+Show recap cards:
+- Most accurate prediction
+- Favorite quote
+- Most reacted chapter
+- Group average rating
+- Funniest reaction
+- Emotional journey
+
+Design direction:
+- Original Tropely UI.
+- Cozy premium reading aesthetic.
+- Warm layered background.
+- Rounded cards.
+- Soft shadows.
+- Clean spacing.
+- Modern social app layout.
+- Mobile-first native design.
+- More visually rich than a plain chapter list.
+- Do not use a circular layout.
+- Do not copy another app’s layout exactly.
+
+Step 4: Verification
+After editing, run:
+pnpm install
+npx expo-doctor
+npx expo start --clear
+
+Fix errors until:
+- package.json is valid
+- Expo Doctor has no React Native version mismatch
+- App.tsx compiles
+- App loads on iPhone development build
+
+Step 5: Commit-ready commands
+When stable, provide:
+git status
+git add .
+git commit -m "Stabilize Expo migration and add Buddy Reads native prototype"
+git push
+
+Deliverables:
+- Valid package.json
+- Updated .gitignore
+- Working App.tsx
+- Expo Doctor passing or explanation of remaining warnings
+- App loads on iPhone development build

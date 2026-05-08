@@ -1,0 +1,187 @@
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { useLibrary, type Book } from "@/lib/store";
+import { MOODS, type MoodKey } from "@/lib/moods";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { Quote, Plus, Timer } from "lucide-react";
+import { toast } from "sonner";
+
+const MOOD_KEYS = Object.keys(MOODS) as MoodKey[];
+
+interface SessionLogPanelProps {
+  book: Book;
+  elapsed: number;
+  onClearElapsed: () => void;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}
+
+const fmt = (s: number) => {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+};
+
+export function SessionLogPanel({ book, elapsed, onClearElapsed, open, onOpenChange }: SessionLogPanelProps) {
+  const { logSession, addJournal } = useLibrary();
+  const [mood, setMood] = useState<MoodKey>(book.mood);
+  const [pages, setPages] = useState<string>("10");
+  const [note, setNote] = useState("");
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  const [quote, setQuote] = useState("");
+  const [quotePage, setQuotePage] = useState<string>(String(book.progress));
+
+  useEffect(() => {
+    setQuotePage(String(book.progress));
+  }, [book.progress]);
+
+  const submit = () => {
+    const n = parseInt(pages, 10);
+    if (Number.isNaN(n) || n <= 0) {
+      toast.error("How many pages did you read?");
+      return;
+    }
+    logSession({
+      bookId: book.id,
+      mood,
+      pagesRead: n,
+      fromPage: Math.max(0, book.progress - n),
+      toPage: book.progress,
+      note: note.trim() || undefined,
+      durationSec: elapsed > 0 ? elapsed : undefined,
+    });
+    onOpenChange(false);
+    onClearElapsed();
+    setNote("");
+    toast.success("Session logged.");
+  };
+
+  const saveQuote = () => {
+    if (!quote.trim()) return;
+    addJournal({
+      bookId: book.id,
+      kind: "quote",
+      text: quote.trim(),
+      page: quotePage ? parseInt(quotePage, 10) : undefined,
+    });
+    setQuote("");
+    setQuoteOpen(false);
+    toast.success("Quote saved to your highlights.");
+  };
+
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full"
+          onClick={() => { onOpenChange(!open); setQuoteOpen(false); }}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> Log a session
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="rounded-full"
+          onClick={() => { setQuoteOpen((o) => !o); onOpenChange(false); }}
+        >
+          <Quote className="h-3.5 w-3.5 mr-1" /> Save a quote
+        </Button>
+      </div>
+
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-white/60 border border-border/60 p-4 space-y-3"
+        >
+          {elapsed > 0 && (
+            <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <Timer className="h-3 w-3" />
+              Duration: <span className="font-medium text-foreground">{fmt(elapsed)}</span>
+              <button
+                onClick={onClearElapsed}
+                className="ml-2 underline hover:text-foreground"
+              >
+                clear
+              </button>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-xs uppercase tracking-widest text-muted-foreground">
+              How did this session feel?
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {MOOD_KEYS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => setMood(k)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs flex items-center gap-1 transition",
+                    mood === k
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-white/80 border-border hover:bg-white"
+                  )}
+                >
+                  <span>{MOODS[k].emoji}</span>
+                  <span>{MOODS[k].label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-end gap-3">
+            <div className="w-28">
+              <label className="text-xs text-muted-foreground">Pages read</label>
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={pages}
+                onChange={(e) => setPages(e.target.value)}
+                className="bg-white/80 h-9"
+              />
+            </div>
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="A thread you want to remember… (optional)"
+              className="min-h-[40px] bg-white/80 flex-1"
+            />
+            <Button onClick={submit} className="rounded-full h-9">Save</Button>
+          </div>
+        </motion.div>
+      )}
+
+      {quoteOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-white/60 border border-border/60 p-4 space-y-3"
+        >
+          <Textarea
+            value={quote}
+            onChange={(e) => setQuote(e.target.value)}
+            placeholder={`\u201cThe line you can\u2019t stop thinking about\u2026\u201d`}
+            className="min-h-[80px] bg-white/80 font-display italic"
+          />
+          <div className="flex items-end gap-3">
+            <div className="w-28">
+              <label className="text-xs text-muted-foreground">Page</label>
+              <Input
+                type="number"
+                value={quotePage}
+                onChange={(e) => setQuotePage(e.target.value)}
+                className="bg-white/80 h-9"
+              />
+            </div>
+            <Button onClick={saveQuote} className="ml-auto rounded-full h-9">Save quote</Button>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+}

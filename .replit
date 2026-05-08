@@ -1,0 +1,65 @@
+modules = ["nodejs-24", "python-3.11"]
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+VITE_CLERK_PUBLISHABLE_KEY = "pk_test_b3JpZW50ZWQtY3Jvdy0xMi5jbGVyay5hY2NvdW50cy5kZXYk"
+VAPID_PUBLIC_KEY = "BEC2JFL6s0zEj3_MN8Itd4Ddg5_hbhNXsFkttrrKPki1nLy6sf0nt2Lq1RRCa-noUN9lR3S_z5yEBRoGy8XrdyE"
+VAPID_PRIVATE_KEY = "5N0pOvWRP8TaV4OyKkZsozMSM6zxuZRiPAZqwcp_vH0"
+VAPID_SUBJECT = "mailto:hello@tropely.app"
+VITE_VAPID_PUBLIC_KEY = "BEC2JFL6s0zEj3_MN8Itd4Ddg5_hbhNXsFkttrrKPki1nLy6sf0nt2Lq1RRCa-noUN9lR3S_z5yEBRoGy8XrdyE"
+
+[[ports]]
+localPort = 8080
+externalPort = 80
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 8082
+externalPort = 3003
+
+[[ports]]
+localPort = 8083
+externalPort = 3001
+
+[[ports]]
+localPort = 8084
+externalPort = 5000
+
+[[ports]]
+localPort = 8085
+externalPort = 4200
+
+[[ports]]
+localPort = 18808
+externalPort = 3000
+
+[[ports]]
+localPort = 24021
+externalPort = 3002
+
+[[ports]]
+localPort = 24022
+externalPort = 5173
