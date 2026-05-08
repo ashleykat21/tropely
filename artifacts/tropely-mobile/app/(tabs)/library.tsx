@@ -106,7 +106,7 @@ interface ShelfSectionProps {
   label: string;
   count: number;
   books: Book[];
-  theme: typeof THEMES.darkWalnut;
+  theme: (typeof THEMES)[ThemeKey];
   selectedId: string | null;
   onPress: (b: Book) => void;
   onAddPress: () => void;

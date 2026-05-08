@@ -4,9 +4,9 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "EXPO_OFFLINE=1 CI=1 expo start --web -c -p ${PORT:-8082}",
-    "start": "EXPO_OFFLINE=1 CI=1 expo start --web -p ${PORT:-8082}",
-    "start:clear": "EXPO_OFFLINE=1 CI=1 expo start --web -c -p ${PORT:-8082}",
+    "dev": "EXPO_OFFLINE=1 expo start --web -c -p ${PORT:-8082}",
+    "start": "EXPO_OFFLINE=1 expo start --web -p ${PORT:-8082}",
+    "start:clear": "EXPO_OFFLINE=1 expo start --web -c -p ${PORT:-8082}",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",

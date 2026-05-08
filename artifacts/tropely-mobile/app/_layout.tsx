@@ -52,7 +52,10 @@ function RootLayoutNav() {
         name="companion/[bookKey]"
         options={{ headerShown: false, presentation: "modal" }}
       />
-
+      <Stack.Screen
+        name="buddy-reads"
+        options={{ headerShown: false, presentation: "modal" }}
+      />
     </Stack>
   );
 }

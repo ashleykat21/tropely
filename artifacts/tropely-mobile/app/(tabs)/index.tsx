@@ -116,7 +116,7 @@ function BookSpine({ book, idx, isSelected, onPress }: { book: Book; idx: number
 }
 
 // ─── Ghost spine (empty slot) ─────────────────────────────────────────────────
-function GhostSpine({ idx, theme }: { idx: number; theme: typeof THEMES.darkWalnut }) {
+function GhostSpine({ idx, theme }: { idx: number; theme: (typeof THEMES)[ThemeKey] }) {
   const h = SPINE_HEIGHTS[idx % SPINE_HEIGHTS.length];
   return (
     <View style={{
@@ -129,7 +129,7 @@ function GhostSpine({ idx, theme }: { idx: number; theme: typeof THEMES.darkWaln
 }
 
 // ─── Add-book slot ────────────────────────────────────────────────────────────
-function AddSlot({ theme, onPress }: { theme: typeof THEMES.darkWalnut; onPress: () => void }) {
+function AddSlot({ theme, onPress }: { theme: (typeof THEMES)[ThemeKey]; onPress: () => void }) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -147,7 +147,7 @@ function AddSlot({ theme, onPress }: { theme: typeof THEMES.darkWalnut; onPress:
 }
 
 // ─── Wooden shelf plank ───────────────────────────────────────────────────────
-function Plank({ theme }: { theme: typeof THEMES.darkWalnut }) {
+function Plank({ theme }: { theme: (typeof THEMES)[ThemeKey] }) {
   return (
     <View>
       {/* Front rounded edge of shelf */}
@@ -169,7 +169,7 @@ function Plank({ theme }: { theme: typeof THEMES.darkWalnut }) {
 interface ShelfRowProps {
   label: string;
   books: Book[];
-  theme: typeof THEMES.darkWalnut;
+  theme: (typeof THEMES)[ThemeKey];
   selectedId: string | null;
   onPress: (b: Book) => void;
   onAdd: () => void;
