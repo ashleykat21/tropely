@@ -1,0 +1,46 @@
+name: EAS Update (OTA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Update message shown in EAS dashboard"
+        required: true
+        default: "Bug fix"
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/tropely-mobile/**"
+      - "lib/**"
+
+jobs:
+  update:
+    name: Push OTA Update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Push EAS Update
+        working-directory: artifacts/tropely-mobile
+        run: |
+          npx eas-cli update \
+            --channel production \
+            --environment production \
+            --message "${{ github.event.inputs.message || github.event.head_commit.message }}" \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
