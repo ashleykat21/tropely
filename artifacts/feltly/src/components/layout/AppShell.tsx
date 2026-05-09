@@ -4,7 +4,6 @@ import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, Me
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useLibrary } from "@/lib/store";
 import { applyMood } from "@/lib/moods";
-import { applyTrope } from "@/lib/tropes";
 import { AddBookDialog } from "@/components/reader/AddBookDialog";
 import { cn } from "@/lib/utils";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
@@ -132,10 +131,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!current) return;
-    const firstTrope = current.tropes?.[0];
-    if (firstTrope && applyTrope(firstTrope)) return;
     applyMood(current.mood);
-  }, [current?.tropes, current?.mood]);
+  }, [current?.mood]);
 
   // Open onboarding for new users (full flow from step 0).
   useEffect(() => {
