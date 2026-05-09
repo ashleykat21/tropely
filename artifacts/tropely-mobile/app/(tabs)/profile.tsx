@@ -571,12 +571,12 @@ export default function ProfileScreen() {
               borderTopWidth: 1, borderTopColor: colors.border }}>
               <View style={{ flex: 1, marginRight: 12 }}>
                 <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
-                  Under 16 profile 🔒
+                  13 &amp; under safe messaging 🔒
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
                   {isUnder16
-                    ? "Chat moderation is on. Inappropriate messages are blocked."
-                    : "Turn on for readers under 16. Enables stricter chat filtering."}
+                    ? "Safe messaging is on. Inappropriate content is blocked."
+                    : "Enable for readers aged 13 and under. Turns on stricter content filtering."}
                 </Text>
               </View>
               <Switch

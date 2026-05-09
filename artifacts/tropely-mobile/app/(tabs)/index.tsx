@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { QuickLogModal } from "@/components/QuickLogModal";
-import { StreakBadge } from "@/components/StreakBadge";
 import { useColors } from "@/hooks/useColors";
 import { MOODS } from "@/lib/moods";
 import { computeStreak } from "@/lib/streak";

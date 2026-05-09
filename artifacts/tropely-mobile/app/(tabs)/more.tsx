@@ -37,15 +37,6 @@ const NAV_ITEMS: NavItem[] = [
     route: "/(tabs)/insights",
     accent: "#5CB8C8",
   },
-  {
-    label: "Profile",
-    description: "Goals, achievements & settings",
-    emoji: "👤",
-    featherIcon: "user",
-    sfSymbol: "person",
-    route: "/(tabs)/profile",
-    accent: "#D4874A",
-  },
 ];
 
 export default function MoreScreen() {
