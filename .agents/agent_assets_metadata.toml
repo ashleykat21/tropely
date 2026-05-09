@@ -24,8 +24,20 @@ uri = "file://artifacts/tropely-mobile/assets/images/splash.png"
 type = "image"
 title = "tropely splash"
 
+[[generated]]
+id = "cEVLCCNXY40oQ8wXC45p3"
+uri = "file://attached_assets/tropely_feature_graphic.png"
+type = "image"
+title = "tropely feature graphic"
+
 [[outputs]]
 id = "B4aEvS_aA3556Ifg3faOW"
 uri = "file://.local/tropely-expo-conversion.md"
 type = "text"
 title = "Tropely → Expo Native Conversion Guide"
+
+[[outputs]]
+id = "RcBLNGCY9zmGDwB3W1MOS"
+uri = "file://attached_assets/tropely_feature_graphic.png"
+type = "image"
+title = "Tropely — Play Store Feature Graphic (1024×500)"
