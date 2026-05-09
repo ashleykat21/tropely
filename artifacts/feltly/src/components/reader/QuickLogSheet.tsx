@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLibrary } from "@/lib/store";
 import { MOODS, type MoodKey } from "@/lib/moods";
 import { cn } from "@/lib/utils";
-import { BookOpen, Check, ChevronsUpDown, Zap } from "lucide-react";
+import { BookOpen, Check, ChevronsUpDown, PauseCircle, PlayCircle, RotateCcw, Timer, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 const MOOD_KEYS = Object.keys(MOODS) as MoodKey[];
@@ -18,6 +18,12 @@ interface QuickLogSheetProps {
   onOpenChange: (o: boolean) => void;
   onPickBook: () => void;
 }
+
+const fmtTimer = (s: number) => {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+};
 
 export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetProps) {
   const { books, currentId, sessions, logSession, updateProgress, setCurrent } = useLibrary();
@@ -36,6 +42,44 @@ export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetP
   const [selectedId, setSelectedId] = useState<string | null>(fallbackBook?.id ?? null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [setAsCurrent, setSetAsCurrent] = useState(false);
+
+  // --- Timer state ---
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [, setTimerTick] = useState(0);
+  const timerStartedAt = useRef<number | null>(null);
+  const timerAccumulated = useRef(0);
+
+  const timerLiveSeconds =
+    timerAccumulated.current +
+    (timerRunning && timerStartedAt.current
+      ? Math.floor((Date.now() - timerStartedAt.current) / 1000)
+      : 0);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const id = window.setInterval(() => setTimerTick((t) => t + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [timerRunning]);
+
+  const startTimer = () => {
+    if (timerRunning) return;
+    timerStartedAt.current = Date.now();
+    setTimerRunning(true);
+  };
+
+  const pauseTimer = () => {
+    if (!timerRunning) return;
+    timerAccumulated.current = timerLiveSeconds;
+    timerStartedAt.current = null;
+    setTimerRunning(false);
+  };
+
+  const resetTimer = () => {
+    timerAccumulated.current = 0;
+    timerStartedAt.current = null;
+    setTimerRunning(false);
+    setTimerTick(0);
+  };
 
   const book =
     activeBooks.find((b) => b.id === selectedId) ??
@@ -65,6 +109,7 @@ export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetP
     setSetAsCurrent(false);
     setShowFull(false);
     setNote("");
+    // Don't reset timer when reopening — let it keep running
   }, [open]);
 
   // Re-prefill pages/mood when the active book changes.
@@ -83,6 +128,7 @@ export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetP
     }
     const newProgress = Math.min(book.pages, book.progress + n);
     const fromPage = Math.max(0, newProgress - n);
+    const elapsed = timerLiveSeconds > 0 ? timerLiveSeconds : undefined;
     logSession({
       bookId: book.id,
       mood: mode === "quick" ? defaultMood : mood,
@@ -90,6 +136,7 @@ export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetP
       fromPage,
       toPage: newProgress,
       note: mode === "full" && note.trim() ? note.trim() : undefined,
+      durationSec: elapsed,
     });
     if (newProgress !== book.progress) {
       updateProgress(book.id, newProgress);
@@ -97,6 +144,7 @@ export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetP
     if (setAsCurrent && book.id !== currentId) {
       setCurrent(book.id);
     }
+    resetTimer();
     onOpenChange(false);
     const justFinished = newProgress >= book.pages && book.progress < book.pages;
     if (justFinished) {
@@ -153,6 +201,42 @@ export function QuickLogSheet({ open, onOpenChange, onPickBook }: QuickLogSheetP
           </div>
         ) : (
           <div className="mt-4 space-y-4">
+            {/* Reading timer */}
+            <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-3">
+              <Timer className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span
+                className="font-display tabular-nums text-xl flex-1"
+                style={{ color: timerRunning ? "var(--mood-strong)" : timerLiveSeconds > 0 ? "var(--foreground)" : "var(--muted-foreground)" }}
+              >
+                {timerLiveSeconds > 0 ? fmtTimer(timerLiveSeconds) : "0:00"}
+              </span>
+              {timerRunning ? (
+                <Button size="sm" variant="outline" className="rounded-full gap-1.5 h-8" onClick={pauseTimer}>
+                  <PauseCircle className="h-3.5 w-3.5" /> Pause
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="rounded-full gap-1.5 h-8"
+                  style={{ background: "var(--mood-strong)" }}
+                  onClick={startTimer}
+                >
+                  <PlayCircle className="h-3.5 w-3.5" /> {timerLiveSeconds > 0 ? "Resume" : "Start timer"}
+                </Button>
+              )}
+              {timerLiveSeconds > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-full h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={resetTimer}
+                  title="Reset timer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+
             {showPicker && (
               <div className="space-y-1.5">
                 <label className="text-xs uppercase tracking-widest text-muted-foreground">

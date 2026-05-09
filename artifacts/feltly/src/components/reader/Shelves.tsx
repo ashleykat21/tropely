@@ -370,7 +370,7 @@ export function Shelves() {
               ? "hidden"
               : active === "series"
               ? "space-y-3"
-              : "grid gap-3 grid-cols-3 sm:grid-cols-5 lg:grid-cols-7"
+              : "grid gap-2 grid-cols-4 sm:grid-cols-6 lg:grid-cols-8"
           }
         >
           {/* Series browser */}
@@ -460,7 +460,7 @@ export function Shelves() {
                     nav(`/book/${b.id}`);
                   }}
                   className={cn(
-                    "w-full text-left space-y-1.5 rounded-xl p-1.5 transition",
+                    "w-full text-left space-y-1 rounded-lg p-1 transition",
                     currentId === b.id ? "bg-white/60 ring-1 ring-border" : "hover:bg-white/40"
                   )}
                 >
@@ -468,15 +468,15 @@ export function Shelves() {
                     <BookCover src={b.cover} title={b.title} />
                   </div>
                   <div className="space-y-0.5">
-                    <div className="font-display text-xs leading-tight line-clamp-2 flex items-center gap-1">
+                    <div className="font-display text-[10px] leading-tight line-clamp-2 flex items-center gap-0.5">
                       {b.consumption === "listened" ? (
-                        <Headphones className="h-3 w-3 text-muted-foreground" />
+                        <Headphones className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
                       ) : b.consumption === "read" ? (
-                        <BookOpen className="h-3 w-3 text-muted-foreground" />
+                        <BookOpen className="h-2.5 w-2.5 shrink-0 text-muted-foreground" />
                       ) : null}
                       <span className="truncate">{b.title}</span>
                     </div>
-                    <div className="text-[10px] text-muted-foreground truncate">{b.author}</div>
+                    <div className="text-[9px] text-muted-foreground truncate">{b.author}</div>
                     {/* Trope category badge */}
                     {cat && (
                       <div className="flex items-center gap-0.5 text-[9px] bg-foreground/5 border border-border/40 rounded-full px-1.5 py-0.5 w-fit max-w-full leading-tight font-medium">

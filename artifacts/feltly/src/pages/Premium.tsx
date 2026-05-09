@@ -15,7 +15,7 @@ import { UpgradePrompt } from "@/components/premium/UpgradePrompt";
 const PLANS: { key: PremiumPlan; label: string; price: string; sub: string; badge?: string; monthlyEquiv?: string }[] = [
   { key: "monthly",  label: "Monthly",  price: "$6",  sub: "per month" },
   { key: "annual",   label: "Annual",   price: "$35", sub: "per year", badge: "Most popular", monthlyEquiv: "$2.92 / mo" },
-  { key: "lifetime", label: "Lifetime", price: "$75", sub: "one-time",  badge: "Best value" },
+  { key: "lifetime", label: "Lifetime", price: "$80", sub: "one-time",  badge: "Best value" },
 ];
 
 type FeatureCategory = {

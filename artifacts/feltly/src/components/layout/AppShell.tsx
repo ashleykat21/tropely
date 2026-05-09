@@ -31,9 +31,10 @@ import { ScenePlayer } from "@/components/scene/ScenePlayer";
 const NAV = [
   { to: "/", key: "nav.home", icon: Home },
   { to: "/discover", key: "nav.discover", icon: Compass },
+  { to: "/journal", key: "nav.journal", icon: NotebookPen },
+  { to: "/insights", key: "nav.insights", icon: BarChart3 },
   { to: "/social", key: "nav.social", icon: Users },
   { to: "/companion", key: "nav.ai", icon: Sparkles },
-  { to: "/insights", key: "nav.insights", icon: BarChart3 },
   { to: "/profile", key: "nav.you", icon: User },
 ];
 
