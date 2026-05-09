@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BookHeart, AlertCircle, AlertTriangle } from "lucide-react";
 
-type Mode = "signin" | "signup" | "forgot" | "reset";
+type Mode = "signin" | "signup" | "forgot" | "reset" | "verify";
 
 // How long to wait for Clerk to initialise before declaring failure.
 const CLERK_INIT_TIMEOUT_MS = 5_000;
@@ -45,6 +45,7 @@ export default function Auth() {
   const [name, setName] = useState("");
   const [resetCode, setResetCode] = useState("");
   const [newPwd, setNewPwd] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -81,7 +82,10 @@ export default function Auth() {
           // disconnect the form and trigger "Form submission canceled".
           await setActive({ session: r.createdSessionId });
         } else {
-          setError("Check your email to verify your account, then sign in.");
+          // Email verification required — send the code and show the verify step.
+          await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
+          setMode("verify");
+          setVerifyCode("");
           setBusy(false);
         }
       } else {
@@ -133,6 +137,27 @@ export default function Auth() {
         await setActive({ session: r.createdSessionId });
       } else {
         setError("Reset incomplete. Please try again.");
+        setBusy(false);
+      }
+    } catch (err) {
+      setError(clerkErr(err));
+      setBusy(false);
+    }
+  };
+
+  // ── email verification — step after sign-up ───────────────────────────────
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clerkReady || busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      const result = await signUp!.attemptEmailAddressVerification({ code: verifyCode });
+      const r = result as { status?: string; createdSessionId?: string };
+      if (r.status === "complete" && r.createdSessionId) {
+        await setActive({ session: r.createdSessionId });
+      } else {
+        setError("Verification incomplete. Please try again.");
         setBusy(false);
       }
     } catch (err) {
@@ -204,12 +229,14 @@ export default function Auth() {
             {mode === "signup" && "Begin your shelf."}
             {mode === "forgot" && "Reset password."}
             {mode === "reset" && "Enter your code."}
+            {mode === "verify" && "Check your inbox."}
           </h1>
           <p className="text-muted-foreground text-sm">
             {mode === "signin" && "Pick up where the feeling left off."}
             {mode === "signup" && "Track reading by emotion, not stars."}
             {mode === "forgot" && "We'll email you a one-time reset code."}
             {mode === "reset" && "Check your inbox for the 6-digit code."}
+            {mode === "verify" && `We sent a 6-digit code to ${email}.`}
           </p>
         </div>
 
@@ -335,6 +362,28 @@ export default function Auth() {
           </form>
         )}
 
+        {/* ── Email verification after sign-up ── */}
+        {mode === "verify" && (
+          <form onSubmit={handleVerify} noValidate className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="verify-code">Verification code</Label>
+              <Input
+                id="verify-code"
+                required
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value)}
+                placeholder="6-digit code"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                disabled={disabled}
+              />
+            </div>
+            <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
+              {!clerkReady ? "Loading…" : busy ? "Verifying…" : "Verify email"}
+            </Button>
+          </form>
+        )}
+
         {/* ── Bottom link ── */}
         <p className="text-center text-sm text-muted-foreground">
           {mode === "signin" && (
@@ -351,7 +400,7 @@ export default function Auth() {
               </button>
             </>
           )}
-          {(mode === "forgot" || mode === "reset") && (
+          {(mode === "forgot" || mode === "reset" || mode === "verify") && (
             <button type="button" onClick={() => switchMode("signin")} disabled={disabled} className="underline underline-offset-4 text-foreground disabled:opacity-50">
               Back to sign in
             </button>
