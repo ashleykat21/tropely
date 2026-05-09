@@ -202,16 +202,20 @@ export function CurrentBookCard() {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <TropeButton tropes={book.tropes ?? []} bookId={book.id} />
-              {isListened ? (
-                <span className="flex items-center gap-1.5 text-xs uppercase tracking-widest text-muted-foreground">
-                  <Headphones className="h-3.5 w-3.5" />
-                  Currently listening
-                </span>
-              ) : (
-                <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                  Currently reading
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium">
+                {isListened ? (
+                  <Headphones className="h-3 w-3 text-muted-foreground" />
+                ) : null}
+                {isListened ? "Currently listening" : "Currently reading"}
+                {book.mood && (
+                  <>
+                    <span className="text-border">·</span>
+                    <span style={{ color: "var(--mood-strong)" }}>
+                      {MOODS[book.mood].emoji} {MOODS[book.mood].label}
+                    </span>
+                  </>
+                )}
+              </span>
               <button
                 onClick={() => {
                   toggleFavorite(book.id);
@@ -247,11 +251,6 @@ export function CurrentBookCard() {
                 Narrated by {book.narrator}
               </p>
             )}
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground/70 pt-0.5">
-              <span>{MOODS[book.mood].emoji}</span>
-              <span>{MOODS[book.mood].label}</span>
-              <span className="opacity-50">· mood undertone</span>
-            </div>
           </div>
 
           {/* Progress */}
@@ -426,24 +425,44 @@ export function CurrentBookCard() {
             )}
           </div>
 
-          {/* Reactions */}
-          <div className="space-y-2 pt-2">
-            <div className="group-heading">{isListened ? "Chapter mood" : "Mood reactions"}</div>
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-sm text-muted-foreground">{isListened ? "How does this chapter sound?" : "What mood is this chapter carrying?"}</p>
+          {/* Emoji mood row — directly below progress */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {isListened ? "How does this chapter sound?" : "How does this chapter feel?"}
+              </span>
               {book.reactions.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Logged: {book.reactions.slice(-6).join(" ")}
-                </p>
+                <span className="text-xs text-muted-foreground">
+                  {book.reactions.slice(-6).join(" ")}
+                </span>
               )}
             </div>
             <EmojiReactionBar onReact={(e) => addReaction(book.id, e)} />
           </div>
 
+          {/* Action pill buttons */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSessionOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-background transition"
+            >
+              <Plus className="h-3.5 w-3.5" /> Log a session
+            </button>
+            <FocusMode book={book} />
+            {book.shelf === "finished" && (
+              <button
+                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-background transition"
+                onClick={() => setRereadStartOpen(true)}
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Read again
+              </button>
+            )}
+          </div>
+
           {/* Audio session is core when listening — keep visible */}
           {isListened && <AudioSessionPanel book={book} />}
 
-          {/* Core reading loop — session log + read again */}
+          {/* Core reading loop — session log panel (opened by button above) */}
           <SessionLogPanel
             book={book}
             elapsed={sessionElapsed}
@@ -451,17 +470,6 @@ export function CurrentBookCard() {
             open={sessionOpen}
             onOpenChange={setSessionOpen}
           />
-          {book.shelf === "finished" && (
-            <div className="flex">
-              <Button
-                variant="outline"
-                className="rounded-full gap-2 h-11 px-5"
-                onClick={() => setRereadStartOpen(true)}
-              >
-                <RotateCcw className="h-4 w-4" /> Read again
-              </Button>
-            </div>
-          )}
 
           {/* Everything else folds into one disclosure to keep the card breathable */}
           <button

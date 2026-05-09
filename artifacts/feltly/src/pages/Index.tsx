@@ -48,20 +48,27 @@ const Index = () => {
   return (
     <AppShell>
       <div className="space-y-4 sm:space-y-6 flex flex-col items-center">
-        <section className="space-y-1 w-full max-w-3xl animate-fade-up">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
-            Today
-          </p>
-          <h1 className="font-display text-2xl sm:text-3xl leading-[1.05]">
-            You&apos;re always living a{" "}
-            <span className="italic" style={{ color: "var(--mood-strong)" }}>
-              trope
-            </span>
-            .
-          </h1>
-          <p className="text-sm text-muted-foreground max-w-md leading-snug">
-            Mood tracked as undertone on every page — your story fingerprint, built one book at a time.
-          </p>
+        <section className="w-full max-w-3xl animate-fade-up rounded-3xl overflow-hidden">
+          <div
+            className="px-6 pt-8 pb-6 space-y-2"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(210 30% 94%) 0%, hsl(220 25% 91%) 40%, hsl(200 28% 93%) 100%)",
+            }}
+          >
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+              Today
+            </p>
+            <h1 className="font-display text-2xl sm:text-3xl leading-[1.1]">
+              What is your book making you{" "}
+              <span className="italic" style={{ color: "var(--mood-strong)" }}>
+                feel?
+              </span>
+            </h1>
+            <p className="text-sm text-muted-foreground max-w-md leading-snug">
+              Tag every reading session by mood — your emotional fingerprint, built one page at a time.
+            </p>
+          </div>
         </section>
 
         {hasAnyReal ? (
