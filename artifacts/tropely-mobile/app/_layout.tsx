@@ -107,7 +107,7 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!IS_WEB && !fontsLoaded && !fontError) return null;
 
   const inner = (
     <QueryClientProvider client={queryClient}>
