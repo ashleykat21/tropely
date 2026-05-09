@@ -1,6 +1,6 @@
 import { useSignIn, useSignUp } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/lib/haptics";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
