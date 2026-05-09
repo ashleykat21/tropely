@@ -1,4 +1,14 @@
 import {
+  Fraunces_400Regular,
+  Fraunces_400Regular_Italic,
+  Fraunces_600SemiBold,
+} from "@expo-google-fonts/fraunces";
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+} from "@expo-google-fonts/dm-sans";
+import {
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
@@ -26,7 +36,6 @@ if (!IS_WEB) {
 }
 
 const queryClient = new QueryClient();
-
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 
 function AuthGate() {
@@ -67,6 +76,12 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
+    Fraunces_400Regular,
+    Fraunces_400Regular_Italic,
+    Fraunces_600SemiBold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
