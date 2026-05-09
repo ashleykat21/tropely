@@ -448,7 +448,6 @@ export function CurrentBookCard() {
             >
               <Plus className="h-3.5 w-3.5" /> Log a session
             </button>
-            <FocusMode book={book} />
             {book.shelf === "finished" && (
               <button
                 className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-4 py-2 text-xs font-medium text-foreground hover:bg-background transition"

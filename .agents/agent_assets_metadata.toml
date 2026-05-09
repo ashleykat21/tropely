@@ -30,6 +30,18 @@ uri = "file://attached_assets/tropely_feature_graphic.png"
 type = "image"
 title = "tropely simple feature graphic"
 
+[[generated]]
+id = "PnsdtBJiex_lyEAsVBUO8"
+uri = "file://artifacts/tropely-app/assets/images/icon.png"
+type = "image"
+title = "tropely book mood app icon"
+
+[[generated]]
+id = "2Uowfi2Mmqlv1kTUL9eCJ"
+uri = "file://artifacts/tropely-app/assets/images/splash.png"
+type = "image"
+title = "tropely splash screen"
+
 [[outputs]]
 id = "B4aEvS_aA3556Ifg3faOW"
 uri = "file://.local/tropely-expo-conversion.md"
