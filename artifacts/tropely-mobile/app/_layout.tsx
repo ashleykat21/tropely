@@ -12,13 +12,18 @@ import { Redirect, Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 import React, { useEffect } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { setApiAuthGetter } from "@/lib/api";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useStore } from "@/lib/store";
 
-SplashScreen.preventAutoHideAsync();
+const IS_WEB = Platform.OS === "web";
+
+if (!IS_WEB) {
+  SplashScreen.preventAutoHideAsync();
+}
 
 const queryClient = new QueryClient();
 
@@ -70,7 +75,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+      if (!IS_WEB) SplashScreen.hideAsync();
       if (!__DEV__) {
         Updates.checkForUpdateAsync()
           .then(({ isAvailable }) => {
@@ -85,17 +90,25 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
+  const inner = (
+    <QueryClientProvider client={queryClient}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        {!IS_WEB && <AuthGate />}
+        <RootLayoutNav />
+      </GestureHandlerRootView>
+    </QueryClientProvider>
+  );
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <AuthGate />
-              <RootLayoutNav />
-            </GestureHandlerRootView>
-          </QueryClientProvider>
-        </ClerkProvider>
+        {IS_WEB ? (
+          inner
+        ) : (
+          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+            {inner}
+          </ClerkProvider>
+        )}
       </ErrorBoundary>
     </SafeAreaProvider>
   );
