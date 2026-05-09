@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo } from "react";
 import {
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -17,23 +17,38 @@ import type { MoodKey } from "@/constants/colors";
 
 const TAB_BAR_HEIGHT = 84;
 
-function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+function SectionLabel({ children }: { children: string }) {
+  const colors = useColors();
+  return (
+    <Text style={{
+      fontSize: 11, fontFamily: "DMSans_600SemiBold",
+      color: colors.mutedForeground, textTransform: "uppercase",
+      letterSpacing: 2, marginBottom: 12,
+    }}>{children}</Text>
+  );
+}
+
+function StatCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: string }) {
   const colors = useColors();
   return (
     <View style={{
-      flex: 1, backgroundColor: colors.card, borderRadius: colors.radius + 4,
+      flex: 1, backgroundColor: colors.card, borderRadius: 16,
       padding: 16, borderWidth: 1, borderColor: colors.border,
     }}>
-      <Text style={{ fontSize: 26, fontFamily: "Inter_700Bold", color: color ?? colors.foreground }}>
-        {value}
-      </Text>
-      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground, marginTop: 3 }}>
-        {label}
-      </Text>
+      <Text style={{
+        fontSize: 28, fontFamily: "Fraunces_700Bold",
+        color: accent ?? colors.foreground, lineHeight: 34,
+      }}>{value}</Text>
+      <Text style={{
+        fontSize: 11, fontFamily: "DMSans_500Medium",
+        color: colors.mutedForeground, marginTop: 4,
+        textTransform: "uppercase", letterSpacing: 0.5,
+      }}>{label}</Text>
       {sub && (
-        <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
-          {sub}
-        </Text>
+        <Text style={{
+          fontSize: 11, fontFamily: "DMSans_400Regular",
+          color: colors.mutedForeground, marginTop: 2,
+        }}>{sub}</Text>
       )}
     </View>
   );
@@ -64,7 +79,6 @@ export default function InsightsScreen() {
     [sessions]
   );
   const finishedCount = books.filter((b) => b.shelf === "finished").length;
-  const readingCount = books.filter((b) => b.shelf === "reading").length;
 
   const weekMinutes = useMemo(() =>
     sessions.filter((s) => s.at >= weekAgo).reduce((sum, s) => sum + (s.minutes ?? 0), 0),
@@ -92,134 +106,191 @@ export default function InsightsScreen() {
 
   const totalMoodCount = moodCounts.reduce((sum, [, c]) => sum + c, 0);
 
-  const recentSessions = sessions
-    .slice(-7)
-    .map((s) => ({ ...s, label: new Date(s.at).toLocaleDateString("en", { weekday: "short" }) }));
+  const last14 = useMemo(() => {
+    const arr: { date: Date; pages: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      arr.push({ date: d, pages: 0 });
+    }
+    sessions.forEach((s) => {
+      const d = new Date(s.at);
+      d.setHours(0, 0, 0, 0);
+      const slot = arr.find((a) => a.date.getTime() === d.getTime());
+      if (slot) slot.pages += s.pagesRead;
+    });
+    return arr;
+  }, [sessions]);
 
-  const maxPages = Math.max(...recentSessions.map((s) => s.pagesRead), 1);
-
-  const s = StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    header: {
-      paddingTop: Platform.OS === "web" ? 67 : insets.top + 12,
-      paddingHorizontal: 20, paddingBottom: 16,
-      flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    },
-    title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground },
-    section: { paddingHorizontal: 20, marginBottom: 24 },
-    sectionTitle: {
-      fontSize: 16, fontFamily: "Inter_600SemiBold",
-      color: colors.foreground, marginBottom: 12,
-    },
-    row: { flexDirection: "row", gap: 10 },
-    card: {
-      backgroundColor: colors.card, borderRadius: colors.radius + 4,
-      padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 10,
-    },
-    moodRow: {
-      flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8,
-    },
-    moodLabel: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground },
-    moodBar: { flex: 2, height: 7, backgroundColor: colors.muted, borderRadius: 99, overflow: "hidden" },
-    moodFill: { height: "100%", borderRadius: 99 },
-    moodCount: { fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground, width: 24, textAlign: "right" },
-    chartRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, height: 80 },
-    bar: { flex: 1, borderRadius: 4, minHeight: 4 },
-    barLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center", marginTop: 4 },
-  });
+  const maxPages14 = Math.max(...last14.map((d) => d.pages), 1);
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
-        <Text style={s.title}>Insights</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Header */}
+      <View style={{
+        paddingTop: Platform.OS === "web" ? 67 : insets.top + 16,
+        paddingHorizontal: 20, paddingBottom: 20,
+        flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
+      }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            fontSize: 11, fontFamily: "DMSans_500Medium",
+            color: colors.mutedForeground, textTransform: "uppercase",
+            letterSpacing: 2.5, marginBottom: 6,
+          }}>Insights</Text>
+          <Text style={{
+            fontSize: 34, fontFamily: "Fraunces_700Bold",
+            color: colors.foreground, lineHeight: 40,
+          }}>
+            Your reading{" "}
+            <Text style={{ fontStyle: "italic", color: colors.moodStrong }}>landscape</Text>
+            .
+          </Text>
+        </View>
         <StreakBadge streak={streak} />
       </View>
 
       <ScrollView
         contentContainerStyle={{
+          paddingHorizontal: 20,
           paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + TAB_BAR_HEIGHT,
+          gap: 28,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Streak */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Streak</Text>
-          <View style={s.card}>
-            <View style={{ flexDirection: "row", gap: 20 }}>
+        {/* Top stats */}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <StatCard label="Pages this week" value={String(weekPages)} accent={colors.moodStrong} />
+          <StatCard label="Minutes" value={String(weekMinutes)} accent="#D4A832" />
+        </View>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <StatCard
+            label="Books finished"
+            value={String(finishedCount)}
+            sub={`Goal: ${yearlyGoal}/yr`}
+          />
+          <StatCard
+            label="Avg per session"
+            value={`${avgPagesPerSession}p`}
+            sub={`Goal: ${dailyGoal}/day`}
+          />
+        </View>
+
+        {/* Streak card */}
+        <View>
+          <SectionLabel>Streak</SectionLabel>
+          <LinearGradient
+            colors={[colors.moodTint, colors.card]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 16, padding: 20,
+              borderWidth: 1, borderColor: colors.border,
+            }}
+          >
+            <View style={{ flexDirection: "row", gap: 0 }}>
               {[
-                { label: "Current", value: streak.current, color: colors.primary },
+                { label: "Current", value: streak.current, color: colors.moodStrong },
                 { label: "Longest", value: streak.longest, color: "#D4A832" },
                 { label: "Freezes left", value: streak.freezesAvailable, color: "#5CB8C8" },
-              ].map((item) => (
-                <View key={item.label} style={{ alignItems: "center", flex: 1 }}>
-                  <Text style={{ fontSize: 28, fontFamily: "Inter_700Bold", color: item.color }}>
-                    {item.value}
-                  </Text>
-                  <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
-                    {item.label}
-                  </Text>
+              ].map((item, i) => (
+                <View
+                  key={item.label}
+                  style={{
+                    flex: 1, alignItems: "center",
+                    borderLeftWidth: i > 0 ? 1 : 0,
+                    borderLeftColor: colors.border,
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 32, fontFamily: "Fraunces_700Bold",
+                    color: item.color, lineHeight: 40,
+                  }}>{item.value}</Text>
+                  <Text style={{
+                    fontSize: 11, fontFamily: "DMSans_400Regular",
+                    color: colors.mutedForeground, marginTop: 3,
+                    textTransform: "uppercase", letterSpacing: 0.5,
+                  }}>{item.label}</Text>
                 </View>
               ))}
             </View>
-          </View>
+          </LinearGradient>
         </View>
 
-        {/* Stats grid */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>This week</Text>
-          <View style={s.row}>
-            <StatCard label="Pages read" value={String(weekPages)} color={colors.primary} />
-            <StatCard label="Minutes" value={String(weekMinutes)} color="#D4A832" />
-          </View>
-          <View style={[s.row, { marginTop: 10 }]}>
-            <StatCard label="Books finished" value={String(finishedCount)} sub={`Goal: ${yearlyGoal}/yr`} />
-            <StatCard label="Avg per session" value={`${avgPagesPerSession}p`} sub={`Goal: ${dailyGoal}/day`} />
-          </View>
-        </View>
-
-        {/* Recent sessions bar chart */}
-        {recentSessions.length > 0 && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Recent sessions</Text>
-            <View style={s.card}>
-              <View style={s.chartRow}>
-                {recentSessions.map((sess, i) => (
+        {/* 14-day mood pulse */}
+        {sessions.length > 0 && (
+          <View>
+            <SectionLabel>14-day mood pulse</SectionLabel>
+            <LinearGradient
+              colors={[colors.moodTint, colors.card]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                borderRadius: 16, padding: 18,
+                borderWidth: 1, borderColor: colors.border,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "flex-end", height: 80, gap: 4 }}>
+                {last14.map((d, i) => (
                   <View key={i} style={{ flex: 1, alignItems: "center" }}>
                     <View
-                      style={[s.bar, {
-                        height: Math.max(4, (sess.pagesRead / maxPages) * 70),
-                        backgroundColor: colors.primary + "CC",
-                      }]}
-                    />
-                    <Text style={s.barLabel}>{sess.label}</Text>
+                      style={{
+                        flex: 1, width: "100%", justifyContent: "flex-end",
+                      }}
+                    >
+                      <View style={{
+                        width: "100%",
+                        height: Math.max(d.pages > 0 ? 4 : 2, (d.pages / maxPages14) * 70),
+                        borderRadius: 4,
+                        backgroundColor: d.pages > 0 ? colors.moodStrong : colors.muted,
+                        opacity: d.pages > 0 ? 1 : 0.4,
+                      }} />
+                    </View>
+                    <Text style={{
+                      fontSize: 9, fontFamily: "DMSans_400Regular",
+                      color: colors.mutedForeground, marginTop: 4,
+                    }}>{d.date.getDate()}</Text>
                   </View>
                 ))}
               </View>
-              <View style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
-                  {monthPages} pages in the last 30 days
-                </Text>
-              </View>
-            </View>
+              <Text style={{
+                fontSize: 11, fontFamily: "DMSans_400Regular",
+                color: colors.mutedForeground, marginTop: 10,
+              }}>{monthPages} pages in the last 30 days</Text>
+            </LinearGradient>
           </View>
         )}
 
-        {/* Top moods */}
+        {/* Reading moods */}
         {moodCounts.length > 0 && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Reading moods</Text>
-            <View style={s.card}>
+          <View>
+            <SectionLabel>Reading moods</SectionLabel>
+            <View style={{
+              backgroundColor: colors.card, borderRadius: 16, padding: 18,
+              borderWidth: 1, borderColor: colors.border, gap: 14,
+            }}>
               {moodCounts.map(([k, count]) => (
-                <View key={k} style={s.moodRow}>
-                  <Text style={{ fontSize: 16 }}>{MOODS[k].emoji}</Text>
-                  <Text style={s.moodLabel}>{MOODS[k].label}</Text>
-                  <View style={s.moodBar}>
-                    <View style={[s.moodFill, {
-                      width: `${(count / totalMoodCount) * 100}%`,
+                <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ fontSize: 18, width: 24 }}>{MOODS[k].emoji}</Text>
+                  <Text style={{
+                    flex: 1, fontSize: 13, fontFamily: "DMSans_500Medium",
+                    color: colors.foreground,
+                  }}>{MOODS[k].label}</Text>
+                  <View style={{
+                    flex: 2, height: 6, backgroundColor: colors.muted,
+                    borderRadius: 99, overflow: "hidden",
+                  }}>
+                    <View style={{
+                      height: "100%", borderRadius: 99,
                       backgroundColor: MOODS[k].accent,
-                    }]} />
+                      width: `${(count / totalMoodCount) * 100}%`,
+                    }} />
                   </View>
-                  <Text style={s.moodCount}>{count}</Text>
+                  <Text style={{
+                    fontSize: 12, fontFamily: "DMSans_500Medium",
+                    color: colors.mutedForeground, width: 22, textAlign: "right",
+                  }}>{count}</Text>
                 </View>
               ))}
             </View>
@@ -227,9 +298,22 @@ export default function InsightsScreen() {
         )}
 
         {sessions.length === 0 && (
-          <View style={{ alignItems: "center", paddingVertical: 40, paddingHorizontal: 32 }}>
-            <Feather name="bar-chart-2" size={42} color={colors.mutedForeground} />
-            <Text style={{ fontSize: 15, fontFamily: "Inter_400Regular", color: colors.mutedForeground, textAlign: "center", marginTop: 12 }}>
+          <View style={{ alignItems: "center", paddingVertical: 40, paddingHorizontal: 20 }}>
+            <View style={{
+              width: 64, height: 64, borderRadius: 20,
+              backgroundColor: colors.moodTint,
+              alignItems: "center", justifyContent: "center", marginBottom: 16,
+            }}>
+              <Feather name="bar-chart-2" size={28} color={colors.moodStrong} />
+            </View>
+            <Text style={{
+              fontSize: 18, fontFamily: "Fraunces_600SemiBold",
+              color: colors.foreground, textAlign: "center", marginBottom: 8,
+            }}>Your landscape is forming</Text>
+            <Text style={{
+              fontSize: 14, fontFamily: "DMSans_400Regular",
+              color: colors.mutedForeground, textAlign: "center", lineHeight: 20,
+            }}>
               Log your first reading session to see insights here.
             </Text>
           </View>

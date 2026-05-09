@@ -2,6 +2,8 @@ import {
   Fraunces_400Regular,
   Fraunces_400Regular_Italic,
   Fraunces_600SemiBold,
+  Fraunces_700Bold,
+  Fraunces_700Bold_Italic,
 } from "@expo-google-fonts/fraunces";
 import {
   DMSans_400Regular,
@@ -79,6 +81,8 @@ export default function RootLayout() {
     Fraunces_400Regular,
     Fraunces_400Regular_Italic,
     Fraunces_600SemiBold,
+    Fraunces_700Bold,
+    Fraunces_700Bold_Italic,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
