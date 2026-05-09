@@ -26,6 +26,7 @@ import { ChangelogSheet } from "./ChangelogSheet";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { CHANGELOG } from "@/lib/changelog";
 import { toast } from "sonner";
+import { ScenePlayer } from "@/components/scene/ScenePlayer";
 
 const NAV = [
   { to: "/", key: "nav.home", icon: Home },
@@ -513,6 +514,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
       <ChangelogSheet open={changelogOpen} onOpenChange={setChangelogOpen} />
       <FeedbackSheet open={feedbackOpen} onOpenChange={setFeedbackOpen} />
+      <ScenePlayer />
     </main>
   );
 }
