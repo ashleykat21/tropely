@@ -1,4 +1,4 @@
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import type { UseAuthReturn, UseUserReturn } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -232,11 +232,15 @@ function FlairPicker({ visible, achievements, currentFlair, onSelect, onClose }:
   );
 }
 
-export default function ProfileScreen() {
+function ProfileScreenInner({
+  signOut,
+  user,
+}: {
+  signOut: () => void;
+  user: UseUserReturn["user"];
+}) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
-  const { user } = useUser();
 
   const books             = useStore((s) => s.books);
   const sessions          = useStore((s) => s.sessions);
@@ -629,3 +633,16 @@ export default function ProfileScreen() {
     </View>
   );
 }
+
+function ProfileScreenNative() {
+  const { useAuth, useUser } = require("@clerk/clerk-expo");
+  const { signOut } = useAuth();
+  const { user } = useUser();
+  return <ProfileScreenInner signOut={signOut} user={user} />;
+}
+
+function ProfileScreenWeb() {
+  return <ProfileScreenInner signOut={() => {}} user={null} />;
+}
+
+export default Platform.OS === "web" ? ProfileScreenWeb : ProfileScreenNative;
