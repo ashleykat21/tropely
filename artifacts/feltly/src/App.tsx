@@ -94,20 +94,6 @@ function MissingKeyScreen() {
 // ── Top-level gate ────────────────────────────────────────────────────────────
 
 function AppGate() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <Splash />;
-
-  if (!user) {
-    return (
-      <>
-        <LibrarySyncRunner />
-        <CompanionFinishedToastRunner />
-        <Auth />
-      </>
-    );
-  }
-
   return (
     <>
       <LibrarySyncRunner />
