@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
   Image,
   Modal,
   Platform,
@@ -22,9 +21,6 @@ import { useColors } from "@/hooks/useColors";
 import { MOODS } from "@/lib/moods";
 import { computeStreak } from "@/lib/streak";
 import { useStore, type Book } from "@/lib/store";
-import type { MoodKey } from "@/constants/colors";
-
-const SCREEN_W = Dimensions.get("window").width;
 
 // ─── Shelf themes ──────────────────────────────────────────────────────────────
 const THEMES = {
@@ -290,142 +286,6 @@ function NowReadingCard({ book, onBump }: { book: Book; onBump: (delta: number) 
   );
 }
 
-// ─── Daily readout ────────────────────────────────────────────────────────────
-function DailyReadout() {
-  const colors           = useColors();
-  const sessions         = useStore((s) => s.sessions);
-  const dailyGoal        = useStore((s) => s.dailyGoal);
-  const dailyGoalMinutes = useStore((s) => s.dailyGoalMinutes);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todaySess = sessions.filter((s) => s.at >= today.getTime());
-  if (todaySess.length === 0) return null;
-
-  const todayPages = todaySess.reduce((a, s) => a + s.pagesRead, 0);
-  const todayMins  = todaySess.reduce((a, s) => a + (s.minutes ?? 0), 0);
-  const pagePct = Math.min(todayPages / Math.max(dailyGoal, 1), 1);
-  const minPct  = Math.min(todayMins  / Math.max(dailyGoalMinutes, 1), 1);
-
-  return (
-    <View style={{
-      marginHorizontal: 16, marginTop: 12, marginBottom: 2,
-      borderRadius: 16, padding: 14,
-      backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-    }}>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
-        Today's Reading
-      </Text>
-      <View style={{ marginBottom: 8 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-          <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.foreground }}>📖 Pages</Text>
-          <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: pagePct >= 1 ? "#52C97E" : colors.foreground }}>
-            {todayPages} / {dailyGoal}
-          </Text>
-        </View>
-        <View style={{ height: 5, borderRadius: 3, backgroundColor: colors.muted, overflow: "hidden" }}>
-          <View style={{ height: 5, width: `${pagePct * 100}%` as any, borderRadius: 3, backgroundColor: pagePct >= 1 ? "#52C97E" : colors.primary }} />
-        </View>
-      </View>
-      {dailyGoalMinutes > 0 && todayMins > 0 && (
-        <View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-            <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.foreground }}>⏱ Minutes</Text>
-            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: minPct >= 1 ? "#52C97E" : colors.foreground }}>
-              {todayMins} / {dailyGoalMinutes}
-            </Text>
-          </View>
-          <View style={{ height: 5, borderRadius: 3, backgroundColor: colors.muted, overflow: "hidden" }}>
-            <View style={{ height: 5, width: `${minPct * 100}%` as any, borderRadius: 3, backgroundColor: minPct >= 1 ? "#52C97E" : "#D4874A" }} />
-          </View>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ─── Mood TBR picker ──────────────────────────────────────────────────────────
-function MoodTbrPicker() {
-  const colors    = useColors();
-  const books     = useStore((s) => s.books);
-  const moveShelf = useStore((s) => s.moveShelf);
-  const [selectedMood, setSelectedMood] = useState<MoodKey | null>(null);
-
-  const tbrWithMood = books.filter((b) => b.shelf === "want" && b.mood);
-  if (tbrWithMood.length === 0) return null;
-
-  const byMood: Partial<Record<MoodKey, Book[]>> = {};
-  for (const b of tbrWithMood) {
-    if (b.mood) {
-      byMood[b.mood] = byMood[b.mood] ?? [];
-      byMood[b.mood]!.push(b);
-    }
-  }
-  const moodKeys = Object.keys(byMood) as MoodKey[];
-  const picked   = selectedMood ? (byMood[selectedMood] ?? []) : [];
-
-  return (
-    <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 2 }}>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
-        Pick Your Mood
-      </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7 }}>
-        {moodKeys.map((k) => {
-          const m = MOODS[k];
-          const active = selectedMood === k;
-          return (
-            <TouchableOpacity
-              key={k}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedMood(active ? null : k); }}
-              style={{
-                flexDirection: "row", alignItems: "center", gap: 5,
-                paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-                backgroundColor: active ? m.accent + "22" : colors.card,
-                borderWidth: 1, borderColor: active ? m.accent : colors.border,
-              }}
-            >
-              <Text style={{ fontSize: 14 }}>{m.emoji}</Text>
-              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: active ? m.accent : colors.foreground }}>{m.label}</Text>
-              <Text style={{ fontSize: 11, color: colors.mutedForeground }}>· {byMood[k]!.length}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-      {selectedMood && picked.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginTop: 10 }}>
-          {picked.slice(0, 5).map((b) => {
-            const accent = MOODS[b.mood!].accent;
-            return (
-              <TouchableOpacity
-                key={b.id}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); moveShelf(b.id, "reading"); setSelectedMood(null); }}
-                style={{
-                  width: 104, padding: 10, borderRadius: 14,
-                  backgroundColor: colors.card, borderWidth: 1, borderColor: accent + "40",
-                  alignItems: "center",
-                }}
-              >
-                {b.cover
-                  ? <Image source={{ uri: b.cover }} style={{ width: 54, height: 76, borderRadius: 6, marginBottom: 6 }} resizeMode="cover" />
-                  : <View style={{ width: 54, height: 76, borderRadius: 6, backgroundColor: accent + "20", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-                      <Text style={{ fontSize: 24 }}>📚</Text>
-                    </View>
-                }
-                <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: colors.foreground, textAlign: "center" }} numberOfLines={2}>
-                  {b.title}
-                </Text>
-                <Text style={{ fontSize: 9, fontFamily: "Inter_400Regular", color: accent, marginTop: 3 }}>
-                  Start Reading →
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-    </View>
-  );
-}
-
 // ─── Main screen ──────────────────────────────────────────────────────────────
 const SHEET_H = 460;
 
@@ -452,7 +312,6 @@ export default function HomeScreen() {
   const [selectedBook, setSelectedBook]     = useState<Book | null>(null);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showLog, setShowLog]               = useState(false);
-  const [currentReadingIdx, setCurrentReadingIdx] = useState(0);
 
   const slideAnim   = useRef(new Animated.Value(SHEET_H + 80)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -526,49 +385,15 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <DailyReadout />
-        <MoodTbrPicker />
-
-        {/* Now Reading carousel — swipe through all currently-reading books */}
+        {/* Now Reading quick-progress card */}
         {reading.length > 0 && (
-          <View style={{ marginTop: 14, marginBottom: 4 }}>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              scrollEventThrottle={16}
-              onScroll={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-                setCurrentReadingIdx(Math.max(0, Math.min(idx, reading.length - 1)));
-              }}
-            >
-              {reading.map((book) => (
-                <View key={book.id} style={{ width: SCREEN_W }}>
-                  <NowReadingCard
-                    book={book}
-                    onBump={(delta) => updateProgress(book.id, Math.min(
-                      book.pages ?? Infinity,
-                      Math.max(0, book.progress + delta)
-                    ))}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-            {reading.length > 1 && (
-              <View style={{ flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 }}>
-                {reading.map((_, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      width: i === currentReadingIdx ? 16 : 5,
-                      height: 5, borderRadius: 3,
-                      backgroundColor: i === currentReadingIdx ? colors.primary : colors.border,
-                    }}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
+          <NowReadingCard
+            book={reading[0]}
+            onBump={(delta) => updateProgress(reading[0].id, Math.min(
+              reading[0].pages ?? Infinity,
+              Math.max(0, reading[0].progress + delta)
+            ))}
+          />
         )}
 
         <ShelfRow

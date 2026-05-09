@@ -89,8 +89,6 @@ interface AppState {
   achievementFlair: string | null;
   familyAccount: boolean | null;
   isUnder16: boolean | null;
-  dailyReminderEnabled: boolean;
-  reminderHour: number;
 
   addBook: (b: Omit<Book, "id" | "addedAt" | "progress">) => string;
   updateBook: (id: string, patch: Partial<Book>) => void;
@@ -120,7 +118,6 @@ interface AppState {
   setAchievementFlair: (id: string | null) => void;
   setFamilyAccount: (v: boolean) => void;
   setIsUnder16: (v: boolean) => void;
-  setDailyReminder: (enabled: boolean, hour: number) => void;
 
   reconcileFreeze: () => void;
 }
@@ -144,8 +141,6 @@ export const useStore = create<AppState>()(
       achievementFlair: null,
       familyAccount: null,
       isUnder16: null,
-      dailyReminderEnabled: false,
-      reminderHour: 20,
 
       addBook: (b) => {
         const id = genId();
@@ -261,7 +256,6 @@ export const useStore = create<AppState>()(
       setAchievementFlair: (id) => set({ achievementFlair: id }),
       setFamilyAccount: (v) => set({ familyAccount: v }),
       setIsUnder16: (v) => set({ isUnder16: v }),
-      setDailyReminder: (enabled, hour) => set({ dailyReminderEnabled: enabled, reminderHour: hour }),
 
       reconcileFreeze: () => {
         const { sessions, freeze } = get();
