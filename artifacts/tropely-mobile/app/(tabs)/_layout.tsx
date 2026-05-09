@@ -21,7 +21,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.background,
+          backgroundColor: isIOS ? "transparent" : colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           elevation: 0,
@@ -29,12 +29,12 @@ export default function TabLayout() {
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={90}
+              intensity={80}
               tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
           ),
         tabBarShowLabel: true,
         tabBarLabelStyle: {
@@ -47,21 +47,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Shelf",
+          title: "Home",
           tabBarIcon: ({ color }) =>
             isIOS
-              ? <SymbolView name="books.vertical" tintColor={color} size={22} />
-              : <Feather name="book" size={21} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="buddy-reads"
-        options={{
-          title: "Buddy",
-          tabBarIcon: ({ color }) =>
-            isIOS
-              ? <SymbolView name="person.2" tintColor={color} size={22} />
-              : <Feather name="users" size={21} color={color} />,
+              ? <SymbolView name="house" tintColor={color} size={22} />
+              : <Feather name="home" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -105,9 +95,9 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hidden — not in tab bar */}
-      <Tabs.Screen name="library" options={{ href: null }} />
-      <Tabs.Screen name="more"    options={{ href: null }} />
+      <Tabs.Screen name="buddy-reads" options={{ href: null }} />
+      <Tabs.Screen name="library"     options={{ href: null }} />
+      <Tabs.Screen name="more"        options={{ href: null }} />
     </Tabs>
   );
 }
