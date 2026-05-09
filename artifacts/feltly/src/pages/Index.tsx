@@ -8,6 +8,8 @@ import { useVisibleBooks } from "@/lib/useVisibleBooks";
 import { EmptyHome } from "@/components/reader/EmptyHome";
 import { FamilyProgressCard } from "@/components/family/FamilyProgressCard";
 import { HomeSmartCards } from "@/components/home/HomeSmartCards";
+import { DailyReadout } from "@/components/reader/DailyReadout";
+import { MoodTbrPicker } from "@/components/reader/MoodTbrPicker";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NotebookPen, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -119,6 +121,7 @@ const Index = () => {
               <CurrentBookCard />
             </div>
             <HomeSmartCards />
+            <DailyReadout />
             <div className="mx-auto grid w-full max-w-3xl gap-3">
               <Link
                 to="/journal"
@@ -137,6 +140,7 @@ const Index = () => {
             </div>
             <FamilyProgressCard />
             <StreakStrip />
+            <MoodTbrPicker />
             <Shelves />
           </>
         ) : (
