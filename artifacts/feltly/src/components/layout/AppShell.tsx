@@ -32,9 +32,6 @@ const NAV = [
   { to: "/", key: "nav.home", icon: Home },
   { to: "/discover", key: "nav.discover", icon: Compass },
   { to: "/journal", key: "nav.journal", icon: NotebookPen },
-  { to: "/insights", key: "nav.insights", icon: BarChart3 },
-  { to: "/social", key: "nav.social", icon: Users },
-  { to: "/companion", key: "nav.ai", icon: Sparkles },
   { to: "/profile", key: "nav.you", icon: User },
 ];
 
@@ -258,6 +255,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </NavLink>
               );
             })}
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-sm transition flex items-center gap-1.5",
+                MOBILE_MORE.some((m) => m.to === pathname)
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+              {t("nav.more")}
+            </button>
           </nav>
 
           <div className="flex items-center gap-2">
