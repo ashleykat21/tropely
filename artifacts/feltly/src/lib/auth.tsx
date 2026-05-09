@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useEffect, useState } from "react";
+import { createContext, useContext, ReactNode } from "react";
 import { useUser, useClerk } from "@clerk/react";
 
 type AuthUser = { id: string; email?: string; displayName?: string };
@@ -17,21 +17,9 @@ const Ctx = createContext<AuthCtx>({
   signOut: async () => {},
 });
 
-// Maximum time we will show the splash before forcing the app past the loading
-// state. Guards against Clerk never resolving (e.g. missing/wrong publishable
-// key, CSP block, network error).
-const MAX_LOADING_MS = 8_000;
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded } = useUser();
   const { signOut: clerkSignOut } = useClerk();
-  const [timedOut, setTimedOut] = useState(false);
-
-  useEffect(() => {
-    if (isLoaded) return;
-    const id = setTimeout(() => setTimedOut(true), MAX_LOADING_MS);
-    return () => clearTimeout(id);
-  }, [isLoaded]);
 
   const authUser = user
     ? {
@@ -45,15 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     : null;
 
-  // Treat as resolved if Clerk confirmed OR if the safety timeout fired.
-  const loading = !isLoaded && !timedOut;
-
   return (
     <Ctx.Provider
       value={{
         user: authUser,
         session: authUser ? { user: authUser } : null,
-        loading,
+        loading: !isLoaded,
         signOut: async () => {
           await clerkSignOut();
         },

@@ -60,17 +60,4 @@ router.post("/block/:targetId", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/block/:targetId", requireAuth, async (req, res) => {
-  const { userId } = req as AuthedRequest;
-  try {
-    const targetId = req.params.targetId as string;
-    await db
-      .delete(blockedUsersTable)
-      .where(and(eq(blockedUsersTable.blockerId, userId), eq(blockedUsersTable.blockedId, targetId)));
-    res.json({ blocked: false });
-  } catch (e: unknown) {
-    res.status(500).json({ error: errMsg(e) });
-  }
-});
-
 export default router;

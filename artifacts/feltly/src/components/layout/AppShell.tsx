@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus } from "lucide-react";
+import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useLibrary } from "@/lib/store";
 import { applyMood } from "@/lib/moods";
@@ -23,7 +23,6 @@ import { ProfileSwitcher } from "@/components/family/ProfileSwitcher";
 import { useFamilyStore } from "@/lib/familyStore";
 import { subscribePending } from "@/lib/offlineQueue";
 import { ChangelogSheet } from "./ChangelogSheet";
-import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
 import { CHANGELOG } from "@/lib/changelog";
 import { toast } from "sonner";
 
@@ -77,7 +76,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [pendingQuickLog, setPendingQuickLog] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const navigate = useNavigate();
@@ -480,18 +478,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                       </button>
                     </SheetClose>
                   </li>
-                  <li>
-                    <SheetClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => setFeedbackOpen(true)}
-                        className="w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card"
-                      >
-                        <MessageSquarePlus className="h-5 w-5" />
-                        Feedback
-                      </button>
-                    </SheetClose>
-                  </li>
                 </ul>
               </SheetContent>
             </Sheet>
@@ -512,7 +498,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         onPickBook={handlePickBookForLog}
       />
       <ChangelogSheet open={changelogOpen} onOpenChange={setChangelogOpen} />
-      <FeedbackSheet open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </main>
   );
 }

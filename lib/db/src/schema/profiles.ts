@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const profilesTable = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -8,10 +8,6 @@ export const profilesTable = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   moodSignature: text("mood_signature"),
   auth: text("auth"),
-  city: text("city"),
-  country: text("country"),
-  familyAccount: boolean("family_account").notNull().default(false),
-  isUnder16: boolean("is_under_16").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

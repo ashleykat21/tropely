@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useUser } from "@clerk/react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { useAuth } from "@/lib/auth";
@@ -462,10 +461,8 @@ function SyncedDevicesSection({ signOut }: { signOut: () => void }) {
 
 export default function Profile() {
   const { user, loading, signOut } = useAuth();
-  const { user: clerkUser } = useUser();
   const nav = useNavigate();
   const { locale, setLocale } = useLocale();
-
   const { books, reactionLog, spoilerStrictness, setSpoilerStrictness, journal, sessions, reflections, finishes, applyImportedData } = useLibrary();
   const dailyGoalPages = useLibrary((s) => s.dailyGoalPages);
   const setDailyGoal = useLibrary((s) => s.setDailyGoal);
@@ -499,23 +496,6 @@ export default function Profile() {
   const [pushSupported, setPushSupported] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
-  const [avatarBusy, setAvatarBusy] = useState(false);
-  const avatarFileRef = useRef<HTMLInputElement>(null);
-
-  const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !clerkUser) return;
-    setAvatarBusy(true);
-    try {
-      await clerkUser.setProfileImage({ file });
-      toast.success("Profile picture updated.");
-    } catch {
-      toast.error("Couldn't update photo. Try a smaller image.");
-    } finally {
-      setAvatarBusy(false);
-      if (avatarFileRef.current) avatarFileRef.current.value = "";
-    }
-  }, [clerkUser]);
 
   useEffect(() => {
     if (!loading && !user) nav("/auth");
@@ -648,49 +628,6 @@ export default function Profile() {
 
         <section className="rounded-2xl bg-card/70 p-6 border border-border/40 space-y-4">
           <h2 className="font-display text-2xl">Profile</h2>
-
-          {/* Avatar upload */}
-          <div className="flex items-center gap-4">
-            <div className="relative shrink-0">
-              {clerkUser?.imageUrl ? (
-                <img
-                  src={clerkUser.imageUrl}
-                  alt="Profile"
-                  className="h-16 w-16 rounded-full object-cover border-2 border-border/60"
-                />
-              ) : (
-                <div className="h-16 w-16 rounded-full bg-muted border-2 border-border/60 flex items-center justify-center">
-                  <User className="h-7 w-7 text-muted-foreground" />
-                </div>
-              )}
-              {avatarBusy && (
-                <div className="absolute inset-0 rounded-full bg-background/60 flex items-center justify-center">
-                  <span className="h-4 w-4 rounded-full border-2 border-foreground border-t-transparent animate-spin" />
-                </div>
-              )}
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Profile picture</p>
-              <p className="text-xs text-muted-foreground">JPG, PNG or GIF · max 10 MB</p>
-              <button
-                type="button"
-                disabled={avatarBusy}
-                onClick={() => avatarFileRef.current?.click()}
-                className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs font-medium transition hover:bg-background disabled:opacity-50"
-              >
-                <Upload className="h-3 w-3" />
-                {avatarBusy ? "Uploading…" : "Upload photo"}
-              </button>
-              <input
-                ref={avatarFileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-              />
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <Label>Display name</Label>
             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />

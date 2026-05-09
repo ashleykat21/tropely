@@ -241,22 +241,28 @@ export function EditBookDialog({ book }: { book: Book }) {
             </div>
           )}
           <div>
-            <Label htmlFor="edit-age-rating">Reader age <span className="text-muted-foreground text-xs">(optional)</span></Label>
-            <input
-              id="edit-age-rating"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={120}
-              placeholder="e.g. 14"
-              value={ageRating ?? ""}
-              onChange={(e) => {
-                const v = parseInt(e.target.value, 10);
-                setAgeRating(isFinite(v) && v > 0 ? v : undefined);
-              }}
-              className="mt-1 w-28 rounded-md border border-border bg-white/60 px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-foreground/20"
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">Helps keep recommendations age-appropriate.</p>
+            <Label>Age rating <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {([
+                { key: "children" as AgeRating, label: "Children", sub: "0\u20137" },
+                { key: "middle-grade" as AgeRating, label: "Middle Grade", sub: "8\u201312" },
+                { key: "young-adult" as AgeRating, label: "Young Adult", sub: "13\u201317" },
+                { key: "adult" as AgeRating, label: "Adult", sub: "18+" },
+              ]).map(({ key, label, sub }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setAgeRating(ageRating === key ? undefined : key)}
+                  className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                    ageRating === key
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-white/60 border-border hover:bg-white"
+                  }`}
+                >
+                  {label} <span className="text-xs opacity-60">{sub}</span>
+                </button>
+              ))}
+            </div>
           </div>
           {book.shelf === "want" && (
             <button

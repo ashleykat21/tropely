@@ -21,17 +21,15 @@ router.get("/profiles/me", requireAuth, async (req, res) => {
 router.patch("/profiles/me", requireAuth, async (req, res) => {
   const { userId } = req as AuthedRequest;
   try {
-    const { displayName, bio, avatarUrl, moodSignature, city, country } = req.body as {
+    const { displayName, bio, avatarUrl, moodSignature } = req.body as {
       displayName?: string;
       bio?: string;
       avatarUrl?: string;
       moodSignature?: string;
-      city?: string;
-      country?: string;
     };
     const [profile] = await db
       .update(profilesTable)
-      .set({ displayName, bio, avatarUrl, moodSignature, city, country, updatedAt: new Date() })
+      .set({ displayName, bio, avatarUrl, moodSignature, updatedAt: new Date() })
       .where(eq(profilesTable.userId, userId))
       .returning();
     res.json(profile);
