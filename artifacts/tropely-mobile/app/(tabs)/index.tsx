@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -20,6 +21,7 @@ import { useStore, type Book, type Shelf } from "@/lib/store";
 const TAB_BAR_HEIGHT = 84;
 const COLS = 3;
 const GRID_GAP = 10;
+
 const STEPS = [
   {
     n: "1",
@@ -63,15 +65,7 @@ function BookCover({
     return (
       <Image
         source={{ uri: book.cover }}
-        style={{
-          width,
-          height,
-          borderRadius: 8,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.18,
-          shadowRadius: 8,
-        }}
+        style={{ width, height, borderRadius: 8 }}
         resizeMode="cover"
       />
     );
@@ -85,10 +79,6 @@ function BookCover({
         backgroundColor: accent + "28",
         alignItems: "center",
         justifyContent: "center",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
       }}
     >
       <Text style={{ fontSize: Math.max(16, width * 0.3) }}>📚</Text>
@@ -110,7 +100,7 @@ function EmptyHome() {
         <View
           style={[
             styles.welcomeBanner,
-            { backgroundColor: C.card, borderColor: C.border },
+            { backgroundColor: C.card, borderColor: C.border + "80" },
           ]}
         >
           <Text style={{ fontSize: 18 }}>🎉</Text>
@@ -129,7 +119,7 @@ function EmptyHome() {
                 fontSize: 12,
                 fontFamily: "DMSans_400Regular",
                 color: C.mutedForeground,
-                lineHeight: 17,
+                lineHeight: 18,
               }}
             >
               Add a book below to get started. After your first few books,
@@ -139,19 +129,19 @@ function EmptyHome() {
         </View>
       )}
 
-      {/* Hero card — mood-surface with tint background */}
-      <View
-        style={[
-          styles.heroCard,
-          { backgroundColor: C.moodTint, borderColor: C.border + "66" },
-        ]}
+      {/* Hero card — mood-surface gradient */}
+      <LinearGradient
+        colors={["#C8E6E6", "#EAF3F3", C.card]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.heroCard, { borderColor: C.border + "66" }]}
       >
         {/* "Your shelf is empty" pill badge */}
         <View
           style={[
             styles.badge,
             {
-              borderColor: C.border,
+              borderColor: C.border + "99",
               backgroundColor: "rgba(255,255,255,0.65)",
             },
           ]}
@@ -159,7 +149,7 @@ function EmptyHome() {
           <Text style={{ fontSize: 11 }}>📚</Text>
           <Text
             style={{
-              fontSize: 11,
+              fontSize: 10,
               fontFamily: "DMSans_400Regular",
               color: C.mutedForeground,
               letterSpacing: 1.4,
@@ -176,9 +166,9 @@ function EmptyHome() {
             fontFamily: "Fraunces_400Regular",
             fontSize: 28,
             color: C.foreground,
-            lineHeight: 34,
+            lineHeight: 35,
             letterSpacing: -0.5,
-            marginTop: 14,
+            marginTop: 16,
           }}
         >
           Add your first book and{"\n"}
@@ -227,7 +217,10 @@ function EmptyHome() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push("/(tabs)/discover")}
-            style={[styles.btnOutline, { borderColor: C.border }]}
+            style={[
+              styles.btnOutline,
+              { borderColor: C.border, backgroundColor: "rgba(255,255,255,0.5)" },
+            ]}
             activeOpacity={0.7}
           >
             <Feather name="compass" size={14} color={C.foreground} />
@@ -242,69 +235,215 @@ function EmptyHome() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </LinearGradient>
 
-      {/* 3 numbered step cards */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10, paddingRight: 4 }}
-      >
-        {STEPS.map((step) => (
+      {/* 3-column step cards — matches Feltly's sm:grid-cols-3 */}
+      <StepCards />
+    </View>
+  );
+}
+
+function StepCards() {
+  const C = useColors();
+  return (
+    <View style={{ flexDirection: "row", gap: GRID_GAP }}>
+      {STEPS.map((step) => (
+        <View
+          key={step.n}
+          style={[
+            styles.stepCard,
+            { flex: 1, backgroundColor: C.card + "B3", borderColor: C.border + "80" },
+          ]}
+        >
           <View
-            key={step.n}
-            style={[
-              styles.stepCard,
-              { backgroundColor: C.card, borderColor: C.border },
-            ]}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 8,
+            }}
           >
             <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                marginBottom: 10,
-              }}
+              style={[styles.stepBadge, { backgroundColor: C.foreground }]}
             >
-              <View
-                style={[styles.stepBadge, { backgroundColor: C.foreground }]}
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontFamily: "DMSans_500Medium",
+                  color: C.background,
+                }}
               >
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontFamily: "DMSans_500Medium",
-                    color: C.background,
-                  }}
-                >
-                  {step.n}
-                </Text>
-              </View>
-              <Text style={{ fontSize: 12 }}>✨</Text>
+                {step.n}
+              </Text>
             </View>
-            <Text
-              style={{
-                fontSize: 16,
-                fontFamily: "Fraunces_400Regular",
-                color: C.foreground,
-                lineHeight: 20,
-                marginBottom: 6,
-              }}
-            >
-              {step.title}
-            </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                fontFamily: "DMSans_400Regular",
-                color: C.mutedForeground,
-                lineHeight: 17,
-              }}
-            >
-              {step.body}
-            </Text>
+            <Text style={{ fontSize: 11 }}>✨</Text>
           </View>
-        ))}
-      </ScrollView>
+          <Text
+            style={{
+              fontSize: 14,
+              fontFamily: "Fraunces_400Regular",
+              color: C.foreground,
+              lineHeight: 18,
+              marginBottom: 5,
+            }}
+          >
+            {step.title}
+          </Text>
+          <Text
+            style={{
+              fontSize: 11,
+              fontFamily: "DMSans_400Regular",
+              color: C.mutedForeground,
+              lineHeight: 16,
+            }}
+          >
+            {step.body}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ─── Home smart cards (context-aware nudges) ──────────────────────────────────
+
+function SlumpCard({ currentBook }: { currentBook: Book | undefined }) {
+  const sessions = useStore((s) => s.sessions);
+  const books = useStore((s) => s.books);
+  const C = useColors();
+  const router = useRouter();
+
+  const daysSince = useMemo(() => {
+    if (!sessions.length) return Infinity;
+    const last = Math.max(...sessions.map((s) => s.at));
+    return Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24));
+  }, [sessions]);
+
+  const hasReading = books.some((b) => b.shelf === "reading");
+  if (!hasReading || daysSince < 5) return null;
+
+  return (
+    <TouchableOpacity
+      onPress={() => currentBook && router.push(`/book/${currentBook.id}`)}
+      style={[styles.smartCard, { backgroundColor: C.card + "99", borderColor: C.border + "80" }]}
+      activeOpacity={0.75}
+    >
+      <Text style={{ fontSize: 20, lineHeight: 24 }}>📖</Text>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text
+          style={{
+            fontSize: 13,
+            fontFamily: "Fraunces_400Regular",
+            color: C.foreground,
+            lineHeight: 17,
+          }}
+        >
+          {daysSince === Infinity
+            ? "Ready when you are."
+            : `${daysSince} day${daysSince === 1 ? "" : "s"} since your last session.`}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            fontFamily: "DMSans_400Regular",
+            color: C.mutedForeground,
+          }}
+          numberOfLines={1}
+        >
+          {currentBook
+            ? `"${currentBook.title}" is waiting for you.`
+            : "Your book is waiting."}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function MoodTBRCard({ currentBook }: { currentBook: Book | undefined }) {
+  const books = useStore((s) => s.books);
+  const C = useColors();
+  const router = useRouter();
+
+  const suggestion = useMemo(() => {
+    const tbr = books.filter((b) => b.shelf === "want");
+    if (!tbr.length) return null;
+    if (currentBook) {
+      const match = tbr.find((b) => b.mood === currentBook.mood);
+      if (match) {
+        return {
+          book: match,
+          reason: currentBook.mood
+            ? `matches your ${MOODS[currentBook.mood].label} mood`
+            : "next on your shelf",
+        };
+      }
+    }
+    const recent = [...tbr].sort((a, b) => b.addedAt - a.addedAt)[0];
+    return { book: recent, reason: "next on your shelf" };
+  }, [books, currentBook]);
+
+  if (!suggestion) return null;
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push(`/book/${suggestion.book.id}`)}
+      style={[
+        styles.smartCard,
+        { backgroundColor: C.card + "99", borderColor: C.border + "80" },
+      ]}
+      activeOpacity={0.75}
+    >
+      <Feather name="compass" size={16} color={C.mutedForeground} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text
+          style={{
+            fontSize: 10,
+            fontFamily: "DMSans_400Regular",
+            color: C.mutedForeground,
+            textTransform: "uppercase",
+            letterSpacing: 1.5,
+          }}
+        >
+          Consider reading next
+        </Text>
+        <Text
+          style={{
+            fontSize: 13,
+            fontFamily: "Fraunces_400Regular",
+            color: C.foreground,
+            lineHeight: 17,
+          }}
+          numberOfLines={1}
+        >
+          {suggestion.book.title}
+        </Text>
+        <Text
+          style={{
+            fontSize: 11,
+            fontFamily: "DMSans_400Regular",
+            color: C.mutedForeground,
+          }}
+          numberOfLines={1}
+        >
+          {suggestion.reason}
+        </Text>
+      </View>
+      {suggestion.book.cover && (
+        <Image
+          source={{ uri: suggestion.book.cover }}
+          style={{ width: 32, height: 46, borderRadius: 4 }}
+          resizeMode="cover"
+        />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function HomeSmartCards({ currentBook }: { currentBook: Book | undefined }) {
+  return (
+    <View style={{ gap: 8 }}>
+      <MoodTBRCard currentBook={currentBook} />
+      <SlumpCard currentBook={currentBook} />
     </View>
   );
 }
@@ -321,7 +460,7 @@ function CurrentBookCard({
   const C = useColors();
   const updateProgress = useStore((s) => s.updateProgress);
   const accent = book.mood ? MOODS[book.mood].accent : C.moodStrong;
-  const moodBg = book.mood ? MOODS[book.mood].bg : C.moodTint;
+  const moodH = 180; // default teal hue — matches Feltly's default mood-h
   const pct =
     book.pages && book.pages > 0
       ? Math.min(Math.round((book.progress / book.pages) * 100), 100)
@@ -335,12 +474,17 @@ function CurrentBookCard({
     updateProgress(book.id, clamped);
   };
 
+  // Mood-surface: diagonal gradient from lighter mood tint → card cream
+  // approximating Feltly's radial gradient mood-surface
+  const gradStart = `hsl(${moodH}, 35%, 88%)`;
+  const gradEnd = C.card;
+
   return (
-    <View
-      style={[
-        styles.currentCard,
-        { backgroundColor: moodBg, borderColor: accent + "35" },
-      ]}
+    <LinearGradient
+      colors={[gradStart as any, gradEnd as any]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.currentCard, { borderColor: accent + "30" }]}
     >
       {/* Currently reading label */}
       <Text
@@ -357,13 +501,13 @@ function CurrentBookCard({
       </Text>
 
       <View style={{ flexDirection: "row", gap: 16 }}>
-        {/* Cover with shadow */}
+        {/* Cover */}
         <View style={{ flexShrink: 0 }}>
           <BookCover book={book} width={88} height={124} />
         </View>
 
         {/* Info column */}
-        <View style={{ flex: 1, gap: 7 }}>
+        <View style={{ flex: 1, gap: 6 }}>
           {/* Mood chip */}
           {book.mood && (
             <View
@@ -371,7 +515,7 @@ function CurrentBookCard({
                 styles.moodChip,
                 {
                   backgroundColor: accent + "18",
-                  borderColor: accent + "45",
+                  borderColor: accent + "40",
                 },
               ]}
             >
@@ -384,16 +528,6 @@ function CurrentBookCard({
                 }}
               >
                 {MOODS[book.mood].label}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontFamily: "DMSans_400Regular",
-                  color: C.mutedForeground,
-                  opacity: 0.7,
-                }}
-              >
-                · mood undertone
               </Text>
             </View>
           )}
@@ -424,12 +558,27 @@ function CurrentBookCard({
             by {book.author}
           </Text>
 
+          {/* Mood undertone — matches Feltly's italic sub-line */}
+          {book.mood && (
+            <Text
+              style={{
+                fontSize: 10,
+                fontFamily: "DMSans_400Regular",
+                color: C.mutedForeground,
+                opacity: 0.7,
+              }}
+            >
+              {MOODS[book.mood].emoji} {MOODS[book.mood].label} · mood undertone
+            </Text>
+          )}
+
           {/* Progress numbers */}
           <View
             style={{
               flexDirection: "row",
               alignItems: "flex-end",
               justifyContent: "space-between",
+              marginTop: 2,
             }}
           >
             <Text
@@ -479,7 +628,7 @@ function CurrentBookCard({
         </View>
       </View>
 
-      {/* ±10 page bumps + Log session */}
+      {/* ±10 bumps + Log session — matches Feltly's progress action row */}
       <View style={styles.progressActions}>
         <View
           style={[
@@ -495,7 +644,7 @@ function CurrentBookCard({
           </TouchableOpacity>
           <Text
             style={{
-              fontSize: 11,
+              fontSize: 10,
               fontFamily: "DMSans_400Regular",
               color: C.mutedForeground,
               paddingHorizontal: 4,
@@ -509,9 +658,10 @@ function CurrentBookCard({
         </View>
         <TouchableOpacity
           onPress={onLogSession}
-          style={[styles.logBtn, { backgroundColor: accent }]}
+          style={[styles.logBtn, { backgroundColor: C.moodStrong }]}
           activeOpacity={0.85}
         >
+          <Feather name="play" size={13} color="#fff" />
           <Text
             style={{
               fontSize: 13,
@@ -523,7 +673,7 @@ function CurrentBookCard({
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -608,34 +758,35 @@ function StreakStrip() {
     <View
       style={[
         styles.streakCard,
-        { backgroundColor: C.card + "CC", borderColor: C.border },
+        { backgroundColor: C.card + "CC", borderColor: C.border + "80" },
       ]}
     >
-      {/* Streak count */}
+      {/* ── Streak count row ── */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View
           style={[
             styles.streakIcon,
             {
-              backgroundColor:
-                streak.current > 0 ? C.foreground : C.muted,
+              backgroundColor: streak.current > 0 ? C.foreground : C.muted,
             },
           ]}
         >
-          <Text style={{ fontSize: 16 }}>🔥</Text>
+          <Text style={{ fontSize: 15 }}>🔥</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontSize: 9,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-            }}
-          >
-            Streak
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text
+              style={{
+                fontSize: 9,
+                fontFamily: "DMSans_400Regular",
+                color: C.mutedForeground,
+                letterSpacing: 2,
+                textTransform: "uppercase",
+              }}
+            >
+              Streak
+            </Text>
+          </View>
           <Text
             style={{
               fontSize: 21,
@@ -674,12 +825,14 @@ function StreakStrip() {
         </View>
       </View>
 
-      {/* Daily goal bar */}
-      <View style={{ marginTop: 16 }}>
+      {/* ── Daily goal bar ── */}
+      <View style={styles.streakDivider} />
+      <View>
         <View
           style={{
             flexDirection: "row",
             justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: 6,
           }}
         >
@@ -717,9 +870,7 @@ function StreakStrip() {
               width: `${goalPct * 100}%`,
               height: 6,
               borderRadius: 3,
-              backgroundColor: goalMet
-                ? C.moodStrong
-                : C.foreground + "99",
+              backgroundColor: goalMet ? C.moodStrong : C.foreground + "99",
             }}
           />
         </View>
@@ -737,8 +888,9 @@ function StreakStrip() {
         </Text>
       </View>
 
-      {/* 7-day mini bar chart */}
-      <View style={{ marginTop: 16 }}>
+      {/* ── 7-day mini bar chart ── */}
+      <View style={styles.streakDivider} />
+      <View>
         <Text
           style={{
             fontSize: 9,
@@ -760,49 +912,37 @@ function StreakStrip() {
           }}
         >
           {last7.map((d, i) => {
-            const barH =
-              d.pages > 0
-                ? Math.max((d.pages / maxPages) * 100, 14)
-                : 5;
+            const barH = d.pages > 0 ? Math.max((d.pages / maxPages) * 44, 8) : 4;
             const hit = d.pages >= dailyGoal;
             const isToday = i === 6;
-            const label = new Date(d.day).toLocaleDateString(undefined, {
+            const dayLabel = new Date(d.day).toLocaleDateString(undefined, {
               weekday: "narrow",
             });
             return (
               <View
                 key={d.day}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  gap: 4,
-                  height: "100%",
-                  justifyContent: "flex-end",
-                }}
+                style={{ flex: 1, alignItems: "center", gap: 4, justifyContent: "flex-end" }}
               >
                 <View
                   style={{
                     width: "100%",
-                    height: `${barH}%`,
+                    height: barH,
+                    borderRadius: 3,
                     backgroundColor: hit
                       ? C.moodStrong
-                      : C.foreground + "40",
-                    borderRadius: 3,
-                    opacity: d.pages > 0 ? 1 : 0.3,
+                      : C.foreground + (d.pages > 0 ? "40" : "1A"),
                   }}
                 />
                 <Text
                   style={{
                     fontSize: 9,
-                    fontFamily: isToday
-                      ? "DMSans_500Medium"
-                      : "DMSans_400Regular",
+                    fontFamily: isToday ? "DMSans_500Medium" : "DMSans_400Regular",
                     color: isToday ? C.foreground : C.mutedForeground,
-                    textTransform: "uppercase",
                     letterSpacing: 0.5,
+                    textTransform: "uppercase",
                   }}
                 >
-                  {label}
+                  {dayLabel}
                 </Text>
               </View>
             );
@@ -817,87 +957,115 @@ function StreakStrip() {
 
 const SHELF_TABS: { key: Shelf; label: string }[] = [
   { key: "reading", label: "Reading" },
-  { key: "want", label: "Want to read" },
+  { key: "want", label: "Want" },
+  { key: "paused", label: "Paused" },
   { key: "finished", label: "Finished" },
+  { key: "dropped", label: "DNF" },
 ];
 
 function ShelvesSection() {
   const C = useColors();
   const router = useRouter();
   const books = useStore((s) => s.books);
+  const reflections = useStore((s) => s.reflections);
   const [activeTab, setActiveTab] = useState<Shelf>("reading");
 
   const shelfBooks = books.filter((b) => b.shelf === activeTab);
   const coverW = Math.floor((310 - GRID_GAP * (COLS - 1)) / COLS);
   const coverH = Math.floor(coverW * 1.42);
 
+  const ratingMap = useMemo(() => {
+    const m = new Map<string, number>();
+    reflections.forEach((r) => { if (r.rating != null) m.set(r.bookId, r.rating); });
+    return m;
+  }, [reflections]);
+
   return (
-    <View style={{ gap: 12 }}>
-      {/* Tab chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 6 }}
+    <View style={{ gap: 14 }}>
+      {/* "Your library" heading — matches Feltly's font-display text-2xl */}
+      <Text
+        style={{
+          fontSize: 22,
+          fontFamily: "Fraunces_400Regular",
+          color: C.foreground,
+          letterSpacing: -0.3,
+        }}
       >
-        {SHELF_TABS.map((tab) => {
-          const active = activeTab === tab.key;
-          const count = books.filter((b) => b.shelf === tab.key).length;
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => setActiveTab(tab.key)}
-              style={[
-                styles.shelfTab,
-                {
-                  backgroundColor: active ? C.foreground : C.card,
-                  borderColor: active ? C.foreground : C.border,
-                },
-              ]}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: "DMSans_500Medium",
-                  color: active ? C.background : C.mutedForeground,
-                }}
-              >
-                {tab.label}
-              </Text>
-              <View
+        Your library
+      </Text>
+
+      {/* Tab row — scrollable pill chips inside a bordered container */}
+      <View
+        style={[
+          styles.tabContainer,
+          { backgroundColor: C.card + "CC", borderColor: C.border + "99" },
+        ]}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 2 }}
+        >
+          {SHELF_TABS.map((tab) => {
+            const active = activeTab === tab.key;
+            const count = books.filter((b) => b.shelf === tab.key).length;
+            return (
+              <TouchableOpacity
+                key={tab.key}
+                onPress={() => setActiveTab(tab.key)}
                 style={[
-                  styles.countBadge,
+                  styles.shelfTab,
                   {
-                    backgroundColor: active
-                      ? "rgba(255,255,255,0.22)"
-                      : C.muted,
+                    backgroundColor: active ? C.foreground : "transparent",
                   },
                 ]}
+                activeOpacity={0.8}
               >
                 <Text
                   style={{
-                    fontSize: 10,
-                    fontFamily: "DMSans_400Regular",
+                    fontSize: 12,
+                    fontFamily: "DMSans_500Medium",
                     color: active ? C.background : C.mutedForeground,
                   }}
                 >
-                  {count}
+                  {tab.label}
                 </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                {count > 0 && (
+                  <View
+                    style={[
+                      styles.countBadge,
+                      {
+                        backgroundColor: active
+                          ? "rgba(255,255,255,0.22)"
+                          : C.muted,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontFamily: "DMSans_400Regular",
+                        color: active ? C.background : C.mutedForeground,
+                      }}
+                    >
+                      {count}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Books grid or empty */}
       {shelfBooks.length === 0 ? (
         <View
           style={[
             styles.shelfEmpty,
-            { backgroundColor: C.card + "B3", borderColor: C.border },
+            { backgroundColor: C.card + "80", borderColor: C.border + "60", borderStyle: "dashed" },
           ]}
         >
-          <Text style={{ fontSize: 28 }}>📚</Text>
           <Text
             style={{
               fontSize: 12,
@@ -914,6 +1082,7 @@ function ShelvesSection() {
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP }}>
           {shelfBooks.map((b) => {
             const accent = b.mood ? MOODS[b.mood].accent : C.moodStrong;
+            const rating = ratingMap.get(b.id);
             return (
               <TouchableOpacity
                 key={b.id}
@@ -924,7 +1093,16 @@ function ShelvesSection() {
                 style={{ width: coverW, gap: 5 }}
                 activeOpacity={0.8}
               >
-                <BookCover book={b} width={coverW} height={coverH} />
+                <View
+                  style={{
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    padding: 4,
+                    backgroundColor: "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  <BookCover book={b} width={coverW - 8} height={coverH - 8} />
+                </View>
                 <Text
                   style={{
                     fontSize: 11,
@@ -946,6 +1124,18 @@ function ShelvesSection() {
                 >
                   {b.author}
                 </Text>
+                {b.mood && (
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontFamily: "DMSans_400Regular",
+                      color: C.mutedForeground,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {MOODS[b.mood].emoji} {MOODS[b.mood].label}
+                  </Text>
+                )}
                 {activeTab === "reading" && b.pages && b.pages > 0 && (
                   <View
                     style={{
@@ -965,15 +1155,12 @@ function ShelvesSection() {
                     />
                   </View>
                 )}
-                {activeTab === "finished" && b.rating && b.rating > 0 && (
+                {activeTab === "finished" && rating != null && rating > 0 && (
                   <View style={{ flexDirection: "row", gap: 1 }}>
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Text
                         key={i}
-                        style={{
-                          fontSize: 9,
-                          color: i < b.rating! ? "#C49A28" : C.border,
-                        }}
+                        style={{ fontSize: 9, color: i < rating ? "#C49A28" : C.border }}
                       >
                         ★
                       </Text>
@@ -996,10 +1183,14 @@ export default function HomeScreen() {
   const C = useColors();
   const router = useRouter();
   const books = useStore((s) => s.books);
+  const sessions = useStore((s) => s.sessions);
+  const freeze = useStore((s) => s.freeze);
   const [logOpen, setLogOpen] = useState(false);
 
   const hasBooks = books.length > 0;
   const currentBook = books.find((b) => b.shelf === "reading") ?? books[0];
+
+  const streak = useMemo(() => computeStreak(sessions, freeze), [sessions, freeze]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.background }}>
@@ -1025,16 +1216,38 @@ export default function HomeScreen() {
           Tropely
         </Text>
         <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+          {/* Streak pill — matches Feltly's header streak badge */}
+          {streak.current > 0 && (
+            <View
+              style={[
+                styles.streakPill,
+                { borderColor: C.border + "99", backgroundColor: C.card + "B3" },
+              ]}
+            >
+              <Text style={{ fontSize: 11 }}>🔥</Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontFamily: "DMSans_500Medium",
+                  color: C.foreground,
+                }}
+              >
+                {streak.current}
+              </Text>
+            </View>
+          )}
+          {/* Journal icon */}
           <TouchableOpacity
             onPress={() => router.push("/(tabs)/journal")}
             style={[
               styles.headerIconBtn,
-              { borderColor: C.border, backgroundColor: C.card + "B3" },
+              { borderColor: C.border + "99", backgroundColor: C.card + "B3" },
             ]}
             activeOpacity={0.7}
           >
             <Feather name="edit-3" size={16} color={C.mutedForeground} />
           </TouchableOpacity>
+          {/* Log button — shown when there are books */}
           {hasBooks && (
             <TouchableOpacity
               onPress={() => setLogOpen(true)}
@@ -1056,7 +1269,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Journal prompt strip ── */}
+      {/* ── Journal prompt strip — matches Feltly's AppShell journal strip ── */}
       <TouchableOpacity
         onPress={() => router.push("/(tabs)/journal")}
         style={[
@@ -1092,7 +1305,7 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Section header */}
+        {/* TODAY tagline section — exact match to Feltly Index.tsx */}
         <View style={{ gap: 4 }}>
           <Text
             style={{
@@ -1142,14 +1355,24 @@ export default function HomeScreen() {
         {/* ── Content ── */}
         {hasBooks ? (
           <>
+            {/* CurrentBookCard */}
             {currentBook && (
               <CurrentBookCard
                 book={currentBook}
                 onLogSession={() => setLogOpen(true)}
               />
             )}
+
+            {/* HomeSmartCards — between book card and journal link */}
+            <HomeSmartCards currentBook={currentBook} />
+
+            {/* Journal link row */}
             <JournalLink />
+
+            {/* Streak strip */}
             <StreakStrip />
+
+            {/* Shelves section */}
             <ShelvesSection />
           </>
         ) : (
@@ -1187,6 +1410,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  streakPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 18,
+    borderWidth: 1,
   },
   logHeaderBtn: {
     flexDirection: "row",
@@ -1253,10 +1485,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   stepCard: {
-    width: 162,
     borderRadius: 16,
     borderWidth: 1,
-    padding: 16,
+    padding: 12,
   },
   stepBadge: {
     width: 22,
@@ -1302,9 +1533,20 @@ const styles = StyleSheet.create({
   },
   logBtn: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
     borderRadius: 999,
+    paddingVertical: 12,
+  },
+  smartCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
   journalLink: {
@@ -1326,6 +1568,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
+    gap: 0,
+  },
+  streakDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#00000018",
+    marginVertical: 14,
   },
   streakIcon: {
     width: 38,
@@ -1334,14 +1582,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  tabContainer: {
+    borderRadius: 999,
+    borderWidth: 1,
+    padding: 3,
+  },
   shelfTab: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
-    borderWidth: 1,
   },
   countBadge: {
     minWidth: 18,
