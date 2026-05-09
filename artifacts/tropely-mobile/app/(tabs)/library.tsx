@@ -228,7 +228,6 @@ export default function LibraryScreen() {
           paddingTop: 16,
         }}
       >
-        <ShelfSection label="Currently Reading" count={reading.length} books={reading} theme={theme} selectedId={selectedBook?.id ?? null} onPress={openBook} onAddPress={() => router.push("/discover")} />
         <ShelfSection label="Want to Read" count={want.length} books={want} theme={theme} selectedId={selectedBook?.id ?? null} onPress={openBook} onAddPress={() => router.push("/discover")} />
         <ShelfSection label="Finished" count={finished.length} books={finished} theme={theme} selectedId={selectedBook?.id ?? null} onPress={openBook} onAddPress={() => router.push("/discover")} />
         {paused.length > 0 && (

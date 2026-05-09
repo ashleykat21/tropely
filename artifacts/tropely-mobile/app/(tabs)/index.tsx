@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Animated,
+  Dimensions,
   Image,
   Modal,
   Platform,
@@ -21,6 +22,8 @@ import { useColors } from "@/hooks/useColors";
 import { MOODS } from "@/lib/moods";
 import { computeStreak } from "@/lib/streak";
 import { useStore, type Book } from "@/lib/store";
+
+const SCREEN_W = Dimensions.get("window").width;
 
 // ─── Shelf themes ──────────────────────────────────────────────────────────────
 const THEMES = {
@@ -312,6 +315,7 @@ export default function HomeScreen() {
   const [selectedBook, setSelectedBook]     = useState<Book | null>(null);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [showLog, setShowLog]               = useState(false);
+  const [currentReadingIdx, setCurrentReadingIdx] = useState(0);
 
   const slideAnim   = useRef(new Animated.Value(SHEET_H + 80)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -385,15 +389,46 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Now Reading quick-progress card */}
+        {/* Now Reading carousel — swipe through all currently-reading books */}
         {reading.length > 0 && (
-          <NowReadingCard
-            book={reading[0]}
-            onBump={(delta) => updateProgress(reading[0].id, Math.min(
-              reading[0].pages ?? Infinity,
-              Math.max(0, reading[0].progress + delta)
-            ))}
-          />
+          <View style={{ marginTop: 14, marginBottom: 4 }}>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
+              onScroll={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
+                setCurrentReadingIdx(Math.max(0, Math.min(idx, reading.length - 1)));
+              }}
+            >
+              {reading.map((book) => (
+                <View key={book.id} style={{ width: SCREEN_W }}>
+                  <NowReadingCard
+                    book={book}
+                    onBump={(delta) => updateProgress(book.id, Math.min(
+                      book.pages ?? Infinity,
+                      Math.max(0, book.progress + delta)
+                    ))}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            {reading.length > 1 && (
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 5, marginTop: 8 }}>
+                {reading.map((_, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      width: i === currentReadingIdx ? 16 : 5,
+                      height: 5, borderRadius: 3,
+                      backgroundColor: i === currentReadingIdx ? colors.primary : colors.border,
+                    }}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
         )}
 
         <ShelfRow

@@ -2,6 +2,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -247,6 +248,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { signOut, getToken } = useAuth();
   const { user } = useUser();
+  const router = useRouter();
 
   const books             = useStore((s) => s.books);
   const sessions          = useStore((s) => s.sessions);
@@ -263,8 +265,6 @@ export default function ProfileScreen() {
   const preferences       = useStore((s) => s.preferences);
   const achievementFlair  = useStore((s) => s.achievementFlair);
   const setAchievementFlair = useStore((s) => s.setAchievementFlair);
-  const familyAccount     = useStore((s) => s.familyAccount);
-  const setFamilyAccount  = useStore((s) => s.setFamilyAccount);
   const isUnder16         = useStore((s) => s.isUnder16);
   const setIsUnder16      = useStore((s) => s.setIsUnder16);
 
@@ -567,41 +567,26 @@ export default function ProfileScreen() {
                 Only your city and country are stored — no GPS used. Helps match you with nearby readers.
               </Text>
             </View>
-            {/* Family account toggle */}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-              paddingHorizontal: 16, paddingVertical: 14 }}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
-                  Family account 👨‍👩‍👧‍👦
-                </Text>
-                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
-                  {familyAccount
-                    ? "Chat moderation and safe messaging are active."
-                    : "Enable to read together with your family."}
-                </Text>
-              </View>
-              <Switch
-                value={familyAccount === true}
-                onValueChange={(v) => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  setFamilyAccount(v);
-                }}
-                trackColor={{ false: colors.border, true: colors.primary + "60" }}
-                thumbColor={familyAccount ? colors.primary : colors.mutedForeground}
+            {/* Reading Twins */}
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
+              <Row
+                label="Reading Twins 👯"
+                value="Find nearby readers"
+                onPress={() => router.push("/twins")}
               />
             </View>
-            {/* Under-16 toggle */}
+            {/* 13-and-under safe messaging */}
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
               paddingHorizontal: 16, paddingVertical: 14,
               borderTopWidth: 1, borderTopColor: colors.border }}>
               <View style={{ flex: 1, marginRight: 12 }}>
                 <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
-                  Under 16 profile 🔒
+                  13 &amp; under safe messaging 🔒
                 </Text>
                 <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
                   {isUnder16
-                    ? "Chat moderation is on. Inappropriate messages are blocked."
-                    : "Turn on for readers under 16. Enables stricter chat filtering."}
+                    ? "Safe messaging is on. Inappropriate content is blocked."
+                    : "Enable for readers aged 13 and under. Turns on stricter content filtering."}
                 </Text>
               </View>
               <Switch
@@ -609,7 +594,6 @@ export default function ProfileScreen() {
                 onValueChange={(v) => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   setIsUnder16(v);
-                  if (v) setFamilyAccount(true);
                 }}
                 trackColor={{ false: colors.border, true: colors.primary + "60" }}
                 thumbColor={isUnder16 ? colors.primary : colors.mutedForeground}
