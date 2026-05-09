@@ -37,6 +37,7 @@ export default function InsightsScreen() {
   const books = useStore((s) => s.books);
   const freeze = useStore((s) => s.freeze);
   const journal = useStore((s) => s.journal);
+  const reactionLog = useStore((s) => s.reactionLog);
 
   const streak = computeStreak(sessions, freeze);
 
@@ -48,15 +49,14 @@ export default function InsightsScreen() {
 
   const topEmotion = useMemo(() => {
     const c: Record<string, number> = {};
-    sessions.forEach((s) => {
-      if (s.mood) c[s.mood] = (c[s.mood] || 0) + 1;
+    reactionLog.forEach((r) => {
+      c[r.emoji] = (c[r.emoji] || 0) + 1;
     });
     const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0];
-    if (!top) return "—";
-    return MOODS[top[0] as MoodKey]?.emoji ?? "—";
-  }, [sessions]);
+    return top ? top[0] : "—";
+  }, [reactionLog]);
 
-  const isCold = sessions.length === 0 && journal.length === 0;
+  const isCold = sessions.length === 0 && reactionLog.length === 0 && journal.length === 0;
 
   const last14 = useMemo(() => {
     const arr: { date: Date; readPages: number; listenedPages: number; count: number }[] = [];
@@ -139,13 +139,13 @@ export default function InsightsScreen() {
           </View>
         )}
 
-        {/* ── 4-stat grid (Pages / Finished / Sessions / Top mood) ── */}
+        {/* ── 4-stat grid (Pages / Finished / Reactions / Top emotion) ── */}
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {[
             { label: "Pages", value: String(totalPages) },
             { label: "Finished", value: String(finished) },
-            { label: "Sessions", value: String(sessions.length) },
-            { label: "Top mood", value: topEmotion },
+            { label: "Reactions", value: String(reactionLog.length) },
+            { label: "Top emotion", value: topEmotion },
           ].map((s) => (
             <View
               key={s.label}
