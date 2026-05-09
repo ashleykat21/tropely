@@ -16,7 +16,6 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { coverUrl, searchBooks, type OLSearchResult } from "@/lib/api";
 import { MOOD_KEYS, MOODS } from "@/lib/moods";
-import { TROPE_CATEGORIES } from "@/lib/tropes";
 import { useStore, type Book } from "@/lib/store";
 import { useColors } from "@/hooks/useColors";
 import type { MoodKey } from "@/constants/colors";
@@ -28,31 +27,16 @@ type FeedKey = "new" | "upcoming" | "search";
 type Length = "short" | "medium" | "long";
 
 const GENRE_CATEGORIES = [
-  { emoji: "💕", name: "Romance",                   q: "romance novel" },
-  { emoji: "⚔️", name: "Fantasy & Adventure",       q: "epic fantasy adventure" },
-  { emoji: "🔍", name: "Thriller & Mystery",         q: "thriller mystery" },
-  { emoji: "📖", name: "Literary",                   q: "literary fiction" },
-  { emoji: "🚀", name: "Sci-Fi",                     q: "science fiction" },
-  { emoji: "🕯️", name: "Horror",                    q: "horror fiction" },
-  { emoji: "🏛️", name: "Historical Fiction",         q: "historical fiction" },
-  { emoji: "🌆", name: "Contemporary",               q: "contemporary fiction" },
-  { emoji: "🌙", name: "Paranormal & Urban Fantasy", q: "paranormal urban fantasy" },
-  { emoji: "☕", name: "Cozy & Comfort",             q: "cozy mystery" },
-];
-
-const TRENDING_TROPES = [
-  "Enemies to Lovers",
-  "Dark Academia",
-  "Found Family",
-  "Slow Burn",
-  "Morally Grey Protagonist",
-  "Dual Timeline",
-  "Dystopia",
-  "Unreliable Narrator",
-  "Coming of Age",
-  "Chosen One",
-  "Forced Proximity",
-  "Political Intrigue",
+  { emoji: "💕", name: "Romance", q: "romance novel" },
+  { emoji: "⚔️", name: "Fantasy", q: "epic fantasy adventure" },
+  { emoji: "🔪", name: "Thriller", q: "thriller mystery" },
+  { emoji: "📖", name: "Literary", q: "literary fiction" },
+  { emoji: "🚀", name: "Sci-Fi", q: "science fiction" },
+  { emoji: "👻", name: "Horror", q: "horror fiction" },
+  { emoji: "🏰", name: "Historical", q: "historical fiction" },
+  { emoji: "☕", name: "Contemporary", q: "contemporary fiction" },
+  { emoji: "🌙", name: "Paranormal", q: "paranormal urban fantasy" },
+  { emoji: "🫖", name: "Cozy", q: "cozy mystery" },
 ];
 
 const LENGTHS: { key: Length; label: string; hint: string }[] = [
@@ -74,14 +58,13 @@ const moodFor = (seed: string): MoodKey => {
   return MOOD_KEYS[h % MOOD_KEYS.length];
 };
 
-function tropeEmoji(trope: string): string {
-  for (const cat of TROPE_CATEGORIES) {
-    if (cat.tropes.includes(trope)) return cat.emoji;
-  }
-  return "📖";
-}
-
-function BookCard({ item, onAdd }: { item: OLSearchResult; onAdd: (item: OLSearchResult) => void }) {
+function BookCard({
+  item,
+  onAdd,
+}: {
+  item: OLSearchResult;
+  onAdd: (item: OLSearchResult) => void;
+}) {
   const C = useColors();
   const cover = coverUrl(item.cover_i, "M");
   const mood = moodFor(item.key);
@@ -89,72 +72,176 @@ function BookCard({ item, onAdd }: { item: OLSearchResult; onAdd: (item: OLSearc
   return (
     <TouchableOpacity
       style={{
-        flex: 1, backgroundColor: C.card, borderRadius: 16, padding: 12,
-        borderWidth: 1, borderColor: C.border + "80", gap: 8,
+        flex: 1,
+        backgroundColor: C.card,
+        borderRadius: 16,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: C.border + "80",
+        gap: 8,
       }}
       onPress={() => onAdd(item)}
       activeOpacity={0.85}
     >
       {cover ? (
-        <Image source={{ uri: cover }} style={{ width: "100%", aspectRatio: 2 / 3, borderRadius: 10 }} resizeMode="cover" />
+        <Image
+          source={{ uri: cover }}
+          style={{ width: "100%", aspectRatio: 2 / 3, borderRadius: 10 }}
+          resizeMode="cover"
+        />
       ) : (
-        <View style={{ width: "100%", aspectRatio: 2 / 3, borderRadius: 10, backgroundColor: MOODS[mood].accent + "22", alignItems: "center", justifyContent: "center" }}>
+        <View
+          style={{
+            width: "100%",
+            aspectRatio: 2 / 3,
+            borderRadius: 10,
+            backgroundColor: MOODS[mood].accent + "22",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Text style={{ fontSize: 32 }}>📚</Text>
         </View>
       )}
       <View style={{ gap: 2 }}>
-        <Text style={{ fontSize: 13, fontFamily: "Fraunces_600SemiBold", color: C.foreground, lineHeight: 18 }} numberOfLines={2}>
+        <Text
+          style={{
+            fontSize: 13,
+            fontFamily: "Fraunces_600SemiBold",
+            color: C.foreground,
+            lineHeight: 18,
+          }}
+          numberOfLines={2}
+        >
           {item.title}
         </Text>
         {item.author_name?.[0] && (
-          <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: C.mutedForeground }} numberOfLines={1}>
+          <Text
+            style={{
+              fontSize: 11,
+              fontFamily: "DMSans_400Regular",
+              color: C.mutedForeground,
+            }}
+            numberOfLines={1}
+          >
             {item.author_name[0]}
           </Text>
         )}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            marginTop: 2,
+          }}
+        >
           <Text style={{ fontSize: 10 }}>{MOODS[mood].emoji}</Text>
-          <Text style={{ fontSize: 10, fontFamily: "DMSans_400Regular", color: C.mutedForeground }}>{MOODS[mood].label}</Text>
+          <Text
+            style={{
+              fontSize: 10,
+              fontFamily: "DMSans_400Regular",
+              color: C.mutedForeground,
+            }}
+          >
+            {MOODS[mood].label}
+          </Text>
         </View>
       </View>
       <TouchableOpacity
-        style={{ borderRadius: 99, paddingVertical: 7, backgroundColor: C.foreground, alignItems: "center" }}
+        style={{
+          borderRadius: 99,
+          paddingVertical: 7,
+          backgroundColor: C.foreground,
+          alignItems: "center",
+        }}
         onPress={() => onAdd(item)}
       >
-        <Text style={{ fontSize: 12, fontFamily: "DMSans_600SemiBold", color: C.background }}>+ Add</Text>
+        <Text
+          style={{
+            fontSize: 12,
+            fontFamily: "DMSans_600SemiBold",
+            color: C.background,
+          }}
+        >
+          + Add
+        </Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
 }
 
-function ResultRow({ item, onAdd }: { item: OLSearchResult; onAdd: (item: OLSearchResult) => void }) {
+function ResultRow({
+  item,
+  onAdd,
+}: {
+  item: OLSearchResult;
+  onAdd: (item: OLSearchResult) => void;
+}) {
   const C = useColors();
   const cover = coverUrl(item.cover_i, "S");
 
   return (
     <>
       <Pressable
-        style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, gap: 14 }}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          paddingHorizontal: 20,
+          paddingVertical: 12,
+          gap: 14,
+        }}
         onPress={() => onAdd(item)}
       >
         {cover ? (
-          <Image source={{ uri: cover }} style={{ width: 44, height: 64, borderRadius: 8, backgroundColor: C.muted }} />
+          <Image
+            source={{ uri: cover }}
+            style={{ width: 44, height: 64, borderRadius: 8, backgroundColor: C.muted }}
+          />
         ) : (
-          <View style={{ width: 44, height: 64, borderRadius: 8, backgroundColor: C.muted, alignItems: "center", justifyContent: "center" }}>
+          <View
+            style={{
+              width: 44,
+              height: 64,
+              borderRadius: 8,
+              backgroundColor: C.muted,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <Feather name="book" size={18} color={C.mutedForeground} />
           </View>
         )}
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={{ fontSize: 14, fontFamily: "Fraunces_600SemiBold", color: C.foreground, lineHeight: 20 }} numberOfLines={2}>
+          <Text
+            style={{
+              fontSize: 14,
+              fontFamily: "Fraunces_600SemiBold",
+              color: C.foreground,
+              lineHeight: 20,
+            }}
+            numberOfLines={2}
+          >
             {item.title}
           </Text>
           {item.author_name?.[0] && (
-            <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: C.mutedForeground }}>
+            <Text
+              style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: C.mutedForeground }}
+            >
               {item.author_name[0]}
             </Text>
           )}
         </View>
         <TouchableOpacity
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.moodStrong + "18", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: C.moodStrong + "40" }}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: C.moodStrong + "18",
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: C.moodStrong + "40",
+          }}
           onPress={() => onAdd(item)}
         >
           <Feather name="plus" size={18} color={C.moodStrong} />
@@ -165,7 +252,13 @@ function ResultRow({ item, onAdd }: { item: OLSearchResult; onAdd: (item: OLSear
   );
 }
 
-function AddModal({ item, onClose }: { item: OLSearchResult; onClose: () => void }) {
+function AddModal({
+  item,
+  onClose,
+}: {
+  item: OLSearchResult;
+  onClose: () => void;
+}) {
   const C = useColors();
   const addBook = useStore((s) => s.addBook);
   const [shelf, setShelf] = useState<Book["shelf"]>("want");
@@ -193,16 +286,33 @@ function AddModal({ item, onClose }: { item: OLSearchResult; onClose: () => void
 
   return (
     <Pressable
-      style={{ position: "absolute", inset: 0, backgroundColor: "rgba(42,31,20,0.55)", justifyContent: "flex-end" }}
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundColor: "rgba(42,31,20,0.55)",
+        justifyContent: "flex-end",
+      }}
       onPress={onClose}
     >
       <Pressable
-        style={{ backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 22 }}
+        style={{
+          backgroundColor: C.card,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          padding: 24,
+          paddingBottom: 40,
+          gap: 22,
+        }}
         onPress={() => {}}
       >
-        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: "center" }} />
+        <View
+          style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: C.border, alignSelf: "center" }}
+        />
         <View>
-          <Text style={{ fontSize: 20, fontFamily: "Fraunces_700Bold", color: C.foreground, lineHeight: 26 }} numberOfLines={2}>
+          <Text
+            style={{ fontSize: 20, fontFamily: "Fraunces_700Bold", color: C.foreground, lineHeight: 26 }}
+            numberOfLines={2}
+          >
             {item.title}
           </Text>
           {item.author_name?.[0] && (
@@ -220,7 +330,11 @@ function AddModal({ item, onClose }: { item: OLSearchResult; onClose: () => void
             {shelves.map((sh) => (
               <Pressable
                 key={sh.key}
-                style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 99, borderWidth: 1.5, borderColor: shelf === sh.key ? C.moodStrong : C.border, backgroundColor: shelf === sh.key ? C.moodStrong + "15" : C.background }}
+                style={{
+                  paddingHorizontal: 16, paddingVertical: 9, borderRadius: 99, borderWidth: 1.5,
+                  borderColor: shelf === sh.key ? C.moodStrong : C.border,
+                  backgroundColor: shelf === sh.key ? C.moodStrong + "15" : C.background,
+                }}
                 onPress={() => setShelf(sh.key)}
               >
                 <Text style={{ fontSize: 13, fontFamily: "DMSans_500Medium", color: shelf === sh.key ? C.moodStrong : C.foreground }}>
@@ -239,7 +353,12 @@ function AddModal({ item, onClose }: { item: OLSearchResult; onClose: () => void
             {MOOD_KEYS.map((k) => (
               <Pressable
                 key={k}
-                style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, borderWidth: 1.5, borderColor: mood === k ? MOODS[k].accent : C.border, backgroundColor: mood === k ? MOODS[k].accent + "18" : C.background, flexDirection: "row", alignItems: "center", gap: 5 }}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, borderWidth: 1.5,
+                  borderColor: mood === k ? MOODS[k].accent : C.border,
+                  backgroundColor: mood === k ? MOODS[k].accent + "18" : C.background,
+                  flexDirection: "row", alignItems: "center", gap: 5,
+                }}
                 onPress={() => setMood(mood === k ? undefined : k)}
               >
                 <Text style={{ fontSize: 14 }}>{MOODS[k].emoji}</Text>
@@ -255,7 +374,9 @@ function AddModal({ item, onClose }: { item: OLSearchResult; onClose: () => void
           style={{ backgroundColor: C.moodStrong, borderRadius: 14, paddingVertical: 15, alignItems: "center" }}
           onPress={save}
         >
-          <Text style={{ fontSize: 15, fontFamily: "DMSans_600SemiBold", color: "#fff" }}>Add to library</Text>
+          <Text style={{ fontSize: 15, fontFamily: "DMSans_600SemiBold", color: "#fff" }}>
+            Add to library
+          </Text>
         </TouchableOpacity>
       </Pressable>
     </Pressable>
@@ -276,7 +397,6 @@ export default function DiscoverScreen() {
   const [catFilter, setCatFilter] = useState<string | null>(null);
   const [activeMood, setActiveMood] = useState<MoodKey | null>(null);
   const [activeLength, setActiveLength] = useState<Length | null>(null);
-  const [activeTrope, setActiveTrope] = useState<string | null>(null);
   const [adding, setAdding] = useState<OLSearchResult | null>(null);
 
   useEffect(() => {
@@ -322,19 +442,6 @@ export default function DiscoverScreen() {
     return newReleases;
   }, [feed, searchResults, upcoming, newReleases]);
 
-  const tropeOptions = useMemo<string[]>(() => {
-    const counts = new Map<string, number>();
-    baseFeed.forEach((r) => {
-      const title = r.title.toLowerCase();
-      TRENDING_TROPES.forEach((t) => {
-        if (title.includes(t.toLowerCase().split(" ")[0])) {
-          counts.set(t, (counts.get(t) ?? 0) + 1);
-        }
-      });
-    });
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t]) => t);
-  }, [baseFeed]);
-
   const visible = useMemo<OLSearchResult[]>(() => {
     return baseFeed.filter((r) => {
       if (activeLength) {
@@ -359,7 +466,10 @@ export default function DiscoverScreen() {
       >
         {/* ── Page header ── */}
         <View style={{ paddingHorizontal: 20, gap: 4, marginBottom: 24 }}>
-          <Text style={{ fontSize: 11, fontFamily: "DMSans_600SemiBold", color: C.mutedForeground, textTransform: "uppercase", letterSpacing: 4 }}>
+          <Text style={{
+            fontSize: 11, fontFamily: "DMSans_600SemiBold",
+            color: C.mutedForeground, textTransform: "uppercase", letterSpacing: 4,
+          }}>
             Discover
           </Text>
           <Text style={{ fontFamily: "Fraunces_400Regular", fontSize: 36, color: C.foreground, lineHeight: 38, letterSpacing: -0.5 }}>
@@ -374,7 +484,11 @@ export default function DiscoverScreen() {
 
         {/* ── Search ── */}
         <View style={{ paddingHorizontal: 20, flexDirection: "row", gap: 10, alignItems: "center", marginBottom: 24 }}>
-          <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: C.card + "CC", borderWidth: 1, borderColor: C.border, borderRadius: 99, paddingHorizontal: 14, gap: 8, height: 46 }}>
+          <View style={{
+            flex: 1, flexDirection: "row", alignItems: "center",
+            backgroundColor: C.card + "CC", borderWidth: 1, borderColor: C.border,
+            borderRadius: 99, paddingHorizontal: 14, gap: 8, height: 46,
+          }}>
             <Feather name="search" size={16} color={C.mutedForeground} />
             <TextInput
               style={{ flex: 1, fontSize: 14, fontFamily: "DMSans_400Regular", color: C.foreground }}
@@ -416,11 +530,19 @@ export default function DiscoverScreen() {
               return (
                 <TouchableOpacity
                   key={cat.name}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, borderWidth: 1, borderColor: active ? C.foreground : C.border + "99", backgroundColor: active ? C.foreground : C.card + "B3" }}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 5,
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 99, borderWidth: 1,
+                    borderColor: active ? C.foreground : C.border + "99",
+                    backgroundColor: active ? C.foreground : C.card + "B3",
+                  }}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (active) { setCatFilter(null); setQ(""); setFeed("new"); }
-                    else { setCatFilter(cat.name); doSearch(cat.q); }
+                    if (active) {
+                      setCatFilter(null); setQ(""); setFeed("new");
+                    } else {
+                      setCatFilter(cat.name); doSearch(cat.q);
+                    }
                   }}
                 >
                   <Text style={{ fontSize: 12 }}>{cat.emoji}</Text>
@@ -435,14 +557,20 @@ export default function DiscoverScreen() {
 
         {/* ── Feed tabs ── */}
         <View style={{ paddingHorizontal: 20, marginBottom: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-          <View style={{ flexDirection: "row", borderRadius: 99, borderWidth: 1, borderColor: C.border + "99", backgroundColor: C.card + "CC", padding: 4 }}>
+          <View style={{
+            flexDirection: "row", borderRadius: 99, borderWidth: 1,
+            borderColor: C.border + "99", backgroundColor: C.card + "CC", padding: 4,
+          }}>
             {(["new", "upcoming", ...(feed === "search" ? ["search" as FeedKey] : [])] as FeedKey[]).map((f) => {
               const active = feed === f;
               const label = f === "new" ? "✦ New releases" : f === "upcoming" ? "Upcoming" : "Search results";
               return (
                 <TouchableOpacity
                   key={f}
-                  style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99, backgroundColor: active ? C.foreground : "transparent" }}
+                  style={{
+                    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 99,
+                    backgroundColor: active ? C.foreground : "transparent",
+                  }}
                   onPress={() => setFeed(f)}
                 >
                   <Text style={{ fontSize: 13, fontFamily: "DMSans_400Regular", color: active ? C.background : C.mutedForeground }}>
@@ -459,30 +587,12 @@ export default function DiscoverScreen() {
           )}
         </View>
 
-        {/* ── Community trending ── */}
-        <View style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 16, backgroundColor: C.moodTint + "80", borderWidth: 1, borderColor: C.border + "66", padding: 20, gap: 14 }}>
-          <View style={{ gap: 2 }}>
-            <Text style={{ fontFamily: "Fraunces_400Regular", fontSize: 22, color: C.foreground }}>Community trending</Text>
-            <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: C.mutedForeground }}>
-              Popular tropes right now — tap one to search for books.
-            </Text>
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {TRENDING_TROPES.map((trope) => (
-              <TouchableOpacity
-                key={trope}
-                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 99, borderWidth: 1, borderColor: C.border + "99", backgroundColor: C.background + "60" }}
-                onPress={() => { setQ(trope); doSearch(trope); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-              >
-                <Text style={{ fontSize: 13 }}>{tropeEmoji(trope)}</Text>
-                <Text style={{ fontSize: 13, fontFamily: "DMSans_400Regular", color: C.foreground + "CC" }}>{trope}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         {/* ── Filters ── */}
-        <View style={{ marginHorizontal: 20, marginBottom: 20, borderRadius: 16, borderWidth: 1, borderColor: C.border + "80", backgroundColor: C.card + "80", padding: 16, gap: 14 }}>
+        <View style={{
+          marginHorizontal: 20, marginBottom: 20,
+          borderRadius: 16, borderWidth: 1, borderColor: C.border + "80",
+          backgroundColor: C.card + "80", padding: 16, gap: 14,
+        }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Feather name="sliders" size={14} color={C.mutedForeground} />
             <Text style={{ fontSize: 14, fontFamily: "DMSans_400Regular", color: C.mutedForeground }}>
@@ -500,11 +610,18 @@ export default function DiscoverScreen() {
                 return (
                   <TouchableOpacity
                     key={k}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1, borderColor: active ? C.foreground : C.border, backgroundColor: active ? C.foreground : C.card + "B3" }}
+                    style={{
+                      flexDirection: "row", alignItems: "center", gap: 5,
+                      paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1,
+                      borderColor: active ? C.foreground : C.border,
+                      backgroundColor: active ? C.foreground : C.card + "B3",
+                    }}
                     onPress={() => setActiveMood(active ? null : k)}
                   >
                     <Text style={{ fontSize: 12 }}>{MOODS[k].emoji}</Text>
-                    <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: active ? C.background : C.foreground }}>{MOODS[k].label}</Text>
+                    <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: active ? C.background : C.foreground }}>
+                      {MOODS[k].label}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -521,7 +638,11 @@ export default function DiscoverScreen() {
                 return (
                   <TouchableOpacity
                     key={l.key}
-                    style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1, borderColor: active ? C.foreground : C.border, backgroundColor: active ? C.foreground : C.card + "B3" }}
+                    style={{
+                      paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1,
+                      borderColor: active ? C.foreground : C.border,
+                      backgroundColor: active ? C.foreground : C.card + "B3",
+                    }}
                     onPress={() => setActiveLength(active ? null : l.key)}
                   >
                     <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: active ? C.background : C.foreground }}>
@@ -534,30 +655,8 @@ export default function DiscoverScreen() {
             </View>
           </View>
 
-          {tropeOptions.length > 0 && (
-            <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 10, fontFamily: "DMSans_600SemiBold", color: C.mutedForeground, textTransform: "uppercase", letterSpacing: 3.2 }}>
-                Trope
-              </Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                {tropeOptions.map((t) => {
-                  const active = activeTrope === t;
-                  return (
-                    <TouchableOpacity
-                      key={t}
-                      style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 99, borderWidth: 1, borderColor: active ? C.foreground : C.border, backgroundColor: active ? C.foreground : C.card + "B3" }}
-                      onPress={() => setActiveTrope(active ? null : t)}
-                    >
-                      <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: active ? C.background : C.foreground }}>{t}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {(activeMood || activeLength || activeTrope) && (
-            <TouchableOpacity onPress={() => { setActiveMood(null); setActiveLength(null); setActiveTrope(null); }}>
+          {(activeMood || activeLength) && (
+            <TouchableOpacity onPress={() => { setActiveMood(null); setActiveLength(null); }}>
               <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: C.mutedForeground, textDecorationLine: "underline" }}>
                 Clear all filters
               </Text>
@@ -580,7 +679,9 @@ export default function DiscoverScreen() {
                 <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: C.moodTint, alignItems: "center", justifyContent: "center" }}>
                   <Feather name="search" size={24} color={C.moodStrong} />
                 </View>
-                <Text style={{ fontSize: 18, fontFamily: "Fraunces_600SemiBold", color: C.foreground, textAlign: "center" }}>No results found</Text>
+                <Text style={{ fontSize: 18, fontFamily: "Fraunces_600SemiBold", color: C.foreground, textAlign: "center" }}>
+                  No results found
+                </Text>
               </View>
             )}
           </View>
@@ -588,7 +689,11 @@ export default function DiscoverScreen() {
           <View style={{ paddingHorizontal: 20, gap: 12 }}>
             {visible.length === 0 && !feedLoading && (
               <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
-                <View style={{ width: 56, height: 56, borderRadius: 16, borderWidth: 1, borderStyle: "dashed", borderColor: C.border, alignItems: "center", justifyContent: "center" }}>
+                <View style={{
+                  width: 56, height: 56, borderRadius: 16,
+                  borderWidth: 1, borderStyle: "dashed", borderColor: C.border,
+                  alignItems: "center", justifyContent: "center",
+                }}>
                   <Text style={{ fontSize: 24 }}>📚</Text>
                 </View>
                 <Text style={{ fontSize: 16, fontFamily: "Fraunces_400Regular", color: C.foreground, textAlign: "center" }}>
@@ -602,7 +707,11 @@ export default function DiscoverScreen() {
               return (
                 <View key={rowIdx} style={{ flexDirection: "row", gap: 12 }}>
                   {left && <View style={{ flex: 1 }}><BookCard item={left} onAdd={setAdding} /></View>}
-                  {right ? <View style={{ flex: 1 }}><BookCard item={right} onAdd={setAdding} /></View> : <View style={{ flex: 1 }} />}
+                  {right ? (
+                    <View style={{ flex: 1 }}><BookCard item={right} onAdd={setAdding} /></View>
+                  ) : (
+                    <View style={{ flex: 1 }} />
+                  )}
                 </View>
               );
             })}

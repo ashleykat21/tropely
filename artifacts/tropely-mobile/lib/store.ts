@@ -36,7 +36,6 @@ export interface JournalEntry {
   mood?: MoodKey;
   kind?: JournalKind;
   text: string;
-  page?: number;
   createdAt: number;
   isSpoiler?: boolean;
   reactions?: string[];
@@ -50,13 +49,6 @@ export interface SessionLog {
   at: number;
   mood?: MoodKey;
   note?: string;
-}
-
-export interface ReactionLog {
-  id: string;
-  emoji: string;
-  bookId?: string;
-  at: number;
 }
 
 export interface Reflection {
@@ -88,7 +80,6 @@ interface AppState {
   books: Book[];
   journal: JournalEntry[];
   sessions: SessionLog[];
-  reactionLog: ReactionLog[];
   reflections: Reflection[];
   companionMessages: CompanionMessage[];
   freeze: FreezeState | undefined;
@@ -113,7 +104,6 @@ interface AppState {
   addJournal: (e: Omit<JournalEntry, "id" | "createdAt">) => void;
   removeJournal: (id: string) => void;
   reactToJournal: (id: string, emoji: string) => void;
-  logReaction: (emoji: string, bookId?: string) => void;
 
   logSession: (s: Omit<SessionLog, "id" | "at">) => void;
 
@@ -143,7 +133,6 @@ export const useStore = create<AppState>()(
       books: [],
       journal: [],
       sessions: [],
-      reactionLog: [],
       reflections: [],
       companionMessages: [],
       freeze: undefined,
@@ -219,11 +208,6 @@ export const useStore = create<AppState>()(
             const has = current.includes(emoji);
             return { ...e, reactions: has ? current.filter((r) => r !== emoji) : [...current, emoji] };
           }),
-        })),
-
-      logReaction: (emoji, bookId) =>
-        set((s) => ({
-          reactionLog: [...s.reactionLog, { id: genId(), emoji, bookId, at: Date.now() }],
         })),
 
       logSession: (s) => {
