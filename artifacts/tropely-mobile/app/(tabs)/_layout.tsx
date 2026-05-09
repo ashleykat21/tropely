@@ -76,6 +76,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Me",
+          tabBarIcon: ({ color }) =>
+            isIOS
+              ? <SymbolView name="person" tintColor={color} size={22} />
+              : <Feather name="user" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="more"
         options={{
           title: "More",
@@ -89,7 +99,6 @@ export default function TabLayout() {
       {/* ── Hidden from tab bar but still navigable ── */}
       <Tabs.Screen name="buddy-reads" options={{ href: null }} />
       <Tabs.Screen name="insights"    options={{ href: null }} />
-      <Tabs.Screen name="profile"     options={{ href: null }} />
       <Tabs.Screen name="library"     options={{ href: null }} />
     </Tabs>
   );
