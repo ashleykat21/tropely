@@ -47,11 +47,11 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Shelf",
+          title: "Home",
           tabBarIcon: ({ color }) =>
             isIOS
-              ? <SymbolView name="books.vertical" tintColor={color} size={22} />
-              : <Feather name="book" size={21} color={color} />,
+              ? <SymbolView name="house" tintColor={color} size={22} />
+              : <Feather name="home" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
