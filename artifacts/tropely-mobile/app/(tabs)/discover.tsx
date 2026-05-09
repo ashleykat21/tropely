@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Platform,
@@ -244,6 +245,7 @@ export default function DiscoverScreen() {
       setResults(res);
     } catch {
       setResults([]);
+      Alert.alert("Search unavailable", "Couldn't reach the book database. Check your connection and try again.");
     } finally {
       setLoading(false);
     }

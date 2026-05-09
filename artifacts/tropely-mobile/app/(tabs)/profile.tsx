@@ -24,6 +24,7 @@ import { useColors } from "@/hooks/useColors";
 import { computeStreak } from "@/lib/streak";
 import { useStore } from "@/lib/store";
 import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/lib/api";
+import { cancelDailyReminder, requestNotificationPermission, scheduleDailyReminder } from "@/lib/notifications";
 
 const TAB_BAR_HEIGHT = 84;
 
@@ -265,8 +266,11 @@ export default function ProfileScreen() {
   const preferences       = useStore((s) => s.preferences);
   const achievementFlair  = useStore((s) => s.achievementFlair);
   const setAchievementFlair = useStore((s) => s.setAchievementFlair);
-  const isUnder16         = useStore((s) => s.isUnder16);
-  const setIsUnder16      = useStore((s) => s.setIsUnder16);
+  const isUnder16              = useStore((s) => s.isUnder16);
+  const setIsUnder16           = useStore((s) => s.setIsUnder16);
+  const dailyReminderEnabled   = useStore((s) => s.dailyReminderEnabled);
+  const reminderHour           = useStore((s) => s.reminderHour);
+  const setDailyReminder       = useStore((s) => s.setDailyReminder);
 
   const finished   = books.filter((b) => b.shelf === "finished").length;
   const totalPages = sessions.reduce((sum, s) => sum + s.pagesRead, 0);
@@ -344,6 +348,21 @@ export default function ProfileScreen() {
       }
     }
   }
+
+  const handleToggleReminder = async (enabled: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (enabled) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert("Permission needed", "Go to Settings and allow notifications for Tropely to use daily reminders.");
+        return;
+      }
+      await scheduleDailyReminder(reminderHour);
+    } else {
+      await cancelDailyReminder();
+    }
+    setDailyReminder(enabled, reminderHour);
+  };
 
   const handleSignOut = () => {
     Alert.alert("Sign out", "Are you sure?", [
@@ -597,6 +616,27 @@ export default function ProfileScreen() {
                 }}
                 trackColor={{ false: colors.border, true: colors.primary + "60" }}
                 thumbColor={isUnder16 ? colors.primary : colors.mutedForeground}
+              />
+            </View>
+            {/* Daily reading reminder */}
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              paddingHorizontal: 16, paddingVertical: 14,
+              borderTopWidth: 1, borderTopColor: colors.border }}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
+                  Daily reading reminder 🔔
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
+                  {dailyReminderEnabled
+                    ? `Reminder set for ${reminderHour}:00 every day.`
+                    : "Get a nudge each day to keep your streak alive."}
+                </Text>
+              </View>
+              <Switch
+                value={dailyReminderEnabled}
+                onValueChange={handleToggleReminder}
+                trackColor={{ false: colors.border, true: colors.primary + "60" }}
+                thumbColor={dailyReminderEnabled ? colors.primary : colors.mutedForeground}
               />
             </View>
           </View>
