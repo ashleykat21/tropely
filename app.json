@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "8fc30fba-1acd-40a5-8974-9fcdd55bd1b4"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.ashleykat21.workspace",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
