@@ -15,3 +15,5 @@ export * from "./pushSubscriptions";
 export * from "./readingPositions";
 export * from "./syncedDevices";
 export * from "./tasteProfiles";
+export * from "./feedback";
+export * from "./reports";

@@ -8,12 +8,14 @@ import { TROPE_CATEGORIES, tropeCategory } from "@/lib/tropes";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePremium } from "@/lib/usePremium";
-import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark } from "lucide-react";
+import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Sliders } from "lucide-react";
 import { ShareCardModal } from "./ShareCardModal";
 import { TbrMoodIntentBadge, TbrIntentStrip } from "./TbrMoodIntent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LockedFeature } from "@/components/premium/LockedFeature";
+import { BookshelfView } from "./BookshelfView";
+import { BookshelfCustomizer } from "./BookshelfCustomizer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,6 +59,10 @@ export function Shelves() {
   const shelfTheme = useLibrary((s) => s.shelfTheme);
   const userAge = useLibrary((s) => s.age);
   const isPremium = usePremium((s) => s.isPremium);
+  const bookcaseMode = useLibrary((s) => s.bookcaseMode);
+  const setBookcaseMode = useLibrary((s) => s.setBookcaseMode);
+  const bookcaseStyle = useLibrary((s) => s.bookcaseStyle);
+  const [showCustomizer, setShowCustomizer] = useState(false);
   const [active, setActive] = useState<TabKey>("reading");
   const [newCollName, setNewCollName] = useState("");
   const [isSeries, setIsSeries] = useState(false);
@@ -67,7 +73,6 @@ export function Shelves() {
   const [librarySearch, setLibrarySearch] = useState("");
   type SortKey = "recent" | "az" | "rating" | "pages";
   const [sortKey, setSortKey] = useState<SortKey>("recent");
-  const AGE_MINS: Record<string, number> = { children: 0, "middle-grade": 8, "young-adult": 13, adult: 18 };
 
   const ratingMap = useMemo(() => {
     const m = new Map<string, number>();
@@ -78,7 +83,7 @@ export function Shelves() {
   const filtered = useMemo(() => {
     const list = books.filter((b) => {
       if (b.shelf !== active) return false;
-      if (b.ageRating && userAge != null && (AGE_MINS[b.ageRating] ?? 0) > userAge) return false;
+      if (b.ageRating && userAge != null && b.ageRating > userAge) return false;
       return true;
     });
     if (active === "want") {
@@ -159,9 +164,64 @@ export function Shelves() {
       style={themeStyle}
     >
       <div className="flex items-end justify-between gap-4 flex-wrap">
-        <h3 className="font-display text-2xl" style={dark ? { color: "white" } : undefined}>
-          Your library
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="font-display text-2xl" style={dark ? { color: "white" } : undefined}>
+            Your library
+          </h3>
+          {/* View toggle */}
+          <div className="flex gap-0.5 rounded-full border border-border/60 bg-card/80 backdrop-blur p-0.5">
+            <button
+              onClick={() => { setBookcaseMode(false); setShowCustomizer(false); }}
+              title="Grid view"
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
+                !bookcaseMode
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => {
+                if (!isPremium) {
+                  toast("Immersive bookshelf is a premium feature", {
+                    description: "Upgrade to unlock the cozy bookshelf experience.",
+                    action: { label: "Upgrade", onClick: () => nav("/premium") },
+                  });
+                  return;
+                }
+                setBookcaseMode(true);
+              }}
+              title={isPremium ? "Bookshelf view" : "Premium — bookshelf view"}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
+                bookcaseMode
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <BookMarked className="h-3.5 w-3.5" />
+              {!isPremium && <Lock className="h-2.5 w-2.5 opacity-60" />}
+            </button>
+          </div>
+          {/* Customize button — bookshelf mode only */}
+          {bookcaseMode && isPremium && (
+            <button
+              onClick={() => setShowCustomizer((v) => !v)}
+              title="Customize shelf"
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition",
+                showCustomizer
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border/60 bg-card/80 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Sliders className="h-3 w-3" />
+              Customize
+            </button>
+          )}
+        </div>
         <div className="flex gap-1 rounded-full border border-border/60 bg-card/80 backdrop-blur p-1">
           {TABS.map((t) => {
             const label = (t.key !== "series" ? customShelfNames[t.key as Shelf] : undefined) || t.label;
@@ -198,7 +258,7 @@ export function Shelves() {
                   setShelfNameDraft(customShelfNames[t.key as Shelf] || "");
                 }}
                 className={cn(
-                  "group/tab flex items-center gap-1 rounded-full px-4 py-1.5 text-sm transition",
+                  "group/tab flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
                   active === t.key
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground"
@@ -293,6 +353,11 @@ export function Shelves() {
         </div>
       )}
 
+      {/* Bookshelf view — premium immersive mode */}
+      {bookcaseMode && active !== "series" && (
+        <BookshelfView books={sortedDisplayFiltered} style={bookcaseStyle} />
+      )}
+
       <AnimatePresence mode="wait">
         <motion.div
           key={active}
@@ -300,7 +365,13 @@ export function Shelves() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
-          className={active === "series" ? "space-y-3" : "grid gap-3 grid-cols-3 sm:grid-cols-5 lg:grid-cols-7"}
+          className={
+            bookcaseMode && active !== "series"
+              ? "hidden"
+              : active === "series"
+              ? "space-y-3"
+              : "grid gap-3 grid-cols-3 sm:grid-cols-5 lg:grid-cols-7"
+          }
         >
           {/* Series browser */}
           {active === "series" && (() => {
@@ -500,6 +571,21 @@ export function Shelves() {
             );
           })}
         </motion.div>
+      </AnimatePresence>
+
+      {/* Bookshelf customizer panel */}
+      <AnimatePresence>
+        {bookcaseMode && showCustomizer && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <BookshelfCustomizer />
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {active === "want" && <TbrIntentStrip />}

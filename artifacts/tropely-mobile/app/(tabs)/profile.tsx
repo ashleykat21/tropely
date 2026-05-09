@@ -1,17 +1,17 @@
-import type { UseAuthReturn, UseUserReturn } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  StyleSheet,
   Switch,
   Text,
   TextInput,
@@ -26,6 +26,7 @@ import { apiDelete, apiGet, apiPatch, apiPost, baseUrl } from "@/lib/api";
 
 const TAB_BAR_HEIGHT = 84;
 
+// ─── Achievement definitions ──────────────────────────────────────────────────
 type Achievement = {
   id: string;
   emoji: string;
@@ -35,18 +36,8 @@ type Achievement = {
   earned: boolean;
 };
 
-function SectionLabel({ children }: { children: string }) {
-  const colors = useColors();
-  return (
-    <Text style={{
-      fontSize: 11, fontFamily: "DMSans_600SemiBold",
-      color: colors.mutedForeground, textTransform: "uppercase",
-      letterSpacing: 2, marginBottom: 12, paddingHorizontal: 20,
-    }}>{children}</Text>
-  );
-}
-
-function SettingRow({ label, value, onPress }: { label: string; value?: string; onPress?: () => void }) {
+// ─── Row helper ───────────────────────────────────────────────────────────────
+function Row({ label, value, onPress }: { label: string; value: string; onPress?: () => void }) {
   const colors = useColors();
   return (
     <TouchableOpacity
@@ -58,39 +49,32 @@ function SettingRow({ label, value, onPress }: { label: string; value?: string; 
       onPress={onPress}
       disabled={!onPress}
     >
-      <Text style={{ fontSize: 14, fontFamily: "DMSans_500Medium", color: colors.foreground }}>{label}</Text>
-      {value !== undefined && (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 14, fontFamily: "DMSans_400Regular", color: colors.mutedForeground }}>{value}</Text>
-          {onPress && <Feather name="chevron-right" size={14} color={colors.mutedForeground} />}
-        </View>
-      )}
+      <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>{label}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>{value}</Text>
+        {onPress && <Feather name="chevron-right" size={14} color={colors.mutedForeground} />}
+      </View>
     </TouchableOpacity>
   );
 }
 
-function GoalRow({ label, value, options, onChange }: {
-  label: string; value: number; options: number[]; onChange: (v: number) => void;
-}) {
+function GoalRow({ label, value, options, onChange }: { label: string; value: number; options: number[]; onChange: (v: number) => void }) {
   const colors = useColors();
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      <Text style={{ fontSize: 14, fontFamily: "DMSans_500Medium", color: colors.foreground, marginBottom: 10 }}>{label}</Text>
+      <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground, marginBottom: 10 }}>{label}</Text>
       <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
         {options.map((o) => (
           <Pressable
             key={o}
             style={{
-              paddingHorizontal: 16, paddingVertical: 7, borderRadius: 99,
-              backgroundColor: value === o ? colors.moodStrong + "18" : colors.background,
-              borderWidth: 1.5, borderColor: value === o ? colors.moodStrong : colors.border,
+              paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20,
+              backgroundColor: value === o ? colors.primary + "20" : colors.muted,
+              borderWidth: 1, borderColor: value === o ? colors.primary : colors.border,
             }}
             onPress={() => { onChange(o); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
           >
-            <Text style={{
-              fontSize: 13, fontFamily: "DMSans_500Medium",
-              color: value === o ? colors.moodStrong : colors.mutedForeground,
-            }}>{o}</Text>
+            <Text style={{ fontSize: 13, fontFamily: "Inter_500Medium", color: value === o ? colors.primary : colors.mutedForeground }}>{o}</Text>
           </Pressable>
         ))}
       </View>
@@ -98,117 +82,141 @@ function GoalRow({ label, value, options, onChange }: {
   );
 }
 
-function AchievementBadge({ a, isFlair, onPress }: { a: Achievement; isFlair: boolean; onPress?: () => void }) {
+// ─── Achievement badge ────────────────────────────────────────────────────────
+function AchievementBadge({
+  a, isFlair, onPress,
+}: { a: Achievement; isFlair: boolean; onPress?: () => void }) {
   const colors = useColors();
-  const borderColor = isFlair ? colors.moodStrong : a.earned ? "#D4A832" : colors.border;
-  const bgColor = isFlair ? colors.moodStrong + "15" : a.earned ? "#D4A83215" : colors.card;
-
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={onPress ? 0.75 : 1}
-      style={{
-        width: "46%", padding: 14, borderRadius: 18,
-        alignItems: "center", gap: 4, overflow: "hidden",
-        minHeight: 120, backgroundColor: bgColor,
-        borderWidth: isFlair ? 2.5 : a.earned ? 2 : 1,
-        borderColor,
-      }}
+      style={[
+        st.badge,
+        {
+          backgroundColor: isFlair
+            ? "#9E7CCC18"
+            : a.earned ? "#D4A83218" : colors.card,
+          borderColor: isFlair
+            ? colors.primary
+            : a.earned ? "#D4A832" : colors.border,
+          borderWidth: isFlair ? 2.5 : a.earned ? 2 : 1,
+          shadowColor: isFlair ? colors.primary : a.earned ? "#D4A832" : "transparent",
+          shadowOpacity: isFlair ? 0.55 : a.earned ? 0.35 : 0,
+          shadowRadius: isFlair ? 14 : 8,
+          shadowOffset: { width: 0, height: 2 },
+          elevation: isFlair ? 8 : a.earned ? 4 : 0,
+        },
+      ]}
     >
-      <Text style={{ fontSize: 30, marginBottom: 2, opacity: a.earned ? 1 : 0.3 }}>{a.emoji}</Text>
-      <Text style={{
-        fontSize: 12, fontFamily: "DMSans_600SemiBold", textAlign: "center",
-        color: isFlair ? colors.moodStrong : a.earned ? colors.foreground : colors.mutedForeground,
-      }}>{a.label}</Text>
-      <Text style={{
-        fontSize: 10, fontFamily: "DMSans_400Regular", textAlign: "center",
-        color: colors.mutedForeground, lineHeight: 14,
-      }} numberOfLines={2}>{a.desc}</Text>
+      {/* Glow ring */}
+      {(isFlair || a.earned) && (
+        <View style={[
+          st.glowRing,
+          { backgroundColor: isFlair ? colors.primary + "14" : "#D4A83228" },
+        ]} />
+      )}
+
+      <Text style={[st.badgeEmoji, { opacity: a.earned ? 1 : 0.3 }]}>{a.emoji}</Text>
+      <Text style={[
+        st.badgeLabel,
+        { color: isFlair ? colors.primary : a.earned ? colors.foreground : colors.mutedForeground },
+      ]}>
+        {a.label}
+      </Text>
+      <Text style={[st.badgeDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
+        {a.desc}
+      </Text>
+
+      {/* Flair crown indicator */}
       {isFlair && (
-        <View style={{
-          position: "absolute", top: 8, right: 8,
-          backgroundColor: colors.moodStrong, borderRadius: 8,
-          paddingHorizontal: 6, paddingVertical: 3,
-        }}>
-          <Text style={{ fontSize: 8, color: "#fff", fontFamily: "DMSans_600SemiBold" }}>★ FLAIR</Text>
+        <View style={[st.flairCrown, { backgroundColor: colors.primary }]}>
+          <Text style={{ fontSize: 8, color: "#fff" }}>★</Text>
         </View>
       )}
+      {/* Earned check */}
       {a.earned && !isFlair && (
-        <View style={{
-          position: "absolute", top: 8, right: 8, width: 18, height: 18, borderRadius: 9,
-          backgroundColor: "#D4A83222", borderWidth: 1.5, borderColor: "#D4A832",
-          alignItems: "center", justifyContent: "center",
-        }}>
+        <View style={st.earnedCheck}>
           <Text style={{ fontSize: 9, color: "#D4A832" }}>✓</Text>
         </View>
       )}
+      {/* Locked overlay */}
       {!a.earned && (
-        <View style={{
-          position: "absolute", bottom: 8, right: 8, width: 22, height: 22, borderRadius: 11,
-          backgroundColor: colors.muted + "80", alignItems: "center", justifyContent: "center",
-        }}>
-          <Text style={{ fontSize: 12, opacity: 0.5 }}>🔒</Text>
+        <View style={[st.lockedOverlay, { backgroundColor: colors.muted + "50" }]}>
+          <Text style={{ fontSize: 13, opacity: 0.4 }}>🔒</Text>
         </View>
       )}
     </TouchableOpacity>
   );
 }
 
-function FlairPicker({ visible, achievements, currentFlair, onSelect, onClose }: {
-  visible: boolean; achievements: Achievement[]; currentFlair: string | null;
-  onSelect: (id: string | null) => void; onClose: () => void;
+// ─── Flair picker modal ───────────────────────────────────────────────────────
+function FlairPicker({
+  visible, achievements, currentFlair, onSelect, onClose,
+}: {
+  visible: boolean;
+  achievements: Achievement[];
+  currentFlair: string | null;
+  onSelect: (id: string | null) => void;
+  onClose: () => void;
 }) {
   const colors = useColors();
   const earned = achievements.filter((a) => a.earned);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={{ flex: 1, backgroundColor: "rgba(42,31,20,0.55)", justifyContent: "flex-end" }} onPress={onClose}>
-        <Pressable style={{ backgroundColor: colors.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "78%" }} onPress={() => {}}>
-          <View style={{ alignItems: "center", paddingVertical: 12 }}>
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+      <Pressable style={st.modalBackdrop} onPress={onClose}>
+        <Pressable style={[st.pickerSheet, { backgroundColor: colors.card }]} onPress={() => {}}>
+          {/* Handle */}
+          <View style={st.handleRow}>
+            <View style={[st.handle, { backgroundColor: colors.border }]} />
           </View>
-          <Text style={{ fontSize: 20, fontFamily: "Fraunces_700Bold", color: colors.foreground, textAlign: "center", paddingHorizontal: 20 }}>
-            Choose Achievement Flair
-          </Text>
-          <Text style={{ fontSize: 13, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, textAlign: "center", paddingHorizontal: 28, marginTop: 6, lineHeight: 18 }}>
+
+          <Text style={[st.pickerTitle, { color: colors.foreground }]}>Choose Achievement Flair</Text>
+          <Text style={[st.pickerSub, { color: colors.mutedForeground }]}>
             Your flair appears on your profile as your featured achievement.
           </Text>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
             {earned.length === 0 ? (
               <View style={{ alignItems: "center", paddingVertical: 32, gap: 8 }}>
                 <Text style={{ fontSize: 36 }}>🔒</Text>
-                <Text style={{ fontSize: 14, fontFamily: "DMSans_500Medium", textAlign: "center", color: colors.mutedForeground }}>
+                <Text style={[{ fontSize: 14, fontFamily: "Inter_500Medium", textAlign: "center" }, { color: colors.mutedForeground }]}>
                   Earn achievements first to set a flair.
                 </Text>
               </View>
             ) : (
               <View style={{ gap: 10, paddingHorizontal: 20, paddingTop: 16 }}>
                 {earned.map((a) => {
-                  const selected = currentFlair === a.id;
+                  const isSelected = currentFlair === a.id;
                   return (
                     <TouchableOpacity
                       key={a.id}
-                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onSelect(selected ? null : a.id); onClose(); }}
-                      style={{
-                        flexDirection: "row", alignItems: "center", gap: 14,
-                        padding: 14, borderRadius: 16,
-                        backgroundColor: selected ? colors.moodStrong + "15" : colors.muted + "60",
-                        borderWidth: selected ? 2 : 1,
-                        borderColor: selected ? colors.moodStrong : colors.border,
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        onSelect(isSelected ? null : a.id);
+                        onClose();
                       }}
+                      style={[
+                        st.pickerRow,
+                        {
+                          backgroundColor: isSelected ? colors.primary + "15" : colors.muted + "60",
+                          borderColor: isSelected ? colors.primary : colors.border,
+                          borderWidth: isSelected ? 2 : 1,
+                        },
+                      ]}
                     >
                       <Text style={{ fontSize: 28 }}>{a.emoji}</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontFamily: "DMSans_600SemiBold", color: selected ? colors.moodStrong : colors.foreground }}>
+                        <Text style={[st.pickerRowTitle, { color: isSelected ? colors.primary : colors.foreground }]}>
                           {a.label}
                         </Text>
-                        <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, marginTop: 2 }}>
+                        <Text style={[st.pickerRowSub, { color: colors.mutedForeground }]}>
                           {a.flairDesc}
                         </Text>
                       </View>
-                      {selected && (
-                        <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.moodStrong, alignItems: "center", justifyContent: "center" }}>
+                      {isSelected && (
+                        <View style={[st.pickerCheck, { backgroundColor: colors.primary }]}>
                           <Feather name="check" size={13} color="#fff" />
                         </View>
                       )}
@@ -217,12 +225,13 @@ function FlairPicker({ visible, achievements, currentFlair, onSelect, onClose }:
                 })}
               </View>
             )}
+
             {currentFlair && (
               <TouchableOpacity
-                style={{ marginHorizontal: 20, marginTop: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, alignItems: "center" }}
+                style={[st.clearBtn, { borderColor: colors.border }]}
                 onPress={() => { onSelect(null); onClose(); }}
               >
-                <Text style={{ fontSize: 13, fontFamily: "DMSans_500Medium", color: colors.mutedForeground }}>Remove flair</Text>
+                <Text style={[st.clearBtnTxt, { color: colors.mutedForeground }]}>Remove flair</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -232,15 +241,12 @@ function FlairPicker({ visible, achievements, currentFlair, onSelect, onClose }:
   );
 }
 
-function ProfileScreenInner({
-  signOut,
-  user,
-}: {
-  signOut: () => void;
-  user: UseUserReturn["user"];
-}) {
+// ─── Main screen ──────────────────────────────────────────────────────────────
+export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { signOut, getToken } = useAuth();
+  const { user } = useUser();
 
   const books             = useStore((s) => s.books);
   const sessions          = useStore((s) => s.sessions);
@@ -290,22 +296,24 @@ function ProfileScreenInner({
     }, 800);
   };
 
+  // ── Achievements ────────────────────────────────────────────────────────────
   const achievements: Achievement[] = [
-    { id: "first",    emoji: "📖", label: "First Chapter",  desc: "Added your first book",        flairDesc: "Stepping into the story",    earned: books.length >= 1 },
-    { id: "five",     emoji: "📚", label: "Bookworm",        desc: "Finished 5 books",             flairDesc: "Five books and counting",    earned: finished >= 5 },
-    { id: "ten",      emoji: "🏆", label: "Bibliophile",     desc: "Finished 10 books",            flairDesc: "Double digits, no breaks",   earned: finished >= 10 },
-    { id: "pages100", emoji: "💯", label: "Century",         desc: "Read 100+ pages total",        flairDesc: "100 pages already",          earned: totalPages >= 100 },
-    { id: "pages1k",  emoji: "🌟", label: "Marathon Reader", desc: "Read 1,000+ pages total",      flairDesc: "A thousand pages deep",      earned: totalPages >= 1000 },
-    { id: "streak7",  emoji: "🔥", label: "Week Warrior",    desc: "7-day reading streak",         flairDesc: "Seven days straight",        earned: streak.current >= 7 },
-    { id: "mood5",    emoji: "💜", label: "Mood Reader",     desc: "Tagged moods on 5+ books",     flairDesc: "Reads by feeling, not genre",earned: books.filter((b) => b.mood).length >= 5 },
-    { id: "trope3",   emoji: "🔮", label: "Trope Hunter",    desc: "Tropes tagged on 3+ books",    flairDesc: "Knows the tropes by heart",  earned: books.filter((b) => (b.tropes?.length ?? 0) > 0).length >= 3 },
-    { id: "journal5", emoji: "✍️", label: "Journaler",       desc: "5+ journal entries",           flairDesc: "Writing between the lines",  earned: journal.length >= 5 },
-    { id: "fave",     emoji: "⭐", label: "Collector",       desc: "Marked a book as favourite",   flairDesc: "Keeps their favourites close",earned: books.some((b) => b.isFavorite) },
+    { id: "first",    emoji: "📖", label: "First Chapter",   desc: "Added your first book",         flairDesc: "Stepping into the story",      earned: books.length >= 1 },
+    { id: "five",     emoji: "📚", label: "Bookworm",         desc: "Finished 5 books",              flairDesc: "Five books and counting",       earned: finished >= 5 },
+    { id: "ten",      emoji: "🏆", label: "Bibliophile",      desc: "Finished 10 books",             flairDesc: "Double digits, no breaks",      earned: finished >= 10 },
+    { id: "pages100", emoji: "💯", label: "Century",          desc: "Read 100+ pages total",         flairDesc: "100 pages already",             earned: totalPages >= 100 },
+    { id: "pages1k",  emoji: "🌟", label: "Marathon Reader",  desc: "Read 1,000+ pages total",       flairDesc: "A thousand pages deep",         earned: totalPages >= 1000 },
+    { id: "streak7",  emoji: "🔥", label: "Week Warrior",     desc: "7-day reading streak",          flairDesc: "Seven days straight",           earned: streak.current >= 7 },
+    { id: "mood5",    emoji: "💜", label: "Mood Reader",      desc: "Tagged moods on 5+ books",      flairDesc: "Reads by feeling, not genre",   earned: books.filter((b) => b.mood).length >= 5 },
+    { id: "trope3",   emoji: "🔮", label: "Trope Hunter",     desc: "Tropes tagged on 3+ books",     flairDesc: "Knows the tropes by heart",     earned: books.filter((b) => (b.tropes?.length ?? 0) > 0).length >= 3 },
+    { id: "journal5", emoji: "✍️", label: "Journaler",        desc: "5+ journal entries",            flairDesc: "Writing between the lines",     earned: journal.length >= 5 },
+    { id: "fave",     emoji: "⭐", label: "Collector",        desc: "Marked a book as favourite",    flairDesc: "Keeps their favourites close",   earned: books.some((b) => b.isFavorite) },
   ];
 
-  const earnedCount = achievements.filter((a) => a.earned).length;
-  const activeFlair = achievements.find((a) => a.id === achievementFlair) ?? null;
+  const earnedCount  = achievements.filter((a) => a.earned).length;
+  const activeFlair  = achievements.find((a) => a.id === achievementFlair) ?? null;
 
+  // ── Photo picker ─────────────────────────────────────────────────────────────
   async function pickPhoto() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -313,7 +321,10 @@ function ProfileScreenInner({
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.8,
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     });
     if (!result.canceled) {
       const localUri = result.assets[0].uri;
@@ -326,7 +337,9 @@ function ProfileScreenInner({
         await fetch(uploadURL, { method: "PUT", body: imageBlob, headers: { "Content-Type": "image/jpeg" } });
         await apiPatch("/api/profiles/me", { avatarUrl: objectPath });
         setServerAvatarUrl(objectPath);
-      } catch { } finally {
+      } catch {
+        // local preview still shows — upload failed silently
+      } finally {
         setUploadingPhoto(false);
       }
     }
@@ -335,178 +348,161 @@ function ProfileScreenInner({
   const handleSignOut = () => {
     Alert.alert("Sign out", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: () => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); signOut(); } },
-    ]);
-  };
-
-  const handleDeleteAccount = () => {
-    Alert.alert("Delete account", "This will permanently delete your account and all your data. This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
       {
-        text: "Delete my account", style: "destructive",
+        text: "Sign out", style: "destructive",
         onPress: () => {
-          Alert.alert("Are you absolutely sure?", "All your data will be gone forever.", [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Yes, delete everything", style: "destructive",
-              onPress: async () => {
-                try {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                  await apiDelete("/api/account/me");
-                  signOut();
-                } catch {
-                  Alert.alert("Error", "Could not delete your account. Please try again.");
-                }
-              },
-            },
-          ]);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          signOut();
         },
       },
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This will permanently delete your account, all your books, reading sessions, journal entries, and chat history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete my account",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you absolutely sure?",
+              "All your data will be gone forever.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, delete everything",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                      await apiDelete("/api/account/me");
+                      signOut();
+                    } catch {
+                      Alert.alert("Error", "Could not delete your account. Please try again or contact support.");
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const initial = (user?.firstName?.[0] ?? user?.emailAddresses?.[0]?.emailAddress?.[0] ?? "?").toUpperCase();
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={[st.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + TAB_BAR_HEIGHT + 8 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero header ── */}
-        <LinearGradient
-          colors={[colors.moodTint, colors.background]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={{
-            paddingTop: Platform.OS === "web" ? 67 : insets.top + 20,
-            paddingHorizontal: 20, paddingBottom: 24, alignItems: "center",
-          }}
-        >
-          {/* Avatar */}
+        {/* ── Avatar header ── */}
+        <View style={[st.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 12 }]}>
           <TouchableOpacity onPress={pickPhoto} activeOpacity={0.8} disabled={uploadingPhoto}>
-            <View style={{
-              width: 88, height: 88, borderRadius: 44,
-              borderWidth: 3, borderColor: colors.moodStrong + "60",
-              padding: 3, marginBottom: 14, opacity: uploadingPhoto ? 0.6 : 1,
-            }}>
+            <View style={[st.avatarRing, { borderColor: colors.primary + "60", opacity: uploadingPhoto ? 0.6 : 1 }]}>
               {(serverAvatarUrl || profilePicture) ? (
                 <Image
                   source={{ uri: serverAvatarUrl ? `${baseUrl()}/api/storage${serverAvatarUrl}` : profilePicture! }}
-                  style={{ width: "100%", height: "100%", borderRadius: 38 }}
+                  style={st.avatarImage}
                 />
               ) : (
-                <View style={{
-                  width: "100%", height: "100%", borderRadius: 38,
-                  backgroundColor: colors.moodStrong + "25",
-                  alignItems: "center", justifyContent: "center",
-                }}>
-                  <Text style={{ fontSize: 32, fontFamily: "Fraunces_700Bold", color: colors.moodStrong }}>{initial}</Text>
+                <View style={[st.avatarFallback, { backgroundColor: colors.primary + "30" }]}>
+                  <Text style={[st.avatarText, { color: colors.primary }]}>{initial}</Text>
                 </View>
               )}
             </View>
-            <View style={{
-              position: "absolute", bottom: 14, right: -2,
-              width: 26, height: 26, borderRadius: 13,
-              backgroundColor: uploadingPhoto ? colors.mutedForeground : colors.moodStrong,
-              alignItems: "center", justifyContent: "center",
-              borderWidth: 2.5, borderColor: colors.background,
-            }}>
+            <View style={[st.cameraBtn, { backgroundColor: uploadingPhoto ? colors.mutedForeground : colors.primary }]}>
               {uploadingPhoto
                 ? <ActivityIndicator size={10} color="#fff" />
-                : <Feather name="camera" size={12} color="#fff" />}
+                : <Feather name="camera" size={11} color="#fff" />}
             </View>
           </TouchableOpacity>
 
-          <Text style={{ fontSize: 22, fontFamily: "Fraunces_700Bold", color: colors.foreground }}>
+          <Text style={[st.name, { color: colors.foreground }]}>
             {user?.fullName ?? user?.firstName ?? "Reader"}
           </Text>
-          <Text style={{ fontSize: 13, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, marginTop: 3 }}>
+          <Text style={[st.email, { color: colors.mutedForeground }]}>
             {user?.emailAddresses?.[0]?.emailAddress ?? ""}
           </Text>
 
-          {/* Flair badge */}
+          {/* ── Achievement flair badge ── */}
           <TouchableOpacity
+            style={[
+              st.flairBadge,
+              activeFlair
+                ? { backgroundColor: colors.primary + "18", borderColor: colors.primary + "80" }
+                : { backgroundColor: colors.muted, borderColor: colors.border },
+            ]}
             onPress={() => setShowFlairPicker(true)}
             activeOpacity={0.8}
-            style={{
-              flexDirection: "row", alignItems: "center", gap: 10,
-              marginTop: 14, paddingHorizontal: 16, paddingVertical: 11,
-              borderRadius: 99, borderWidth: 1.5, width: "100%",
-              backgroundColor: activeFlair ? colors.moodStrong + "15" : colors.card,
-              borderColor: activeFlair ? colors.moodStrong + "80" : colors.border,
-            }}
           >
             {activeFlair ? (
               <>
-                <Text style={{ fontSize: 18 }}>{activeFlair.emoji}</Text>
+                <Text style={{ fontSize: 16 }}>{activeFlair.emoji}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontFamily: "DMSans_600SemiBold", color: colors.moodStrong }}>{activeFlair.label}</Text>
-                  <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, marginTop: 1 }} numberOfLines={1}>
+                  <Text style={[st.flairLabel, { color: colors.primary }]}>{activeFlair.label}</Text>
+                  <Text style={[st.flairSub, { color: colors.mutedForeground }]} numberOfLines={1}>
                     {activeFlair.flairDesc}
                   </Text>
                 </View>
-                <View style={{ backgroundColor: colors.moodStrong, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
-                  <Text style={{ fontSize: 9, color: "#fff", fontFamily: "DMSans_600SemiBold" }}>★ FLAIR</Text>
+                <View style={[st.flairStarBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={{ fontSize: 9, color: "#fff" }}>★ FLAIR</Text>
                 </View>
               </>
             ) : (
               <>
                 <Feather name="award" size={15} color={colors.mutedForeground} />
-                <Text style={{ flex: 1, fontSize: 13, fontFamily: "DMSans_500Medium", color: colors.mutedForeground }}>Set achievement flair</Text>
+                <Text style={[st.flairEmpty, { color: colors.mutedForeground }]}>Set achievement flair</Text>
                 <Feather name="chevron-right" size={13} color={colors.mutedForeground} />
               </>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={pickPhoto}
-            style={{
-              flexDirection: "row", alignItems: "center", gap: 6,
-              marginTop: 10, paddingHorizontal: 14, paddingVertical: 7,
-              borderRadius: 99, borderWidth: 1, borderColor: colors.border,
-            }}
-          >
+          <TouchableOpacity onPress={pickPhoto} style={[st.changePhotoBtn, { borderColor: colors.border }]}>
             <Feather name="camera" size={12} color={colors.mutedForeground} />
-            <Text style={{ fontSize: 12, fontFamily: "DMSans_500Medium", color: colors.mutedForeground }}>
+            <Text style={[st.changePhotoTxt, { color: colors.mutedForeground }]}>
               {profilePicture ? "Change photo" : "Add profile photo"}
             </Text>
           </TouchableOpacity>
-        </LinearGradient>
+        </View>
 
         {/* ── Stats ── */}
-        <View style={{ flexDirection: "row", paddingHorizontal: 20, gap: 10, marginBottom: 28 }}>
+        <View style={st.statsRow}>
           {[
-            { label: "Finished", value: finished },
-            { label: "Pages read", value: totalPages },
-            { label: "Entries", value: journal.length },
+            { label: "Finished",    value: finished },
+            { label: "Total pages", value: totalPages },
+            { label: "Entries",     value: journal.length },
           ].map((item) => (
-            <View key={item.label} style={{
-              flex: 1, backgroundColor: colors.card, borderRadius: 16,
-              padding: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border,
-            }}>
-              <Text style={{ fontSize: 22, fontFamily: "Fraunces_700Bold", color: colors.foreground }}>{item.value}</Text>
-              <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, marginTop: 3, textTransform: "uppercase", letterSpacing: 0.5 }}>{item.label}</Text>
+            <View key={item.label} style={[st.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[st.statVal, { color: colors.foreground }]}>{item.value}</Text>
+              <Text style={[st.statLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
             </View>
           ))}
         </View>
 
-        {/* ── Achievements ── */}
-        <View style={{ marginBottom: 28 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 6 }}>
-            <Text style={{ fontSize: 11, fontFamily: "DMSans_600SemiBold", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 2 }}>
-              Achievements
-            </Text>
-            <View style={{ backgroundColor: colors.moodStrong + "18", borderWidth: 1, borderColor: colors.moodStrong + "50", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 99 }}>
-              <Text style={{ fontSize: 12, fontFamily: "DMSans_600SemiBold", color: colors.moodStrong }}>
-                {earnedCount} / {achievements.length}
+        {/* ── Achievement badges ── */}
+        <View style={st.section}>
+          <View style={st.achieveHeader}>
+            <Text style={[st.sectionTitle, { color: colors.mutedForeground }]}>Achievements</Text>
+            <View style={[st.achieveCount, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "60" }]}>
+              <Text style={[st.achieveCountTxt, { color: colors.primary }]}>
+                {earnedCount} / {achievements.length} earned
               </Text>
             </View>
           </View>
-          <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, paddingHorizontal: 20, marginBottom: 14 }}>
+
+          {/* Flair hint */}
+          <Text style={[st.flairHint, { color: colors.mutedForeground }]}>
             Tap an earned achievement to set it as your flair ★
           </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, gap: 10 }}>
+
+          <View style={st.badgeGrid}>
             {achievements.map((a) => (
               <AchievementBadge
                 key={a.id}
@@ -521,108 +517,123 @@ function ProfileScreenInner({
           </View>
         </View>
 
+        {/* ── Favourite moods ── */}
+        <View style={st.section}>
+          <Text style={[st.sectionTitle, { color: colors.mutedForeground }]}>Favourite moods</Text>
+          <View style={[st.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Row label="Reading moods" value={preferences?.favoriteMoods?.join(", ") ?? "Not set"} />
+          </View>
+        </View>
+
         {/* ── Daily goals ── */}
-        <View style={{ marginBottom: 28 }}>
-          <SectionLabel>Daily goals</SectionLabel>
-          <View style={{ marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
+        <View style={st.section}>
+          <Text style={[st.sectionTitle, { color: colors.mutedForeground }]}>Daily goals</Text>
+          <View style={[st.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <GoalRow label="Pages per day"   value={dailyGoal}        options={[10, 20, 30, 50, 100]} onChange={setDailyGoal} />
             <GoalRow label="Minutes per day" value={dailyGoalMinutes} options={[15, 30, 45, 60, 90]}  onChange={setDailyGoalMinutes} />
             <GoalRow label="Books per year"  value={yearlyGoal}       options={[12, 24, 36, 50, 100]} onChange={setYearlyGoal} />
           </View>
         </View>
 
-        {/* ── Favourite moods ── */}
-        {preferences?.favoriteMoods && preferences.favoriteMoods.length > 0 && (
-          <View style={{ marginBottom: 28 }}>
-            <SectionLabel>Favourite moods</SectionLabel>
-            <View style={{ marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
-              <SettingRow label="Reading moods" value={preferences.favoriteMoods.join(", ")} />
-            </View>
-          </View>
-        )}
-
         {/* ── Account ── */}
-        <View style={{ marginBottom: 28 }}>
-          <SectionLabel>Account</SectionLabel>
-          <View style={{ marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
-            <SettingRow label="Email" value={user?.emailAddresses?.[0]?.emailAddress ?? ""} />
-            <SettingRow
+        <View style={st.section}>
+          <Text style={[st.sectionTitle, { color: colors.mutedForeground }]}>Account</Text>
+          <View style={[st.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Row label="Email" value={user?.emailAddresses?.[0]?.emailAddress ?? ""} />
+            <Row
               label="Member since"
               value={user?.createdAt
                 ? new Date(user.createdAt).toLocaleDateString("en", { month: "long", year: "numeric" })
                 : "—"}
             />
-            {/* Location for Reading Twins */}
-            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 14, gap: 10 }}>
-              <Text style={{ fontSize: 11, fontFamily: "DMSans_600SemiBold", color: colors.mutedForeground, textTransform: "uppercase", letterSpacing: 1 }}>
-                Location · for Reading Twins 👯
-              </Text>
+            {/* Location — for Reading Twins */}
+            <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, gap: 8 }}>
+              <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground }}>LOCATION · for Reading Twins 👯</Text>
               <TextInput
-                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "DMSans_400Regular", color: colors.foreground }}
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, fontFamily: "Inter_400Regular", color: colors.foreground }}
                 placeholder="City (e.g. London)"
                 placeholderTextColor={colors.mutedForeground}
                 value={city}
                 onChangeText={(v) => { setCity(v); saveLocation(v, country); }}
               />
               <TextInput
-                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: "DMSans_400Regular", color: colors.foreground }}
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, fontFamily: "Inter_400Regular", color: colors.foreground }}
                 placeholder="Country (e.g. United Kingdom)"
                 placeholderTextColor={colors.mutedForeground}
                 value={country}
                 onChangeText={(v) => { setCountry(v); saveLocation(city, v); }}
               />
-              <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, lineHeight: 16 }}>
-                Only your city and country are stored — no GPS used.
+              <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground, lineHeight: 16 }}>
+                Only your city and country are stored — no GPS used. Helps match you with nearby readers.
               </Text>
             </View>
             {/* Family account toggle */}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              paddingHorizontal: 16, paddingVertical: 14 }}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 14, fontFamily: "DMSans_500Medium", color: colors.foreground }}>Family account 👨‍👩‍👧‍👦</Text>
-                <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
-                  {familyAccount ? "Chat moderation and safe messaging are active." : "Enable to read together with your family."}
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
+                  Family account 👨‍👩‍👧‍👦
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
+                  {familyAccount
+                    ? "Chat moderation and safe messaging are active."
+                    : "Enable to read together with your family."}
                 </Text>
               </View>
               <Switch
                 value={familyAccount === true}
-                onValueChange={(v) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setFamilyAccount(v); }}
-                trackColor={{ false: colors.border, true: colors.moodStrong + "60" }}
-                thumbColor={familyAccount ? colors.moodStrong : colors.mutedForeground}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setFamilyAccount(v);
+                }}
+                trackColor={{ false: colors.border, true: colors.primary + "60" }}
+                thumbColor={familyAccount ? colors.primary : colors.mutedForeground}
               />
             </View>
             {/* Under-16 toggle */}
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 14, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+              paddingHorizontal: 16, paddingVertical: 14,
+              borderTopWidth: 1, borderTopColor: colors.border }}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{ fontSize: 14, fontFamily: "DMSans_500Medium", color: colors.foreground }}>Under 16 profile 🔒</Text>
-                <Text style={{ fontSize: 12, fontFamily: "DMSans_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
-                  {isUnder16 ? "Chat moderation is on." : "Turn on for readers under 16."}
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: colors.foreground }}>
+                  Under 16 profile 🔒
+                </Text>
+                <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, lineHeight: 16 }}>
+                  {isUnder16
+                    ? "Chat moderation is on. Inappropriate messages are blocked."
+                    : "Turn on for readers under 16. Enables stricter chat filtering."}
                 </Text>
               </View>
               <Switch
                 value={isUnder16 === true}
-                onValueChange={(v) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setIsUnder16(v); if (v) setFamilyAccount(true); }}
-                trackColor={{ false: colors.border, true: colors.moodStrong + "60" }}
-                thumbColor={isUnder16 ? colors.moodStrong : colors.mutedForeground}
+                onValueChange={(v) => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setIsUnder16(v);
+                  if (v) setFamilyAccount(true);
+                }}
+                trackColor={{ false: colors.border, true: colors.primary + "60" }}
+                thumbColor={isUnder16 ? colors.primary : colors.mutedForeground}
               />
             </View>
           </View>
         </View>
 
-        {/* ── Sign out / delete ── */}
         <TouchableOpacity
-          style={{ marginHorizontal: 20, borderRadius: 14, borderWidth: 1.5, borderColor: colors.destructive + "60", paddingVertical: 14, alignItems: "center" }}
+          style={[st.signOutBtn, { borderColor: colors.destructive + "60" }]}
           onPress={handleSignOut}
         >
-          <Text style={{ fontSize: 14, fontFamily: "DMSans_600SemiBold", color: colors.destructive }}>Sign out</Text>
+          <Text style={[st.signOutTxt, { color: colors.destructive }]}>Sign out</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={{ marginHorizontal: 20, marginTop: 10, marginBottom: 4, borderRadius: 14, borderWidth: 1, borderColor: colors.destructive + "25", paddingVertical: 13, alignItems: "center" }}
+          style={[st.signOutBtn, { borderColor: colors.destructive + "20", marginTop: 10, marginBottom: 4 }]}
           onPress={handleDeleteAccount}
         >
-          <Text style={{ fontSize: 13, fontFamily: "DMSans_500Medium", color: colors.destructive + "99" }}>Delete account</Text>
+          <Text style={[st.signOutTxt, { color: colors.destructive + "99", fontSize: 13 }]}>Delete account</Text>
         </TouchableOpacity>
       </ScrollView>
 
+      {/* ── Flair picker modal ── */}
       <FlairPicker
         visible={showFlairPicker}
         achievements={achievements}
@@ -634,15 +645,120 @@ function ProfileScreenInner({
   );
 }
 
-function ProfileScreenNative() {
-  const { useAuth, useUser } = require("@clerk/clerk-expo");
-  const { signOut } = useAuth();
-  const { user } = useUser();
-  return <ProfileScreenInner signOut={signOut} user={user} />;
-}
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const st = StyleSheet.create({
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingBottom: 20, alignItems: "center" },
 
-function ProfileScreenWeb() {
-  return <ProfileScreenInner signOut={() => {}} user={null} />;
-}
+  avatarRing: { width: 84, height: 84, borderRadius: 42, borderWidth: 2.5, padding: 2, marginBottom: 12 },
+  avatarImage: { width: "100%", height: "100%", borderRadius: 38 },
+  avatarFallback: { width: "100%", height: "100%", borderRadius: 38, alignItems: "center", justifyContent: "center" },
+  avatarText: { fontSize: 32, fontFamily: "Inter_700Bold" },
+  cameraBtn: {
+    position: "absolute", bottom: 12, right: -2,
+    width: 24, height: 24, borderRadius: 12,
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: "#fff",
+  },
+  name: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  email: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 3 },
 
-export default Platform.OS === "web" ? ProfileScreenWeb : ProfileScreenNative;
+  // Flair badge in header
+  flairBadge: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginTop: 14, paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 20, borderWidth: 1.5, width: "100%",
+  },
+  flairLabel: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  flairSub: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 },
+  flairEmpty: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium" },
+  flairStarBadge: {
+    paddingHorizontal: 7, paddingVertical: 3, borderRadius: 10,
+  },
+
+  changePhotoBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginTop: 12, paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 20, borderWidth: 1,
+  },
+  changePhotoTxt: { fontSize: 12, fontFamily: "Inter_500Medium" },
+
+  statsRow: { flexDirection: "row", paddingHorizontal: 20, gap: 10, marginBottom: 24 },
+  statBox: { flex: 1, borderRadius: 16, padding: 14, alignItems: "center", borderWidth: 1 },
+  statVal: { fontSize: 22, fontFamily: "Inter_700Bold" },
+  statLabel: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+
+  section: { marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 12, fontFamily: "Inter_600SemiBold", textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  groupCard: { marginHorizontal: 20, borderRadius: 16, overflow: "hidden", borderWidth: 1 },
+
+  achieveHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, marginBottom: 6,
+  },
+  achieveCount: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  achieveCountTxt: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  flairHint: {
+    fontSize: 11, fontFamily: "Inter_400Regular", paddingHorizontal: 20, marginBottom: 12,
+  },
+
+  badgeGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, gap: 10 },
+  badge: {
+    width: "46%", padding: 14, borderRadius: 18,
+    alignItems: "center", gap: 4, overflow: "hidden",
+    minHeight: 120,
+  },
+  glowRing: { position: "absolute", inset: 0, borderRadius: 18 },
+  badgeEmoji: { fontSize: 30, marginBottom: 2 },
+  badgeLabel: { fontSize: 12, fontFamily: "Inter_700Bold", textAlign: "center" },
+  badgeDesc: { fontSize: 10, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 14 },
+  flairCrown: {
+    position: "absolute", top: 8, right: 8,
+    paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8,
+  },
+  earnedCheck: {
+    position: "absolute", top: 8, right: 8,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: "#D4A83222", borderWidth: 1.5, borderColor: "#D4A832",
+    alignItems: "center", justifyContent: "center",
+  },
+  lockedOverlay: {
+    position: "absolute", bottom: 8, right: 8,
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: "center", justifyContent: "center",
+  },
+
+  signOutBtn: { marginHorizontal: 20, borderRadius: 12, borderWidth: 1, paddingVertical: 13, alignItems: "center" },
+  signOutTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  // Flair picker modal
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "flex-end" },
+  pickerSheet: {
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    maxHeight: "78%",
+    shadowColor: "#000", shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 20,
+  },
+  handleRow: { alignItems: "center", paddingVertical: 12 },
+  handle: { width: 40, height: 4, borderRadius: 2 },
+  pickerTitle: { fontSize: 20, fontFamily: "Inter_700Bold", textAlign: "center" },
+  pickerSub: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 28, marginTop: 6, lineHeight: 18 },
+
+  pickerRow: {
+    flexDirection: "row", alignItems: "center", gap: 14,
+    padding: 14, borderRadius: 16,
+  },
+  pickerRowTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  pickerRowSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  pickerCheck: {
+    width: 26, height: 26, borderRadius: 13,
+    alignItems: "center", justifyContent: "center",
+  },
+  clearBtn: {
+    marginHorizontal: 20, marginTop: 16, borderRadius: 12,
+    borderWidth: 1, paddingVertical: 12, alignItems: "center",
+  },
+  clearBtnTxt: { fontSize: 13, fontFamily: "Inter_500Medium" },
+});

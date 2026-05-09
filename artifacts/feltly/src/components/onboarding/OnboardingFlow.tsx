@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 
 const MOOD_KEYS = Object.keys(MOODS) as MoodKey[];
-const MAX_TROPES = 6;
+const MAX_TROPES = 10;
 const QUIZ_STEPS = 7;  // indices 0-6
 const TOUR_STEPS = 4;  // indices 7-10
 const TOTAL_STEPS = QUIZ_STEPS + TOUR_STEPS;

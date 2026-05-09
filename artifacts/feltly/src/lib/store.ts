@@ -9,7 +9,7 @@ import letters from "@/assets/book-letters.jpg";
 import hollow from "@/assets/book-hollow.jpg";
 
 export type Shelf = "reading" | "want" | "finished" | "dnf" | "paused";
-export type AgeRating = "children" | "middle-grade" | "young-adult" | "adult";
+export type AgeRating = number;
 
 export type TriggerType =
   | "gut-punch"
@@ -137,6 +137,13 @@ export type ShelfTheme = {
   texture: "none" | "linen" | "paper" | "wood" | "velvet";
 };
 
+export type BookcaseShelfStyle = "classic-wood" | "light-oak" | "dark-walnut" | "cozy-pastel" | "minimal-cream";
+export type BookcaseSpineStyle = "colorful" | "neutral" | "mood-based" | "genre-based";
+export type BookcaseStyle = {
+  shelf: BookcaseShelfStyle;
+  spine: BookcaseSpineStyle;
+};
+
 export type Collection = {
   id: string;
   name: string;
@@ -179,10 +186,14 @@ type State = {
   readingDensity: "compact" | "default" | "comfortable";
   companionFinishedToastsShown: string[];
   lastChangelogReadAt: number;
+  bookcaseMode: boolean;
+  bookcaseStyle: BookcaseStyle;
   setReadingFontScale: (scale: number) => void;
   setLastChangelogReadAt: (ts: number) => void;
   setReadingDensity: (d: "compact" | "default" | "comfortable") => void;
   setParentalPin: (pin: string | undefined) => void;
+  setBookcaseMode: (v: boolean) => void;
+  setBookcaseStyle: (s: Partial<BookcaseStyle>) => void;
   createCollection: (name: string, isSeries?: boolean) => string;
   renameCollection: (id: string, name: string) => void;
   deleteCollection: (id: string) => void;
@@ -427,11 +438,16 @@ export const useLibrary = create<State>()(
       readingDensity: "default",
       companionFinishedToastsShown: [],
       lastChangelogReadAt: 0,
+      bookcaseMode: false,
+      bookcaseStyle: { shelf: "classic-wood" as const, spine: "colorful" as const },
       setReadingFontScale: (scale) =>
         set({ readingFontScale: Math.max(0.85, Math.min(1.25, scale)) }),
       setLastChangelogReadAt: (ts) => set({ lastChangelogReadAt: ts }),
       setReadingDensity: (readingDensity) => set({ readingDensity }),
       setParentalPin: (pin) => set({ parentalPin: pin }),
+      setBookcaseMode: (bookcaseMode) => set({ bookcaseMode }),
+      setBookcaseStyle: (s) =>
+        set((prev) => ({ bookcaseStyle: { ...prev.bookcaseStyle, ...s } })),
       createCollection: (name, isSeries) => {
         const id = crypto.randomUUID();
         set((s) => ({

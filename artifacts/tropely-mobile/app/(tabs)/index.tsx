@@ -1,10 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
+  Animated,
   Image,
+  Modal,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,1602 +15,768 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StreakBadge } from "@/components/StreakBadge";
 import { QuickLogModal } from "@/components/QuickLogModal";
 import { useColors } from "@/hooks/useColors";
 import { MOODS } from "@/lib/moods";
 import { computeStreak } from "@/lib/streak";
-import { useStore, type Book, type Shelf } from "@/lib/store";
+import { useStore, type Book } from "@/lib/store";
 
-const TAB_BAR_HEIGHT = 84;
-const COLS = 3;
-const GRID_GAP = 10;
+// ─── Shelf themes ──────────────────────────────────────────────────────────────
+const THEMES = {
+  darkWalnut: { id: "darkWalnut", name: "Dark Walnut",  bg: "#0E0A06", wall: "#1A1208", shelf: "#5C3E28", edge: "#3A2415", title: "#F0DEC8", grain: "#00000025", emoji: "🪵" },
+  lightOak:   { id: "lightOak",   name: "Light Oak",    bg: "#EEE2CA", wall: "#F8F0DC", shelf: "#C8A060", edge: "#A87840", title: "#2A1808", grain: "#00000018", emoji: "🌾" },
+  midnight:   { id: "midnight",   name: "Midnight",     bg: "#06080F", wall: "#0C0E1E", shelf: "#1E1C32", edge: "#141228", title: "#D0CEEE", grain: "#ffffff08", emoji: "🌙" },
+  crimson:    { id: "crimson",    name: "Crimson Den",  bg: "#100606", wall: "#180A0A", shelf: "#6A1818", edge: "#4E1010", title: "#EDD4D4", grain: "#00000025", emoji: "🌹" },
+  sage:       { id: "sage",       name: "Sage Forest",  bg: "#060C06", wall: "#0A120A", shelf: "#22402A", edge: "#162C1C", title: "#CCEACC", grain: "#00000020", emoji: "🌿" },
+} as const;
+type ThemeKey = keyof typeof THEMES;
 
-const STEPS = [
-  {
-    n: "1",
-    title: "Add a book",
-    body: "Search by title or author. Pick the mood it's giving you.",
-  },
-  {
-    n: "2",
-    title: "Log how it feels",
-    body: "Quick reactions, notes, and short sessions — no rating required.",
-  },
-  {
-    n: "3",
-    title: "See your signature",
-    body: "Streaks, mood pulse, and a yearly Wrap will start appearing.",
-  },
-];
+// ─── Spine helpers ────────────────────────────────────────────────────────────
+const SPINE_W = 44;
+const SPINE_PALETTE = ["#9B72CF","#D4874A","#5CB8C8","#52C97E","#D4A832","#BF4D5E","#7A8EBF","#C47A55","#B06090","#4A8BB0","#7DC28A","#C4A030"];
+const SPINE_HEIGHTS = [152, 168, 158, 174, 148, 164, 155, 170, 145, 162, 178, 150];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function startOfDay(ms: number): number {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+function hashStr(str: string, mod: number): number {
+  let h = 0;
+  for (const c of str) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return h % mod;
+}
+function spineColor(book: Book): string {
+  return book.mood ? MOODS[book.mood].accent : SPINE_PALETTE[hashStr(book.title, SPINE_PALETTE.length)];
+}
+function spineHeight(bookId: string, idx: number): number {
+  return SPINE_HEIGHTS[(hashStr(bookId, 7) + idx) % SPINE_HEIGHTS.length];
 }
 
-// ─── Book cover ───────────────────────────────────────────────────────────────
+// ─── Single book spine ────────────────────────────────────────────────────────
+function BookSpine({ book, idx, isSelected, onPress }: { book: Book; idx: number; isSelected: boolean; onPress: () => void }) {
+  const col = spineColor(book);
+  const h = spineHeight(book.id, idx);
+  const diff = (h - SPINE_W) / 2;
 
-function BookCover({
-  book,
-  width = 80,
-  height = 112,
-}: {
-  book: Book;
-  width?: number;
-  height?: number;
-}) {
-  const C = useColors();
-  const accent = book.mood ? MOODS[book.mood].accent : C.moodStrong;
-  if (book.cover) {
-    return (
-      <Image
-        source={{ uri: book.cover }}
-        style={{ width, height, borderRadius: 8 }}
-        resizeMode="cover"
-      />
-    );
-  }
   return (
-    <View
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.9}
+      style={[
+        st.spine,
+        {
+          width: SPINE_W,
+          height: h,
+          backgroundColor: col,
+          shadowColor: col,
+          shadowOpacity: isSelected ? 0.7 : 0.3,
+          shadowRadius: isSelected ? 12 : 4,
+          shadowOffset: { width: 2, height: 4 },
+          elevation: isSelected ? 12 : 4,
+          transform: [{ translateY: isSelected ? -22 : 0 }],
+          borderTopLeftRadius: 2,
+          borderTopRightRadius: 3,
+        },
+      ]}
+    >
+      {/* Left highlight (like light hitting the spine) */}
+      <View style={[st.spineEdgeLight, { backgroundColor: "#ffffff20" }]} />
+      {/* Right shadow edge */}
+      <View style={[st.spineEdgeDark, { backgroundColor: "#00000030" }]} />
+
+      {/* Rotated title text */}
+      <View style={{ width: SPINE_W, height: h, overflow: "hidden" }}>
+        <View style={{
+          width: h, height: SPINE_W,
+          position: "absolute",
+          top: diff, left: -diff,
+          transform: [{ rotate: "-90deg" }],
+          justifyContent: "center",
+          paddingHorizontal: 8,
+        }}>
+          <Text style={st.spineTitle} numberOfLines={1}>
+            {book.title.toUpperCase()}
+          </Text>
+          <Text style={st.spineAuthor} numberOfLines={1}>
+            {book.author}
+          </Text>
+        </View>
+      </View>
+
+      {/* Mood pip at bottom */}
+      {book.mood && (
+        <View style={st.spineMoodPip}>
+          <Text style={{ fontSize: 9 }}>{MOODS[book.mood].emoji}</Text>
+        </View>
+      )}
+
+      {/* Top gold stripe for selected */}
+      {isSelected && (
+        <View style={[st.spineTopStripe, { backgroundColor: "#ffffff55" }]} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ─── Ghost spine (empty slot) ─────────────────────────────────────────────────
+function GhostSpine({ idx, theme }: { idx: number; theme: (typeof THEMES)[ThemeKey] }) {
+  const h = SPINE_HEIGHTS[idx % SPINE_HEIGHTS.length];
+  return (
+    <View style={{
+      width: SPINE_W, height: h, borderRadius: 3,
+      borderWidth: 1, borderStyle: "dashed",
+      borderColor: theme.title + "20",
+      backgroundColor: theme.title + "04",
+    }} />
+  );
+}
+
+// ─── Add-book slot ────────────────────────────────────────────────────────────
+function AddSlot({ theme, onPress }: { theme: (typeof THEMES)[ThemeKey]; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
       style={{
-        width,
-        height,
-        borderRadius: 8,
-        backgroundColor: accent + "28",
-        alignItems: "center",
-        justifyContent: "center",
+        width: SPINE_W + 8, height: 130, borderRadius: 4,
+        borderWidth: 1.5, borderStyle: "dashed",
+        borderColor: theme.title + "35",
+        alignItems: "center", justifyContent: "center",
+        marginLeft: 4,
       }}
     >
-      <Text style={{ fontSize: Math.max(16, width * 0.3) }}>📚</Text>
-    </View>
-  );
-}
-
-// ─── Empty home (no books) ────────────────────────────────────────────────────
-
-function EmptyHome() {
-  const C = useColors();
-  const router = useRouter();
-  const onboarded = useStore((s) => s.onboarded);
-
-  return (
-    <View style={{ gap: 16 }}>
-      {/* Welcome banner — shown on first launch */}
-      {!onboarded && (
-        <View
-          style={[
-            styles.welcomeBanner,
-            { backgroundColor: C.card, borderColor: C.border + "80" },
-          ]}
-        >
-          <Text style={{ fontSize: 18 }}>🎉</Text>
-          <View style={{ flex: 1, gap: 3 }}>
-            <Text
-              style={{
-                fontSize: 13,
-                fontFamily: "DMSans_500Medium",
-                color: C.foreground,
-              }}
-            >
-              Welcome to Tropely!
-            </Text>
-            <Text
-              style={{
-                fontSize: 12,
-                fontFamily: "DMSans_400Regular",
-                color: C.mutedForeground,
-                lineHeight: 18,
-              }}
-            >
-              Add a book below to get started. After your first few books,
-              we'll ask about your reading moods to personalise everything.
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Hero card — mood-surface gradient */}
-      <LinearGradient
-        colors={["#C8E6E6", "#EAF3F3", C.card]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.heroCard, { borderColor: C.border + "66" }]}
-      >
-        {/* "Your shelf is empty" pill badge */}
-        <View
-          style={[
-            styles.badge,
-            {
-              borderColor: C.border + "99",
-              backgroundColor: "rgba(255,255,255,0.65)",
-            },
-          ]}
-        >
-          <Text style={{ fontSize: 11 }}>📚</Text>
-          <Text
-            style={{
-              fontSize: 10,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              letterSpacing: 1.4,
-              textTransform: "uppercase",
-            }}
-          >
-            Your shelf is empty
-          </Text>
-        </View>
-
-        {/* Headline — Fraunces serif, 28px */}
-        <Text
-          style={{
-            fontFamily: "Fraunces_400Regular",
-            fontSize: 28,
-            color: C.foreground,
-            lineHeight: 35,
-            letterSpacing: -0.5,
-            marginTop: 16,
-          }}
-        >
-          Add your first book and{"\n"}
-          <Text
-            style={{
-              fontFamily: "Fraunces_400Regular_Italic",
-              color: C.moodStrong,
-            }}
-          >
-            find your tropes
-          </Text>
-          .
-        </Text>
-
-        {/* Body */}
-        <Text
-          style={{
-            fontSize: 14,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-            lineHeight: 21,
-            marginTop: 10,
-          }}
-        >
-          Every story has a shape. Add books, tag your tropes, and the mood
-          underneath will surface — building a fingerprint only you could have.
-        </Text>
-
-        {/* CTA buttons */}
-        <View style={styles.heroButtons}>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/discover")}
-            style={[styles.btnFilled, { backgroundColor: C.foreground }]}
-            activeOpacity={0.85}
-          >
-            <Feather name="plus" size={14} color={C.background} />
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: "DMSans_500Medium",
-                color: C.background,
-              }}
-            >
-              Add a book
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/(tabs)/discover")}
-            style={[
-              styles.btnOutline,
-              { borderColor: C.border, backgroundColor: "rgba(255,255,255,0.5)" },
-            ]}
-            activeOpacity={0.7}
-          >
-            <Feather name="compass" size={14} color={C.foreground} />
-            <Text
-              style={{
-                fontSize: 14,
-                fontFamily: "DMSans_400Regular",
-                color: C.foreground,
-              }}
-            >
-              Browse Discover
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-
-      {/* 3-column step cards — matches Feltly's sm:grid-cols-3 */}
-      <StepCards />
-    </View>
-  );
-}
-
-function StepCards() {
-  const C = useColors();
-  return (
-    <View style={{ flexDirection: "row", gap: GRID_GAP }}>
-      {STEPS.map((step) => (
-        <View
-          key={step.n}
-          style={[
-            styles.stepCard,
-            { flex: 1, backgroundColor: C.card + "B3", borderColor: C.border + "80" },
-          ]}
-        >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              marginBottom: 8,
-            }}
-          >
-            <View
-              style={[styles.stepBadge, { backgroundColor: C.foreground }]}
-            >
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontFamily: "DMSans_500Medium",
-                  color: C.background,
-                }}
-              >
-                {step.n}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 11 }}>✨</Text>
-          </View>
-          <Text
-            style={{
-              fontSize: 14,
-              fontFamily: "Fraunces_400Regular",
-              color: C.foreground,
-              lineHeight: 18,
-              marginBottom: 5,
-            }}
-          >
-            {step.title}
-          </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              lineHeight: 16,
-            }}
-          >
-            {step.body}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-// ─── Home smart cards (context-aware nudges) ──────────────────────────────────
-
-function SlumpCard({ currentBook }: { currentBook: Book | undefined }) {
-  const sessions = useStore((s) => s.sessions);
-  const books = useStore((s) => s.books);
-  const C = useColors();
-  const router = useRouter();
-
-  const daysSince = useMemo(() => {
-    if (!sessions.length) return Infinity;
-    const last = Math.max(...sessions.map((s) => s.at));
-    return Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24));
-  }, [sessions]);
-
-  const hasReading = books.some((b) => b.shelf === "reading");
-  if (!hasReading || daysSince < 5) return null;
-
-  return (
-    <TouchableOpacity
-      onPress={() => currentBook && router.push(`/book/${currentBook.id}`)}
-      style={[styles.smartCard, { backgroundColor: C.card + "99", borderColor: C.border + "80" }]}
-      activeOpacity={0.75}
-    >
-      <Text style={{ fontSize: 20, lineHeight: 24 }}>📖</Text>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text
-          style={{
-            fontSize: 13,
-            fontFamily: "Fraunces_400Regular",
-            color: C.foreground,
-            lineHeight: 17,
-          }}
-        >
-          {daysSince === Infinity
-            ? "Ready when you are."
-            : `${daysSince} day${daysSince === 1 ? "" : "s"} since your last session.`}
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-          }}
-          numberOfLines={1}
-        >
-          {currentBook
-            ? `"${currentBook.title}" is waiting for you.`
-            : "Your book is waiting."}
-        </Text>
-      </View>
+      <Text style={{ fontSize: 22, color: theme.title + "40" }}>+</Text>
     </TouchableOpacity>
   );
 }
 
-function MoodTBRCard({ currentBook }: { currentBook: Book | undefined }) {
-  const books = useStore((s) => s.books);
-  const C = useColors();
-  const router = useRouter();
-
-  const suggestion = useMemo(() => {
-    const tbr = books.filter((b) => b.shelf === "want");
-    if (!tbr.length) return null;
-    if (currentBook) {
-      const match = tbr.find((b) => b.mood === currentBook.mood);
-      if (match) {
-        return {
-          book: match,
-          reason: currentBook.mood
-            ? `matches your ${MOODS[currentBook.mood].label} mood`
-            : "next on your shelf",
-        };
-      }
-    }
-    const recent = [...tbr].sort((a, b) => b.addedAt - a.addedAt)[0];
-    return { book: recent, reason: "next on your shelf" };
-  }, [books, currentBook]);
-
-  if (!suggestion) return null;
-
+// ─── Wooden shelf plank ───────────────────────────────────────────────────────
+function Plank({ theme }: { theme: (typeof THEMES)[ThemeKey] }) {
   return (
-    <TouchableOpacity
-      onPress={() => router.push(`/book/${suggestion.book.id}`)}
-      style={[
-        styles.smartCard,
-        { backgroundColor: C.card + "99", borderColor: C.border + "80" },
-      ]}
-      activeOpacity={0.75}
-    >
-      <Feather name="compass" size={16} color={C.mutedForeground} />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text
-          style={{
-            fontSize: 10,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-            textTransform: "uppercase",
-            letterSpacing: 1.5,
-          }}
-        >
-          Consider reading next
-        </Text>
-        <Text
-          style={{
-            fontSize: 13,
-            fontFamily: "Fraunces_400Regular",
-            color: C.foreground,
-            lineHeight: 17,
-          }}
-          numberOfLines={1}
-        >
-          {suggestion.book.title}
-        </Text>
-        <Text
-          style={{
-            fontSize: 11,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-          }}
-          numberOfLines={1}
-        >
-          {suggestion.reason}
-        </Text>
+    <View>
+      {/* Front rounded edge of shelf */}
+      <View style={{ height: 7, backgroundColor: theme.edge, borderRadius: 1 }}>
+        <View style={{ height: 1.5, backgroundColor: "#ffffff15", marginTop: 1 }} />
       </View>
-      {suggestion.book.cover && (
-        <Image
-          source={{ uri: suggestion.book.cover }}
-          style={{ width: 32, height: 46, borderRadius: 4 }}
-          resizeMode="cover"
-        />
-      )}
-    </TouchableOpacity>
-  );
-}
-
-function HomeSmartCards({ currentBook }: { currentBook: Book | undefined }) {
-  return (
-    <View style={{ gap: 8 }}>
-      <MoodTBRCard currentBook={currentBook} />
-      <SlumpCard currentBook={currentBook} />
+      {/* Main shelf surface */}
+      <View style={{ height: 11, backgroundColor: theme.shelf }}>
+        <View style={{ height: 1, backgroundColor: theme.grain, marginTop: 3 }} />
+        <View style={{ height: 1, backgroundColor: theme.grain, marginTop: 3 }} />
+      </View>
+      {/* Underside shadow */}
+      <View style={{ height: 12, backgroundColor: "#00000060" }} />
     </View>
   );
 }
 
-// ─── Current book card ────────────────────────────────────────────────────────
-
-function CurrentBookCard({
-  book,
-  onLogSession,
-}: {
-  book: Book;
-  onLogSession: () => void;
-}) {
-  const C = useColors();
-  const updateProgress = useStore((s) => s.updateProgress);
-  const accent = book.mood ? MOODS[book.mood].accent : C.moodStrong;
-  const moodH = 180; // default teal hue — matches Feltly's default mood-h
-  const pct =
-    book.pages && book.pages > 0
-      ? Math.min(Math.round((book.progress / book.pages) * 100), 100)
-      : 0;
-  const pagesLeft = book.pages ? Math.max(0, book.pages - book.progress) : null;
-
-  const bump = (delta: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const next = Math.max(0, book.progress + delta);
-    const clamped = book.pages ? Math.min(next, book.pages) : next;
-    updateProgress(book.id, clamped);
-  };
-
-  // Mood-surface: diagonal gradient from lighter mood tint → card cream
-  // approximating Feltly's radial gradient mood-surface
-  const gradStart = `hsl(${moodH}, 35%, 88%)`;
-  const gradEnd = C.card;
-
-  return (
-    <LinearGradient
-      colors={[gradStart as any, gradEnd as any]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.currentCard, { borderColor: accent + "30" }]}
-    >
-      {/* Currently reading label */}
-      <Text
-        style={{
-          fontSize: 9,
-          fontFamily: "DMSans_400Regular",
-          letterSpacing: 2,
-          textTransform: "uppercase",
-          color: C.mutedForeground,
-          marginBottom: 14,
-        }}
-      >
-        Currently reading
-      </Text>
-
-      <View style={{ flexDirection: "row", gap: 16 }}>
-        {/* Cover */}
-        <View style={{ flexShrink: 0 }}>
-          <BookCover book={book} width={88} height={124} />
-        </View>
-
-        {/* Info column */}
-        <View style={{ flex: 1, gap: 6 }}>
-          {/* Mood chip */}
-          {book.mood && (
-            <View
-              style={[
-                styles.moodChip,
-                {
-                  backgroundColor: accent + "18",
-                  borderColor: accent + "40",
-                },
-              ]}
-            >
-              <Text style={{ fontSize: 11 }}>{MOODS[book.mood].emoji}</Text>
-              <Text
-                style={{
-                  fontSize: 10,
-                  fontFamily: "DMSans_500Medium",
-                  color: accent,
-                }}
-              >
-                {MOODS[book.mood].label}
-              </Text>
-            </View>
-          )}
-
-          {/* Title — Fraunces serif */}
-          <Text
-            style={{
-              fontSize: 20,
-              fontFamily: "Fraunces_400Regular",
-              color: C.foreground,
-              lineHeight: 24,
-              letterSpacing: -0.3,
-            }}
-            numberOfLines={2}
-          >
-            {book.title}
-          </Text>
-
-          {/* Author */}
-          <Text
-            style={{
-              fontSize: 12,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-            }}
-            numberOfLines={1}
-          >
-            by {book.author}
-          </Text>
-
-          {/* Mood undertone — matches Feltly's italic sub-line */}
-          {book.mood && (
-            <Text
-              style={{
-                fontSize: 10,
-                fontFamily: "DMSans_400Regular",
-                color: C.mutedForeground,
-                opacity: 0.7,
-              }}
-            >
-              {MOODS[book.mood].emoji} {MOODS[book.mood].label} · mood undertone
-            </Text>
-          )}
-
-          {/* Progress numbers */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-              marginTop: 2,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 11,
-                fontFamily: "DMSans_400Regular",
-                color: C.mutedForeground,
-                flex: 1,
-              }}
-            >
-              {book.pages
-                ? `Page ${book.progress} of ${book.pages}${pagesLeft ? ` · ${pagesLeft} left` : ""}`
-                : book.progress > 0
-                  ? `Page ${book.progress}`
-                  : "Not started yet"}
-            </Text>
-            <Text
-              style={{
-                fontSize: 22,
-                fontFamily: "Fraunces_400Regular",
-                color: accent,
-                lineHeight: 24,
-              }}
-            >
-              {pct}%
-            </Text>
-          </View>
-
-          {/* Progress bar */}
-          <View
-            style={{
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: "rgba(255,255,255,0.5)",
-              overflow: "hidden",
-            }}
-          >
-            <View
-              style={{
-                width: `${pct}%`,
-                height: 6,
-                backgroundColor: accent,
-                borderRadius: 3,
-              }}
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* ±10 bumps + Log session — matches Feltly's progress action row */}
-      <View style={styles.progressActions}>
-        <View
-          style={[
-            styles.bumpGroup,
-            {
-              backgroundColor: "rgba(255,255,255,0.6)",
-              borderColor: C.border,
-            },
-          ]}
-        >
-          <TouchableOpacity style={styles.bumpBtn} onPress={() => bump(-10)}>
-            <Feather name="minus" size={15} color={C.foreground} />
-          </TouchableOpacity>
-          <Text
-            style={{
-              fontSize: 10,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              paddingHorizontal: 4,
-            }}
-          >
-            ±10
-          </Text>
-          <TouchableOpacity style={styles.bumpBtn} onPress={() => bump(10)}>
-            <Feather name="plus" size={15} color={C.foreground} />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          onPress={onLogSession}
-          style={[styles.logBtn, { backgroundColor: C.moodStrong }]}
-          activeOpacity={0.85}
-        >
-          <Feather name="play" size={13} color="#fff" />
-          <Text
-            style={{
-              fontSize: 13,
-              fontFamily: "DMSans_500Medium",
-              color: "#fff",
-            }}
-          >
-            Log session
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </LinearGradient>
-  );
+// ─── One shelf row ────────────────────────────────────────────────────────────
+interface ShelfRowProps {
+  label: string;
+  books: Book[];
+  theme: (typeof THEMES)[ThemeKey];
+  selectedId: string | null;
+  onPress: (b: Book) => void;
+  onAdd: () => void;
+  showGhosts?: boolean;
 }
 
-// ─── Journal quick-link row ───────────────────────────────────────────────────
-
-function JournalLink() {
-  const C = useColors();
-  const router = useRouter();
+function ShelfRow({ label, books, theme, selectedId, onPress, onAdd, showGhosts }: ShelfRowProps) {
+  const VISIBLE_EMPTY = 5;
   return (
-    <TouchableOpacity
-      onPress={() => router.push("/(tabs)/journal")}
-      style={[
-        styles.journalLink,
-        { backgroundColor: C.card + "B3", borderColor: C.border + "80" },
-      ]}
-      activeOpacity={0.75}
-    >
-      <View
-        style={[
-          styles.journalIconBox,
-          { backgroundColor: C.foreground + "0D" },
-        ]}
-      >
-        <Feather name="edit-3" size={14} color={C.foreground} />
-      </View>
-      <View style={{ flex: 1, gap: 1 }}>
-        <Text
-          style={{
-            fontSize: 13,
-            fontFamily: "Fraunces_400Regular",
-            color: C.foreground,
-          }}
-        >
-          Journal
+    <View>
+      {/* Wall section above books */}
+      <View style={{ backgroundColor: theme.wall, paddingTop: 20 }}>
+        {/* Shelf label pinned to the wall */}
+        <Text style={[st.shelfLabel, { color: theme.title + "70" }]}>
+          {label}
         </Text>
-        <Text
-          style={{
-            fontSize: 11,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-          }}
-        >
-          Notes, quotes & reflections
-        </Text>
-      </View>
-      <Feather name="chevron-right" size={16} color={C.mutedForeground} />
-    </TouchableOpacity>
-  );
-}
 
-// ─── Streak strip ─────────────────────────────────────────────────────────────
-
-function StreakStrip() {
-  const C = useColors();
-  const sessions = useStore((s) => s.sessions);
-  const dailyGoal = useStore((s) => s.dailyGoal ?? 20);
-  const freeze = useStore((s) => s.freeze);
-
-  const streak = useMemo(
-    () => computeStreak(sessions, freeze),
-    [sessions, freeze]
-  );
-
-  const last7 = useMemo(() => {
-    const today = startOfDay(Date.now());
-    const map = new Map<number, number>();
-    for (const s of sessions) {
-      const d = startOfDay(s.at);
-      map.set(d, (map.get(d) ?? 0) + s.pagesRead);
-    }
-    return Array.from({ length: 7 }, (_, i) => {
-      const day = today - (6 - i) * 86400000;
-      return { day, pages: map.get(day) ?? 0 };
-    });
-  }, [sessions]);
-
-  const goalPct = Math.min(1, streak.todayPages / dailyGoal);
-  const goalMet = streak.todayPages >= dailyGoal;
-  const maxPages = Math.max(dailyGoal, ...last7.map((x) => x.pages), 1);
-
-  return (
-    <View
-      style={[
-        styles.streakCard,
-        { backgroundColor: C.card + "CC", borderColor: C.border + "80" },
-      ]}
-    >
-      {/* ── Streak count row ── */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <View
-          style={[
-            styles.streakIcon,
-            {
-              backgroundColor: streak.current > 0 ? C.foreground : C.muted,
-            },
-          ]}
-        >
-          <Text style={{ fontSize: 15 }}>🔥</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text
-              style={{
-                fontSize: 9,
-                fontFamily: "DMSans_400Regular",
-                color: C.mutedForeground,
-                letterSpacing: 2,
-                textTransform: "uppercase",
-              }}
-            >
-              Streak
-            </Text>
-          </View>
-          <Text
-            style={{
-              fontSize: 21,
-              fontFamily: "Fraunces_400Regular",
-              color: C.foreground,
-              lineHeight: 26,
-            }}
-          >
-            {streak.current}{" "}
-            <Text
-              style={{
-                fontSize: 13,
-                fontFamily: "DMSans_400Regular",
-                color: C.mutedForeground,
-              }}
-            >
-              day{streak.current === 1 ? "" : "s"}
-            </Text>
-          </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              marginTop: 1,
-            }}
-          >
-            {streak.freezeSavedToday
-              ? "A freeze covered yesterday — you're safe."
-              : streak.longest > streak.current
-                ? `Best: ${streak.longest} days`
-                : streak.current > 0
-                  ? "Personal best — keep going."
-                  : "Log a session today to start one."}
-          </Text>
-        </View>
-      </View>
-
-      {/* ── Daily goal bar ── */}
-      <View style={styles.streakDivider} />
-      <View>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 6,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 9,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              textTransform: "uppercase",
-              letterSpacing: 1.5,
-            }}
-          >
-            🎯  Today's goal
-          </Text>
-          <Text
-            style={{
-              fontSize: 11,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-            }}
-          >
-            {streak.todayPages} / {dailyGoal} pages
-          </Text>
-        </View>
-        <View
-          style={{
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: C.muted,
-            overflow: "hidden",
-          }}
-        >
-          <View
-            style={{
-              width: `${goalPct * 100}%`,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: goalMet ? C.moodStrong : C.foreground + "99",
-            }}
-          />
-        </View>
-        <Text
-          style={{
-            fontSize: 11,
-            fontFamily: "DMSans_400Regular",
-            color: goalMet ? C.foreground : C.mutedForeground,
-            marginTop: 5,
-          }}
-        >
-          {goalMet
-            ? "Goal hit. Streak safe for today."
-            : `${dailyGoal - streak.todayPages} more pages to lock in today.`}
-        </Text>
-      </View>
-
-      {/* ── 7-day mini bar chart ── */}
-      <View style={styles.streakDivider} />
-      <View>
-        <Text
-          style={{
-            fontSize: 9,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-            textTransform: "uppercase",
-            letterSpacing: 1.5,
-            marginBottom: 10,
-          }}
-        >
-          📅  Last 7 days
-        </Text>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "flex-end",
-            height: 44,
-            gap: 4,
-          }}
-        >
-          {last7.map((d, i) => {
-            const barH = d.pages > 0 ? Math.max((d.pages / maxPages) * 44, 8) : 4;
-            const hit = d.pages >= dailyGoal;
-            const isToday = i === 6;
-            const dayLabel = new Date(d.day).toLocaleDateString(undefined, {
-              weekday: "narrow",
-            });
-            return (
-              <View
-                key={d.day}
-                style={{ flex: 1, alignItems: "center", gap: 4, justifyContent: "flex-end" }}
-              >
-                <View
-                  style={{
-                    width: "100%",
-                    height: barH,
-                    borderRadius: 3,
-                    backgroundColor: hit
-                      ? C.moodStrong
-                      : C.foreground + (d.pages > 0 ? "40" : "1A"),
-                  }}
-                />
-                <Text
-                  style={{
-                    fontSize: 9,
-                    fontFamily: isToday ? "DMSans_500Medium" : "DMSans_400Regular",
-                    color: isToday ? C.foreground : C.mutedForeground,
-                    letterSpacing: 0.5,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {dayLabel}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ─── Shelves section ──────────────────────────────────────────────────────────
-
-const SHELF_TABS: { key: Shelf; label: string }[] = [
-  { key: "reading", label: "Reading" },
-  { key: "want", label: "Want" },
-  { key: "paused", label: "Paused" },
-  { key: "finished", label: "Finished" },
-  { key: "dropped", label: "DNF" },
-];
-
-function ShelvesSection() {
-  const C = useColors();
-  const router = useRouter();
-  const books = useStore((s) => s.books);
-  const reflections = useStore((s) => s.reflections);
-  const [activeTab, setActiveTab] = useState<Shelf>("reading");
-
-  const shelfBooks = books.filter((b) => b.shelf === activeTab);
-  const coverW = Math.floor((310 - GRID_GAP * (COLS - 1)) / COLS);
-  const coverH = Math.floor(coverW * 1.42);
-
-  const ratingMap = useMemo(() => {
-    const m = new Map<string, number>();
-    reflections.forEach((r) => { if (r.rating != null) m.set(r.bookId, r.rating); });
-    return m;
-  }, [reflections]);
-
-  return (
-    <View style={{ gap: 14 }}>
-      {/* "Your library" heading — matches Feltly's font-display text-2xl */}
-      <Text
-        style={{
-          fontSize: 22,
-          fontFamily: "Fraunces_400Regular",
-          color: C.foreground,
-          letterSpacing: -0.3,
-        }}
-      >
-        Your library
-      </Text>
-
-      {/* Tab row — scrollable pill chips inside a bordered container */}
-      <View
-        style={[
-          styles.tabContainer,
-          { backgroundColor: C.card + "CC", borderColor: C.border + "99" },
-        ]}
-      >
+        {/* Book spines row */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 2 }}
+          contentContainerStyle={{ paddingHorizontal: 18, gap: 3, alignItems: "flex-end", paddingBottom: 0, minHeight: 178 }}
         >
-          {SHELF_TABS.map((tab) => {
-            const active = activeTab === tab.key;
-            const count = books.filter((b) => b.shelf === tab.key).length;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                onPress={() => setActiveTab(tab.key)}
-                style={[
-                  styles.shelfTab,
-                  {
-                    backgroundColor: active ? C.foreground : "transparent",
-                  },
-                ]}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontFamily: "DMSans_500Medium",
-                    color: active ? C.background : C.mutedForeground,
-                  }}
-                >
-                  {tab.label}
-                </Text>
-                {count > 0 && (
-                  <View
-                    style={[
-                      styles.countBadge,
-                      {
-                        backgroundColor: active
-                          ? "rgba(255,255,255,0.22)"
-                          : C.muted,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontFamily: "DMSans_400Regular",
-                        color: active ? C.background : C.mutedForeground,
-                      }}
-                    >
-                      {count}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+          {books.map((b, i) => (
+            <BookSpine
+              key={b.id}
+              book={b}
+              idx={i}
+              isSelected={selectedId === b.id}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onPress(b);
+              }}
+            />
+          ))}
+
+          {/* Ghost placeholders when empty */}
+          {showGhosts && books.length === 0 &&
+            Array.from({ length: VISIBLE_EMPTY }).map((_, i) => (
+              <GhostSpine key={i} idx={i} theme={theme} />
+            ))
+          }
+
+          {/* Add slot */}
+          <AddSlot theme={theme} onPress={onAdd} />
         </ScrollView>
       </View>
 
-      {/* Books grid or empty */}
-      {shelfBooks.length === 0 ? (
-        <View
-          style={[
-            styles.shelfEmpty,
-            { backgroundColor: C.card + "80", borderColor: C.border + "60", borderStyle: "dashed" },
-          ]}
-        >
-          <Text
-            style={{
-              fontSize: 12,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              textAlign: "center",
-              lineHeight: 18,
-            }}
-          >
-            Nothing here yet.{"\n"}Add a book to this shelf.
+      {/* Plank */}
+      <Plank theme={theme} />
+    </View>
+  );
+}
+
+// ─── Now Reading card (single book, compact) ──────────────────────────────────
+function NowReadingCard({ book, onBump }: { book: Book; onBump: (delta: number) => void }) {
+  const colors = useColors();
+  const accent = book.mood ? MOODS[book.mood].accent : colors.primary;
+  const pct = book.pages && book.pages > 0 ? Math.min(book.progress / book.pages, 1) : 0;
+  const pagesLeft = book.pages ? Math.max(0, book.pages - book.progress) : null;
+
+  return (
+    <View style={{
+      marginHorizontal: 16, marginTop: 14, marginBottom: 4,
+      borderRadius: 18, padding: 14,
+      backgroundColor: colors.card, borderWidth: 1, borderColor: accent + "35",
+    }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        {/* Cover */}
+        <View style={{ width: 50, height: 70, borderRadius: 8, backgroundColor: accent + "20",
+          alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+          {book.cover
+            ? <Image source={{ uri: book.cover }} style={{ width: 50, height: 70 }} resizeMode="cover" />
+            : <Text style={{ fontSize: 24 }}>📚</Text>}
+        </View>
+
+        {/* Info */}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", color: accent,
+            letterSpacing: 1, textTransform: "uppercase", marginBottom: 3 }}>
+            Now Reading
           </Text>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: colors.foreground }}
+            numberOfLines={1}>{book.title}</Text>
+          <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, marginBottom: 8 }}>
+            {book.pages
+              ? `Page ${book.progress} of ${book.pages}${pagesLeft !== null && pagesLeft > 0 ? ` · ${pagesLeft} to go` : ""}`
+              : book.progress > 0 ? `Page ${book.progress}` : "Not started yet"}
+          </Text>
+          <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.muted, overflow: "hidden" }}>
+            <View style={{ width: `${pct * 100}%` as any, height: 4, backgroundColor: accent, borderRadius: 2 }} />
+          </View>
         </View>
-      ) : (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP }}>
-          {shelfBooks.map((b) => {
-            const accent = b.mood ? MOODS[b.mood].accent : C.moodStrong;
-            const rating = ratingMap.get(b.id);
-            return (
-              <TouchableOpacity
-                key={b.id}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push(`/book/${b.id}`);
-                }}
-                style={{ width: coverW, gap: 5 }}
-                activeOpacity={0.8}
-              >
-                <View
-                  style={{
-                    borderRadius: 10,
-                    overflow: "hidden",
-                    padding: 4,
-                    backgroundColor: "rgba(255,255,255,0.4)",
-                  }}
-                >
-                  <BookCover book={b} width={coverW - 8} height={coverH - 8} />
-                </View>
-                <Text
-                  style={{
-                    fontSize: 11,
-                    fontFamily: "Fraunces_400Regular",
-                    color: C.foreground,
-                    lineHeight: 14,
-                  }}
-                  numberOfLines={2}
-                >
-                  {b.title}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontFamily: "DMSans_400Regular",
-                    color: C.mutedForeground,
-                  }}
-                  numberOfLines={1}
-                >
-                  {b.author}
-                </Text>
-                {b.mood && (
-                  <Text
-                    style={{
-                      fontSize: 9,
-                      fontFamily: "DMSans_400Regular",
-                      color: C.mutedForeground,
-                      opacity: 0.7,
-                    }}
-                  >
-                    {MOODS[b.mood].emoji} {MOODS[b.mood].label}
-                  </Text>
-                )}
-                {activeTab === "reading" && b.pages && b.pages > 0 && (
-                  <View
-                    style={{
-                      height: 3,
-                      borderRadius: 2,
-                      backgroundColor: C.muted,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: `${Math.round((b.progress / b.pages) * 100)}%`,
-                        height: 3,
-                        backgroundColor: accent,
-                        borderRadius: 2,
-                      }}
-                    />
-                  </View>
-                )}
-                {activeTab === "finished" && rating != null && rating > 0 && (
-                  <View style={{ flexDirection: "row", gap: 1 }}>
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Text
-                        key={i}
-                        style={{ fontSize: 9, color: i < rating ? "#C49A28" : C.border }}
-                      >
-                        ★
-                      </Text>
-                    ))}
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+
+        {/* Quick page bumps */}
+        <View style={{ gap: 6, flexShrink: 0 }}>
+          <TouchableOpacity
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBump(10); }}
+            style={{ backgroundColor: accent + "22", borderRadius: 10, paddingHorizontal: 10,
+              paddingVertical: 7, borderWidth: 1, borderColor: accent + "40", alignItems: "center" }}
+          >
+            <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: accent }}>+10</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBump(1); }}
+            style={{ backgroundColor: colors.muted + "80", borderRadius: 10,
+              paddingHorizontal: 10, paddingVertical: 7, alignItems: "center" }}
+          >
+            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground }}>+1</Text>
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
     </View>
   );
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
+const SHEET_H = 460;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const C = useColors();
   const router = useRouter();
-  const books = useStore((s) => s.books);
+  const colors = useColors();
+
+  const books    = useStore((s) => s.books);
   const sessions = useStore((s) => s.sessions);
-  const freeze = useStore((s) => s.freeze);
-  const [logOpen, setLogOpen] = useState(false);
+  const freeze   = useStore((s) => s.freeze);
+  const shelfTheme = useStore((s) => s.shelfTheme) as ThemeKey;
+  const setShelfTheme = useStore((s) => s.setShelfTheme);
+  const updateProgress = useStore((s) => s.updateProgress);
 
-  const hasBooks = books.length > 0;
-  const currentBook = books.find((b) => b.shelf === "reading") ?? books[0];
+  const reading  = books.filter((b) => b.shelf === "reading");
+  const want     = books.filter((b) => b.shelf === "want");
+  const finished = books.filter((b) => b.shelf === "finished");
+  const paused   = books.filter((b) => b.shelf === "paused");
 
-  const streak = useMemo(() => computeStreak(sessions, freeze), [sessions, freeze]);
+  const streak = computeStreak(sessions, freeze);
+  const theme  = THEMES[shelfTheme] ?? THEMES.darkWalnut;
+
+  const [selectedBook, setSelectedBook]     = useState<Book | null>(null);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showLog, setShowLog]               = useState(false);
+
+  const slideAnim   = useRef(new Animated.Value(SHEET_H + 80)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  function openBook(b: Book) {
+    setSelectedBook(b);
+    Animated.parallel([
+      Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, tension: 58, friction: 10 }),
+      Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }
+
+  function closeBook(cb?: () => void) {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: SHEET_H + 80, duration: 260, useNativeDriver: true }),
+      Animated.timing(backdropAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => {
+      setSelectedBook(null);
+      cb?.();
+    });
+  }
+
+  const accent   = selectedBook?.mood ? MOODS[selectedBook.mood].accent : colors.primary;
+  const progress = selectedBook?.pages && selectedBook.pages > 0
+    ? Math.min(selectedBook.progress / selectedBook.pages, 1) : 0;
+
+  const TAB_BAR_HEIGHT = 84;
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.background }}>
-      {/* ── Sticky top header ── */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + 4,
-            backgroundColor: C.background + "E6",
-            borderBottomColor: C.border + "66",
-          },
-        ]}
-      >
-        <Text
-          style={{
-            fontSize: 17,
-            fontFamily: "Fraunces_600SemiBold",
-            color: C.foreground,
-            letterSpacing: -0.4,
-          }}
-        >
-          Tropely
-        </Text>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-          {/* Streak pill — matches Feltly's header streak badge */}
+    <View style={[st.root, { backgroundColor: theme.bg }]}>
+
+      {/* ── Header ── */}
+      <View style={[st.header, {
+        paddingTop: Platform.OS === "web" ? 67 : insets.top + 10,
+        backgroundColor: theme.wall,
+        borderBottomColor: theme.shelf + "80",
+      }]}>
+        <View>
+          <Text style={[st.headerTitle, { color: theme.title }]}>Tropely</Text>
+          <Text style={[st.headerSub, { color: theme.title + "60" }]}>
+            {books.length === 0 ? "Your shelves await" : `${books.length} book${books.length === 1 ? "" : "s"} collected`}
+          </Text>
+        </View>
+        <View style={st.headerRight}>
           {streak.current > 0 && (
-            <View
-              style={[
-                styles.streakPill,
-                { borderColor: C.border + "99", backgroundColor: C.card + "B3" },
-              ]}
-            >
-              <Text style={{ fontSize: 11 }}>🔥</Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: "DMSans_500Medium",
-                  color: C.foreground,
-                }}
-              >
-                {streak.current}
-              </Text>
+            <View style={[st.streakPill, { backgroundColor: "#D4A83222", borderColor: "#D4A83260" }]}>
+              <Text style={{ fontSize: 13 }}>🔥</Text>
+              <Text style={[st.streakTxt, { color: "#D4A832" }]}>{streak.current}</Text>
             </View>
           )}
-          {/* Journal icon */}
           <TouchableOpacity
-            onPress={() => router.push("/(tabs)/journal")}
-            style={[
-              styles.headerIconBtn,
-              { borderColor: C.border + "99", backgroundColor: C.card + "B3" },
-            ]}
-            activeOpacity={0.7}
+            style={[st.headerBtn, { backgroundColor: theme.shelf + "80", borderColor: theme.shelf }]}
+            onPress={() => setShowThemePicker(true)}
           >
-            <Feather name="edit-3" size={16} color={C.mutedForeground} />
+            <Text style={{ fontSize: 15 }}>🎨</Text>
           </TouchableOpacity>
-          {/* Log button — shown when there are books */}
-          {hasBooks && (
-            <TouchableOpacity
-              onPress={() => setLogOpen(true)}
-              style={[styles.logHeaderBtn, { backgroundColor: C.foreground }]}
-              activeOpacity={0.85}
-            >
-              <Feather name="plus" size={13} color={C.background} />
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontFamily: "DMSans_500Medium",
-                  color: C.background,
-                }}
-              >
-                Log
-              </Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[st.headerBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+            onPress={() => router.push("/discover")}
+          >
+            <Feather name="plus" size={17} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── Journal prompt strip — matches Feltly's AppShell journal strip ── */}
-      <TouchableOpacity
-        onPress={() => router.push("/(tabs)/journal")}
-        style={[
-          styles.journalStrip,
-          {
-            backgroundColor: C.card + "66",
-            borderBottomColor: C.border + "4D",
-          },
-        ]}
-        activeOpacity={0.75}
-      >
-        <Feather name="pen-tool" size={13} color={C.mutedForeground} />
-        <Text
-          style={{
-            fontSize: 13,
-            fontFamily: "DMSans_400Regular",
-            color: C.mutedForeground,
-            flex: 1,
-          }}
-          numberOfLines={1}
-        >
-          What moved you today? Write a note, quote, or reflection…
-        </Text>
-      </TouchableOpacity>
-
-      {/* ── Scrollable body ── */}
+      {/* ── Bookshelf ── */}
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 22,
-          paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
-          gap: 16,
+          paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + TAB_BAR_HEIGHT + 16,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* TODAY tagline section — exact match to Feltly Index.tsx */}
-        <View style={{ gap: 4 }}>
-          <Text
-            style={{
-              fontSize: 10,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              letterSpacing: 2.5,
-              textTransform: "uppercase",
-            }}
-          >
-            Today
-          </Text>
-          <Text
-            style={{
-              fontSize: 26,
-              fontFamily: "Fraunces_400Regular",
-              color: C.foreground,
-              lineHeight: 31,
-              letterSpacing: -0.5,
-            }}
-          >
-            You're always living a{" "}
-            <Text
-              style={{
-                fontFamily: "Fraunces_400Regular_Italic",
-                color: C.moodStrong,
-              }}
-            >
-              trope
+        {/* Now Reading quick-progress card */}
+        {reading.length > 0 && (
+          <NowReadingCard
+            book={reading[0]}
+            onBump={(delta) => updateProgress(reading[0].id, Math.min(
+              reading[0].pages ?? Infinity,
+              Math.max(0, reading[0].progress + delta)
+            ))}
+          />
+        )}
+
+        <ShelfRow
+          label="📖  Currently Reading"
+          books={reading}
+          theme={theme}
+          selectedId={selectedBook?.id ?? null}
+          onPress={openBook}
+          onAdd={() => router.push("/discover")}
+          showGhosts
+        />
+        <ShelfRow
+          label="🔖  Want to Read"
+          books={want}
+          theme={theme}
+          selectedId={selectedBook?.id ?? null}
+          onPress={openBook}
+          onAdd={() => router.push("/discover")}
+          showGhosts
+        />
+        <ShelfRow
+          label="✅  Finished"
+          books={finished}
+          theme={theme}
+          selectedId={selectedBook?.id ?? null}
+          onPress={openBook}
+          onAdd={() => router.push("/discover")}
+          showGhosts
+        />
+        {paused.length > 0 && (
+          <ShelfRow
+            label="⏸  Paused"
+            books={paused}
+            theme={theme}
+            selectedId={selectedBook?.id ?? null}
+            onPress={openBook}
+            onAdd={() => {}}
+          />
+        )}
+
+        {/* Empty state CTA */}
+        {books.length === 0 && (
+          <View style={[st.emptyState, { backgroundColor: theme.wall }]}>
+            <Text style={[st.emptyTitle, { color: theme.title }]}>Fill your shelves</Text>
+            <Text style={[st.emptySub, { color: theme.title + "55" }]}>
+              Search for a book and it'll appear on your shelf.
             </Text>
-            .
-          </Text>
-          <Text
-            style={{
-              fontSize: 13,
-              fontFamily: "DMSans_400Regular",
-              color: C.mutedForeground,
-              lineHeight: 19,
-              marginTop: 2,
-            }}
-          >
-            Mood tracked as undertone on every page — your story fingerprint,
-            built one book at a time.
-          </Text>
-        </View>
-
-        {/* ── Content ── */}
-        {hasBooks ? (
-          <>
-            {/* CurrentBookCard */}
-            {currentBook && (
-              <CurrentBookCard
-                book={currentBook}
-                onLogSession={() => setLogOpen(true)}
-              />
-            )}
-
-            {/* HomeSmartCards — between book card and journal link */}
-            <HomeSmartCards currentBook={currentBook} />
-
-            {/* Journal link row */}
-            <JournalLink />
-
-            {/* Streak strip */}
-            <StreakStrip />
-
-            {/* Shelves section */}
-            <ShelvesSection />
-          </>
-        ) : (
-          <EmptyHome />
+            <TouchableOpacity
+              style={[st.emptyBtn, { backgroundColor: colors.primary }]}
+              onPress={() => router.push("/discover")}
+            >
+              <Feather name="search" size={14} color="#fff" />
+              <Text style={st.emptyBtnTxt}>Find Books</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
 
-      {/* ── Session log modal ── */}
-      {logOpen && currentBook && (
+      {/* ── Backdrop ── */}
+      {selectedBook && (
+        <Animated.View
+          style={[st.backdrop, { opacity: backdropAnim }]}
+          pointerEvents="auto"
+        >
+          <Pressable style={{ flex: 1 }} onPress={() => closeBook()} />
+        </Animated.View>
+      )}
+
+      {/* ── Book detail sheet ── */}
+      {selectedBook && (
+        <Animated.View style={[st.sheet, {
+          backgroundColor: colors.card,
+          transform: [{ translateY: slideAnim }],
+        }]}>
+          {/* Accent top bar matching mood */}
+          <View style={[st.sheetAccentBar, { backgroundColor: accent }]} />
+
+          {/* Handle */}
+          <View style={st.handleRow}>
+            <View style={[st.handle, { backgroundColor: colors.border }]} />
+          </View>
+
+          {/* Book content */}
+          <View style={st.sheetBody}>
+            {/* Cover */}
+            <View style={[st.coverWrap, {
+              backgroundColor: accent + "18",
+              borderColor: accent + "50",
+              shadowColor: accent,
+            }]}>
+              {selectedBook.cover
+                ? <Image source={{ uri: selectedBook.cover }} style={st.coverImg} resizeMode="cover" />
+                : (
+                  <View style={[st.coverPlaceholder, { backgroundColor: accent + "15" }]}>
+                    <Text style={{ fontSize: 38 }}>📚</Text>
+                  </View>
+                )
+              }
+            </View>
+
+            {/* Info */}
+            <View style={st.infoCol}>
+              <Text style={[st.bookTitle, { color: colors.foreground }]} numberOfLines={3}>
+                {selectedBook.title}
+              </Text>
+              <Text style={[st.bookAuthor, { color: colors.mutedForeground }]} numberOfLines={1}>
+                {selectedBook.author}
+              </Text>
+
+              {/* Mood + shelf chips */}
+              <View style={st.chipRow}>
+                {selectedBook.mood && (
+                  <View style={[st.chip, { backgroundColor: accent + "20", borderColor: accent + "60" }]}>
+                    <Text style={{ fontSize: 11 }}>{MOODS[selectedBook.mood].emoji}</Text>
+                    <Text style={[st.chipTxt, { color: accent }]}>{MOODS[selectedBook.mood].label}</Text>
+                  </View>
+                )}
+                <View style={[st.chip, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                  <Text style={[st.chipTxt, { color: colors.mutedForeground }]}>
+                    {selectedBook.shelf === "reading" ? "Reading" :
+                     selectedBook.shelf === "want" ? "Want" :
+                     selectedBook.shelf === "finished" ? "Finished" : "Paused"}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress */}
+              {selectedBook.shelf === "reading" && (
+                <View style={{ marginTop: 10 }}>
+                  {/* Page counter + bump buttons */}
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <TouchableOpacity
+                      style={{ backgroundColor: colors.muted, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        updateProgress(selectedBook.id, Math.max(0, selectedBook.progress - 10));
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground }}>−10</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ backgroundColor: colors.muted, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        updateProgress(selectedBook.id, Math.max(0, selectedBook.progress - 1));
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground }}>−1</Text>
+                    </TouchableOpacity>
+                    <View style={{ alignItems: "center" }}>
+                      <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: colors.foreground }}>
+                        {selectedBook.progress}
+                      </Text>
+                      <Text style={{ fontSize: 10, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+                        {selectedBook.pages ? `of ${selectedBook.pages} pages` : "pages read"}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={{ backgroundColor: accent + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: accent + "40" }}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        updateProgress(selectedBook.id, Math.min(selectedBook.pages ?? Infinity, selectedBook.progress + 1));
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: accent }}>+1</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ backgroundColor: accent + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: accent + "40" }}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        updateProgress(selectedBook.id, Math.min(selectedBook.pages ?? Infinity, selectedBook.progress + 10));
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: accent }}>+10</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {/* Progress bar */}
+                  {selectedBook.pages && selectedBook.pages > 0 && (
+                    <View style={[st.progressTrack, { backgroundColor: colors.muted }]}>
+                      <View style={[st.progressFill, {
+                        backgroundColor: accent,
+                        width: `${progress * 100}%` as any,
+                      }]} />
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Action buttons */}
+          <View style={st.sheetActions}>
+            <TouchableOpacity
+              style={[st.actionPrimary, { backgroundColor: accent }]}
+              onPress={() => closeBook(() => router.push(`/book/${selectedBook.id}`))}
+            >
+              <Feather name="book-open" size={15} color="#fff" />
+              <Text style={st.actionPrimaryTxt}>View &amp; Edit</Text>
+            </TouchableOpacity>
+
+            <View style={st.actionRow}>
+              {selectedBook.shelf === "reading" && (
+                <TouchableOpacity
+                  style={[st.actionSecondary, { borderColor: colors.border, flex: 1 }]}
+                  onPress={() => {
+                    closeBook(() => setShowLog(true));
+                  }}
+                >
+                  <Feather name="plus-circle" size={14} color={colors.mutedForeground} />
+                  <Text style={[st.actionSecondaryTxt, { color: colors.mutedForeground }]}>Log</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[st.actionSecondary, { borderColor: colors.border, flex: 1 }]}
+                onPress={() => closeBook(() => router.push(`/companion/${encodeURIComponent(selectedBook.openLibraryKey ?? selectedBook.id)}`))}
+              >
+                <Feather name="message-circle" size={14} color={colors.mutedForeground} />
+                <Text style={[st.actionSecondaryTxt, { color: colors.mutedForeground }]}>Companion</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* ── Quick log modal ── */}
+      {showLog && selectedBook && (
         <QuickLogModal
-          bookId={currentBook.id}
-          bookTitle={currentBook.title}
-          onClose={() => setLogOpen(false)}
+          bookId={selectedBook.id}
+          bookTitle={selectedBook.title}
+          onClose={() => setShowLog(false)}
         />
       )}
+
+      {/* ── Theme picker ── */}
+      <Modal visible={showThemePicker} transparent animationType="slide" onRequestClose={() => setShowThemePicker(false)}>
+        <Pressable style={st.modalBackdrop} onPress={() => setShowThemePicker(false)}>
+          <Pressable style={[st.themeSheet, { backgroundColor: colors.card }]} onPress={() => {}}>
+            <View style={st.handleRow}>
+              <View style={[st.handle, { backgroundColor: colors.border }]} />
+            </View>
+            <Text style={[st.themeHeading, { color: colors.foreground }]}>Shelf Theme</Text>
+            <View style={st.themeGrid}>
+              {(Object.keys(THEMES) as ThemeKey[]).map((key) => {
+                const t = THEMES[key];
+                const active = shelfTheme === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[st.themeCard, {
+                      backgroundColor: t.bg,
+                      borderColor: active ? colors.primary : t.shelf + "AA",
+                      borderWidth: active ? 2.5 : 1.5,
+                    }]}
+                    onPress={() => {
+                      setShelfTheme(key);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                  >
+                    {/* Mini shelf preview */}
+                    <View style={{ height: 40, backgroundColor: t.wall, borderRadius: 6, marginBottom: 8, justifyContent: "flex-end", overflow: "hidden", padding: 4 }}>
+                      <View style={{ flexDirection: "row", gap: 2, alignItems: "flex-end" }}>
+                        {[22, 28, 24, 30, 20, 26].map((h, i) => (
+                          <View key={i} style={{ width: 6, height: h, borderRadius: 1, backgroundColor: SPINE_PALETTE[i * 2] }} />
+                        ))}
+                      </View>
+                      <View style={{ height: 5, backgroundColor: t.shelf, marginTop: 1 }} />
+                    </View>
+                    <Text style={{ fontSize: 13 }}>{t.emoji}</Text>
+                    <Text style={[st.themeCardName, { color: t.title }]}>{t.name}</Text>
+                    {active && (
+                      <View style={[st.activeCheck, { backgroundColor: colors.primary }]}>
+                        <Feather name="check" size={10} color="#fff" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity
+              style={[st.themeDone, { backgroundColor: colors.primary }]}
+              onPress={() => setShowThemePicker(false)}
+            >
+              <Text style={st.themeDoneTxt}>Done</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-// ─── StyleSheet ───────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const st = StyleSheet.create({
+  root: { flex: 1 },
 
-const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20, paddingBottom: 14,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderBottomWidth: 1,
   },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold" },
+  headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   streakPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 18,
-    borderWidth: 1,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
   },
-  logHeaderBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 18,
+  streakTxt: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  headerBtn: {
+    width: 38, height: 38, borderRadius: 19, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
   },
-  journalStrip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+
+  // Shelf row
+  shelfLabel: {
+    fontSize: 10, fontFamily: "Inter_600SemiBold",
+    letterSpacing: 1, textTransform: "uppercase",
+    paddingHorizontal: 20, marginBottom: 8,
   },
-  welcomeBanner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  heroCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 24,
+
+  // Spine parts
+  spine: { overflow: "hidden" },
+  spineEdgeLight: { position: "absolute", left: 0, top: 0, bottom: 0, width: 4, zIndex: 1 },
+  spineEdgeDark:  { position: "absolute", right: 0, top: 0, bottom: 0, width: 3, zIndex: 1 },
+  spineTitle:     { fontSize: 8, fontFamily: "Inter_700Bold", color: "#ffffffDD", letterSpacing: 0.3 },
+  spineAuthor:    { fontSize: 6.5, fontFamily: "Inter_400Regular", color: "#ffffff66", marginTop: 3 },
+  spineMoodPip:   { position: "absolute", bottom: 5, left: 0, right: 0, alignItems: "center" },
+  spineTopStripe: { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
+
+  // Empty state
+  emptyState: { alignItems: "center", paddingVertical: 48, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", marginBottom: 8, textAlign: "center" },
+  emptySub:   { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  emptyBtn:   { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 24, paddingVertical: 13, borderRadius: 14 },
+  emptyBtnTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+
+  // Backdrop + sheet
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.72)" },
+  sheet: {
+    position: "absolute", bottom: 0, left: 0, right: 0, height: SHEET_H,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    shadowColor: "#000", shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.4, shadowRadius: 24, elevation: 30,
     overflow: "hidden",
   },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  sheetAccentBar: { height: 3, width: "100%" },
+  handleRow: { alignItems: "center", paddingVertical: 12 },
+  handle: { width: 40, height: 4, borderRadius: 2 },
+
+  sheetBody: { flexDirection: "row", gap: 14, paddingHorizontal: 20, paddingBottom: 18, flex: 1 },
+  coverWrap: {
+    width: 88, height: 128, borderRadius: 10, borderWidth: 1,
+    shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 8,
+    overflow: "hidden",
+    flexShrink: 0,
   },
-  heroButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 18,
-  },
-  btnFilled: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 999,
-  },
-  btnOutline: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  stepCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 12,
-  },
-  stepBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  currentCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
-  },
-  moodChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  progressActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 16,
-  },
-  bumpGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 999,
-    padding: 3,
-  },
-  bumpBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    borderRadius: 999,
-    paddingVertical: 12,
-  },
-  smartCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  journalLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  journalIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  streakCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-    gap: 0,
-  },
-  streakDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: "#00000018",
-    marginVertical: 14,
-  },
-  streakIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabContainer: {
-    borderRadius: 999,
-    borderWidth: 1,
-    padding: 3,
-  },
-  shelfTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  countBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  shelfEmpty: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 32,
-    alignItems: "center",
-    gap: 10,
-  },
+  coverImg: { width: 88, height: 128 },
+  coverPlaceholder: { width: 88, height: 128, alignItems: "center", justifyContent: "center" },
+
+  infoCol: { flex: 1, justifyContent: "flex-start" },
+  bookTitle:  { fontSize: 17, fontFamily: "Inter_700Bold", lineHeight: 22, marginBottom: 4 },
+  bookAuthor: { fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 10 },
+  chipRow:    { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1 },
+  chipTxt: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  progressLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
+  progressFill:  { height: "100%", borderRadius: 3 },
+
+  sheetActions: { paddingHorizontal: 20, paddingBottom: 24, gap: 10 },
+  actionPrimary: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderRadius: 14, paddingVertical: 14 },
+  actionPrimaryTxt: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  actionRow: { flexDirection: "row", gap: 10 },
+  actionSecondary: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 14, paddingVertical: 12, borderWidth: 1 },
+  actionSecondaryTxt: { fontSize: 13, fontFamily: "Inter_500Medium" },
+
+  // Theme picker
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "flex-end" },
+  themeSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 36, paddingHorizontal: 20 },
+  themeHeading: { fontSize: 20, fontFamily: "Inter_700Bold", textAlign: "center", marginBottom: 18 },
+  themeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center" },
+  themeCard: { width: "44%", padding: 14, borderRadius: 18, alignItems: "center", overflow: "hidden" },
+  themeCardName: { fontSize: 12, fontFamily: "Inter_600SemiBold", textAlign: "center", marginTop: 4 },
+  activeCheck: { position: "absolute", top: 8, right: 8, width: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  themeDone: { borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 20 },
+  themeDoneTxt: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
 });

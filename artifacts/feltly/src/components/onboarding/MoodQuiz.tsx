@@ -12,7 +12,7 @@ import { toast } from "sonner";
 
 const MOOD_KEYS = Object.keys(MOODS) as MoodKey[];
 const TOTAL_STEPS = 7;
-const MAX_TROPES = 6;
+const MAX_TROPES = 10;
 
 type Step = number;
 

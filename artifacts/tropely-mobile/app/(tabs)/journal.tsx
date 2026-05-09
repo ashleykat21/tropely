@@ -2,373 +2,281 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
+  FlatList,
   Platform,
   Pressable,
-  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MoodChip } from "@/components/MoodChip";
 import { useColors } from "@/hooks/useColors";
-import { MOODS } from "@/lib/moods";
-import { useStore, type JournalEntry, type JournalKind } from "@/lib/store";
+import { MOOD_KEYS, MOODS } from "@/lib/moods";
+import { selectors, useStore, type JournalEntry } from "@/lib/store";
 import type { MoodKey } from "@/constants/colors";
 
 const TAB_BAR_HEIGHT = 84;
 
-const REACTION_EMOJIS = ["❤️", "😭", "😂", "🤯", "✨", "🔥"];
-
-type KindDef = { key: JournalKind; label: string; icon: string };
-const KINDS: KindDef[] = [
-  { key: "note", label: "Note", icon: "edit-3" },
-  { key: "quote", label: "Quote", icon: "message-square" },
-  { key: "reflection", label: "Reflection", icon: "star" },
-  { key: "trigger", label: "Trigger", icon: "zap" },
-  { key: "reread", label: "Reread", icon: "rotate-ccw" },
-];
-
-const PROMPTS: Record<JournalKind, string[]> = {
-  note: [
-    "What surprised me in this chapter…",
-    "A detail I don't want to forget…",
-    "Something that felt off — or exactly right…",
-  ],
-  quote: [
-    "The line I can't stop thinking about…",
-    "A sentence that hit harder than expected…",
-    "The most beautiful line so far…",
-  ],
-  reflection: [
-    "What did this chapter stir up in me?",
-    "How did the mood shift here?",
-    "Which character am I rooting for — and why?",
-  ],
-  trigger: [
-    "This moment caught me off guard…",
-    "I felt it in my chest when…",
-  ],
-  reread: [
-    "What brought me back to this book…",
-    "I kept thinking about this story because…",
-  ],
-};
-
-function EntryCard({
-  entry,
-  onDelete,
-}: {
-  entry: JournalEntry;
-  onDelete: () => void;
-}) {
-  const C = useColors();
+function EntryCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () => void }) {
+  const colors = useColors();
   const book = useStore((s) => s.books.find((b) => b.id === entry.bookId));
-  const reactToJournal = useStore((s) => s.reactToJournal);
-  const accent = entry.mood ? MOODS[entry.mood].accent : C.moodStrong;
-  const kind = KINDS.find((k) => k.key === entry.kind) ?? KINDS[0];
+
+  const s = StyleSheet.create({
+    card: {
+      backgroundColor: colors.card, marginHorizontal: 20,
+      borderRadius: colors.radius + 4, padding: 16, marginBottom: 10,
+      borderWidth: 1, borderColor: colors.border,
+    },
+    top: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    book: { fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground, flex: 1 },
+    date: { fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground },
+    text: {
+      fontSize: 14, fontFamily: "Inter_400Regular",
+      color: colors.foreground, lineHeight: 21,
+    },
+    delBtn: { marginTop: 10, alignSelf: "flex-end" },
+  });
+
+  const accent = entry.mood ? MOODS[entry.mood].accent : colors.mutedForeground;
 
   return (
-    <View
-      style={{
-        backgroundColor: C.card + "CC",
-        marginHorizontal: 20,
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 10,
-        borderWidth: 1,
-        borderColor: C.border + "80",
-      }}
-    >
-      {/* Header row */}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Feather name={kind.icon as any} size={13} color={C.mutedForeground} />
-          <Text style={{ fontSize: 11, fontFamily: "DMSans_600SemiBold", color: C.mutedForeground, textTransform: "uppercase", letterSpacing: 1.5 }}>
-            {kind.label}
-          </Text>
-          {book && (
-            <View style={{ borderRadius: 99, borderWidth: 1, borderColor: C.border + "99", backgroundColor: C.background + "66", paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: C.mutedForeground }} numberOfLines={1}>
-                {book.title}
-              </Text>
-            </View>
-          )}
-          {entry.isSpoiler && (
-            <View style={{ backgroundColor: "#D4A83215", borderRadius: 99, paddingHorizontal: 7, paddingVertical: 2 }}>
-              <Text style={{ fontSize: 10, fontFamily: "DMSans_600SemiBold", color: "#D4A832" }}>⚠️ SPOILER</Text>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity onPress={onDelete}>
-          <Feather name="trash-2" size={15} color={C.mutedForeground} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      {entry.kind === "quote" ? (
-        <Text style={{ fontSize: 16, fontFamily: "Fraunces_400Regular_Italic", color: C.foreground, lineHeight: 26, marginBottom: 8 }}>
-          "{entry.text}"
+    <View style={s.card}>
+      <View style={s.top}>
+        <View style={[s.dot, { backgroundColor: accent }]} />
+        <Text style={s.book} numberOfLines={1}>
+          {book?.title ?? "General"} {entry.mood ? `· ${MOODS[entry.mood].emoji}` : ""}
         </Text>
-      ) : (
-        <Text style={{ fontSize: 14, fontFamily: "DMSans_400Regular", color: C.foreground + "E6", lineHeight: 22, marginBottom: 8 }}>
-          {entry.text}
+        <Text style={s.date}>
+          {new Date(entry.createdAt).toLocaleDateString("en", { month: "short", day: "numeric" })}
         </Text>
-      )}
-
-      <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: C.mutedForeground, marginBottom: 10 }}>
-        {new Date(entry.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-      </Text>
-
-      {/* Reactions */}
-      <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-        {(entry.reactions ?? []).length > 0 && (
-          <Text style={{ fontSize: 16 }}>{(entry.reactions ?? []).join(" ")}</Text>
-        )}
-        <View style={{
-          flexDirection: "row", alignItems: "center",
-          borderRadius: 99, backgroundColor: C.background + "99",
-          borderWidth: 1, borderColor: C.border + "66",
-          paddingHorizontal: 6, paddingVertical: 3, gap: 2,
-        }}>
-          {REACTION_EMOJIS.map((em) => (
-            <TouchableOpacity
-              key={em}
-              style={{ paddingHorizontal: 4 }}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                reactToJournal(entry.id, em);
-              }}
-            >
-              <Text style={{ fontSize: 15 }}>{em}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
+      <Text style={s.text}>{entry.text}</Text>
+      <TouchableOpacity style={s.delBtn} onPress={onDelete}>
+        <Feather name="trash-2" size={14} color={colors.mutedForeground} />
+      </TouchableOpacity>
     </View>
   );
 }
 
-export default function JournalScreen() {
-  const C = useColors();
+function NewEntrySheet({ onClose }: { onClose: () => void }) {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
-  const books = useStore((s) => s.books);
-  const journal = useStore((s) => s.journal);
+  const books = useStore((s) => s.books.filter((b) => b.shelf === "reading"));
   const addJournal = useStore((s) => s.addJournal);
-  const removeJournal = useStore((s) => s.removeJournal);
 
-  const ALL_ID = "__all__";
-  const [bookId, setBookId] = useState<string>(ALL_ID);
-  const [kind, setKind] = useState<JournalKind>("note");
   const [text, setText] = useState("");
+  const [mood, setMood] = useState<MoodKey | undefined>(undefined);
+  const [bookId, setBookId] = useState<string | undefined>(undefined);
+  const [isSpoiler, setIsSpoiler] = useState(false);
 
-  const filtered = bookId === ALL_ID ? journal : journal.filter((e) => e.bookId === bookId);
-  const selectedBook = books.find((b) => b.id === bookId);
-
-  const submit = () => {
+  const save = () => {
     if (!text.trim()) return;
-    addJournal({
-      bookId: bookId === ALL_ID ? undefined : bookId,
-      kind,
-      text: text.trim(),
-    });
+    addJournal({ text: text.trim(), mood, bookId, isSpoiler });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setText("");
+    onClose();
   };
 
+  const s = StyleSheet.create({
+    backdrop: {
+      position: "absolute", inset: 0,
+      backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 20,
+      paddingBottom: Platform.OS === "web" ? 34 : insets.bottom + 16,
+    },
+    handle: {
+      width: 36, height: 4, borderRadius: 2,
+      backgroundColor: colors.border, alignSelf: "center", marginBottom: 16,
+    },
+    header: {
+      flexDirection: "row", justifyContent: "space-between",
+      alignItems: "center", marginBottom: 16,
+    },
+    title: { fontSize: 17, fontFamily: "Inter_700Bold", color: colors.foreground },
+    input: {
+      backgroundColor: colors.background,
+      borderWidth: 1, borderColor: colors.border,
+      borderRadius: 10, padding: 12, height: 100,
+      fontSize: 14, fontFamily: "Inter_400Regular",
+      color: colors.foreground, textAlignVertical: "top",
+      marginBottom: 16,
+    },
+    label: {
+      fontSize: 12, fontFamily: "Inter_600SemiBold",
+      color: colors.mutedForeground, textTransform: "uppercase",
+      letterSpacing: 0.8, marginBottom: 10,
+    },
+    moodRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+    bookRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 16 },
+    bookChip: {
+      paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+      borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background,
+    },
+    bookChipActive: { borderColor: colors.primary, backgroundColor: colors.primary + "15" },
+    bookChipText: { fontSize: 12, fontFamily: "Inter_500Medium", color: colors.foreground },
+    bookChipTextActive: { color: colors.primary },
+    row: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },
+    toggleBtn: {
+      paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8,
+      borderWidth: 1, borderColor: colors.border,
+    },
+    toggleBtnActive: { borderColor: "#D4A832", backgroundColor: "#D4A83215" },
+    toggleText: { fontSize: 12, fontFamily: "Inter_500Medium", color: colors.mutedForeground },
+    toggleTextActive: { color: "#D4A832" },
+    btn: {
+      backgroundColor: colors.primary, borderRadius: 12,
+      paddingVertical: 13, alignItems: "center",
+    },
+    btnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  });
+
   return (
-    <View style={{ flex: 1, backgroundColor: C.background }}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          paddingTop: Platform.OS === "web" ? 67 : insets.top + 16,
-          paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + TAB_BAR_HEIGHT,
-        }}
-      >
-        {/* ── Page header ── */}
-        <View style={{ paddingHorizontal: 20, gap: 4, marginBottom: 28 }}>
-          <Text style={{ fontSize: 11, fontFamily: "DMSans_600SemiBold", color: C.mutedForeground, textTransform: "uppercase", letterSpacing: 4 }}>
-            Journal
-          </Text>
-          <Text style={{ fontFamily: "Fraunces_400Regular", fontSize: 36, color: C.foreground, lineHeight: 38, letterSpacing: -0.5 }}>
-            {"Hold onto what "}
-            <Text style={{ fontStyle: "italic", color: C.moodStrong }}>moves you</Text>
-            {"."}
-          </Text>
+    <Pressable style={s.backdrop} onPress={onClose}>
+      <Pressable style={s.sheet} onPress={() => {}}>
+        <View style={s.handle} />
+        <View style={s.header}>
+          <Text style={s.title}>New entry</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Feather name="x" size={20} color={colors.mutedForeground} />
+          </TouchableOpacity>
         </View>
 
-        {/* ── Book selector pills ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 24 }}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 8, flexDirection: "row" }}
-        >
+        <TextInput
+          style={s.input}
+          placeholder="What's on your mind?"
+          placeholderTextColor={colors.mutedForeground}
+          value={text}
+          onChangeText={setText}
+          multiline
+          autoFocus
+        />
+
+        <Text style={s.label}>Mood</Text>
+        <View style={s.moodRow}>
+          {MOOD_KEYS.map((k) => (
+            <MoodChip
+              key={k}
+              moodKey={k}
+              selected={mood === k}
+              onPress={() => setMood(mood === k ? undefined : k)}
+              compact
+            />
+          ))}
+        </View>
+
+        {books.length > 0 && (
+          <>
+            <Text style={s.label}>Book</Text>
+            <View style={s.bookRow}>
+              {books.map((b) => (
+                <Pressable
+                  key={b.id}
+                  style={[s.bookChip, bookId === b.id && s.bookChipActive]}
+                  onPress={() => setBookId(bookId === b.id ? undefined : b.id)}
+                >
+                  <Text style={[s.bookChipText, bookId === b.id && s.bookChipTextActive]} numberOfLines={1}>
+                    {b.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </>
+        )}
+
+        <View style={s.row}>
           <TouchableOpacity
-            style={{
-              paddingHorizontal: 16, paddingVertical: 9, borderRadius: 99, borderWidth: 1,
-              borderColor: bookId === ALL_ID ? C.foreground : C.border,
-              backgroundColor: bookId === ALL_ID ? C.foreground : C.card + "B3",
-            }}
-            onPress={() => setBookId(ALL_ID)}
+            style={[s.toggleBtn, isSpoiler && s.toggleBtnActive]}
+            onPress={() => setIsSpoiler(!isSpoiler)}
           >
-            <Text style={{ fontSize: 14, fontFamily: "DMSans_400Regular", color: bookId === ALL_ID ? C.background : C.mutedForeground }}>
-              All books
+            <Text style={[s.toggleText, isSpoiler && s.toggleTextActive]}>⚠️ Spoiler</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={[s.btn, !text.trim() && { opacity: 0.5 }]} onPress={save} disabled={!text.trim()}>
+          <Text style={s.btnText}>Save entry</Text>
+        </TouchableOpacity>
+      </Pressable>
+    </Pressable>
+  );
+}
+
+export default function JournalScreen() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const journal = useStore((s) => s.journal);
+  const removeJournal = useStore((s) => s.removeJournal);
+  const [adding, setAdding] = useState(false);
+
+  const s = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      paddingTop: Platform.OS === "web" ? 67 : insets.top + 12,
+      paddingHorizontal: 20, paddingBottom: 16,
+      flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end",
+    },
+    title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.foreground },
+    addBtn: {
+      width: 38, height: 38, borderRadius: 10,
+      backgroundColor: colors.primary,
+      alignItems: "center", justifyContent: "center",
+    },
+    empty: {
+      flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40,
+    },
+    emptyText: {
+      fontSize: 15, fontFamily: "Inter_400Regular",
+      color: colors.mutedForeground, textAlign: "center", marginTop: 12,
+    },
+  });
+
+  return (
+    <View style={s.container}>
+      <View style={s.header}>
+        <Text style={s.title}>Journal</Text>
+        <TouchableOpacity style={s.addBtn} onPress={() => setAdding(true)}>
+          <Feather name="plus" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {journal.length === 0 ? (
+        <View style={s.empty}>
+          <Feather name="edit-3" size={42} color={colors.mutedForeground} />
+          <Text style={s.emptyText}>
+            Your reading thoughts live here.{"\n"}Write your first entry.
+          </Text>
+          <TouchableOpacity
+            style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 10 }}
+            onPress={() => setAdding(true)}
+          >
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" }}>
+              New entry
             </Text>
           </TouchableOpacity>
-          {books.map((b) => (
-            <TouchableOpacity
-              key={b.id}
-              style={{
-                paddingHorizontal: 16, paddingVertical: 9, borderRadius: 99, borderWidth: 1,
-                borderColor: bookId === b.id ? C.foreground : C.border,
-                backgroundColor: bookId === b.id ? C.foreground : C.card + "B3",
-              }}
-              onPress={() => setBookId(b.id)}
-            >
-              <Text style={{ fontSize: 14, fontFamily: "DMSans_400Regular", color: bookId === b.id ? C.background : C.mutedForeground }} numberOfLines={1}>
-                {b.title}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* ── Composer card ── */}
-        <View style={{
-          marginHorizontal: 20, marginBottom: 32,
-          borderRadius: 16, padding: 20,
-          backgroundColor: C.moodTint + "80",
-          borderWidth: 1, borderColor: C.border + "66",
-          gap: 14,
-        }}>
-          {/* Kind tabs */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: -2 }}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {KINDS.map((k) => {
-                const active = kind === k.key;
-                return (
-                  <TouchableOpacity
-                    key={k.key}
-                    style={{
-                      flexDirection: "row", alignItems: "center", gap: 6,
-                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, borderWidth: 1,
-                      borderColor: active ? C.foreground : C.border,
-                      backgroundColor: active ? C.foreground : C.card + "99",
-                    }}
-                    onPress={() => setKind(k.key)}
-                  >
-                    <Feather name={k.icon as any} size={13} color={active ? C.background : C.mutedForeground} />
-                    <Text style={{ fontSize: 13, fontFamily: "DMSans_400Regular", color: active ? C.background : C.mutedForeground }}>
-                      {k.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-
-          {/* Writing prompt chips */}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-            {PROMPTS[kind].map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={{
-                  paddingHorizontal: 10, paddingVertical: 5, borderRadius: 99,
-                  borderWidth: 1, borderColor: C.border + "80",
-                  backgroundColor: C.card + "80",
-                }}
-                onPress={() => setText((prev) => prev ? prev : p)}
-              >
-                <Text style={{ fontSize: 11, fontFamily: "DMSans_400Regular", color: C.mutedForeground }}>
-                  {p}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Textarea */}
-          <TextInput
-            style={{
-              backgroundColor: C.card + "B3",
-              borderWidth: 1, borderColor: C.border + "99",
-              borderRadius: 12, padding: 14, minHeight: 120,
-              fontSize: 14, fontFamily: "DMSans_400Regular",
-              color: C.foreground, textAlignVertical: "top",
-            }}
-            placeholder={
-              kind === "quote"
-                ? "\u201cThe line you can\u2019t stop thinking about\u2026\u201d"
-                : kind === "reflection"
-                ? "What did this chapter stir up?"
-                : "Anything you want to remember\u2026"
-            }
-            placeholderTextColor={C.mutedForeground}
-            value={text}
-            onChangeText={setText}
-            multiline
-          />
-
-          {/* Save row */}
-          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-            <TouchableOpacity
-              style={{
-                paddingHorizontal: 24, paddingVertical: 12, borderRadius: 99,
-                backgroundColor: C.foreground,
-                opacity: !text.trim() ? 0.45 : 1,
-              }}
-              onPress={submit}
-              disabled={!text.trim()}
-            >
-              <Text style={{ fontSize: 14, fontFamily: "DMSans_600SemiBold", color: C.background }}>
-                Save entry
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
+      ) : (
+        <FlatList
+          data={journal}
+          keyExtractor={(e) => e.id}
+          renderItem={({ item }) => (
+            <EntryCard entry={item} onDelete={() => removeJournal(item.id)} />
+          )}
+          contentContainerStyle={{
+            paddingTop: 4,
+            paddingBottom: (Platform.OS === "web" ? 34 : insets.bottom) + TAB_BAR_HEIGHT,
+          }}
+          scrollEnabled={!!journal.length}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
-        {/* ── Entries section header ── */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text style={{ fontFamily: "Fraunces_400Regular", fontSize: 24, color: C.foreground }}>
-            {bookId === ALL_ID
-              ? "All entries"
-              : selectedBook
-              ? `Entries · ${selectedBook.title}`
-              : "Entries"}
-          </Text>
-        </View>
-
-        {/* ── Entries list ── */}
-        {filtered.length === 0 ? (
-          <View style={{
-            marginHorizontal: 20, borderRadius: 16, padding: 40,
-            borderWidth: 1, borderColor: C.border + "99", borderStyle: "dashed",
-            alignItems: "center", gap: 12,
-          }}>
-            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: C.foreground + "0D", alignItems: "center", justifyContent: "center" }}>
-              <Feather name="edit-3" size={20} color={C.moodStrong} />
-            </View>
-            <View style={{ alignItems: "center", gap: 4 }}>
-              <Text style={{ fontFamily: "Fraunces_400Regular", fontSize: 20, color: C.foreground, textAlign: "center" }}>
-                Capture your first note or quote.
-              </Text>
-              <Text style={{ fontSize: 14, fontFamily: "DMSans_400Regular", color: C.mutedForeground, textAlign: "center", lineHeight: 20 }}>
-                Anything that moves you — a line, a question, a feeling.
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View>
-            {filtered.map((entry) => (
-              <EntryCard
-                key={entry.id}
-                entry={entry}
-                onDelete={() => removeJournal(entry.id)}
-              />
-            ))}
-          </View>
-        )}
-      </ScrollView>
+      {adding && <NewEntrySheet onClose={() => setAdding(false)} />}
     </View>
   );
 }

@@ -28,17 +28,13 @@ export interface Book {
   seriesPosition?: number;
 }
 
-export type JournalKind = "note" | "quote" | "reflection" | "trigger" | "reread";
-
 export interface JournalEntry {
   id: string;
   bookId?: string;
   mood?: MoodKey;
-  kind?: JournalKind;
   text: string;
   createdAt: number;
   isSpoiler?: boolean;
-  reactions?: string[];
 }
 
 export interface SessionLog {
@@ -103,7 +99,6 @@ interface AppState {
 
   addJournal: (e: Omit<JournalEntry, "id" | "createdAt">) => void;
   removeJournal: (id: string) => void;
-  reactToJournal: (id: string, emoji: string) => void;
 
   logSession: (s: Omit<SessionLog, "id" | "at">) => void;
 
@@ -199,16 +194,6 @@ export const useStore = create<AppState>()(
 
       removeJournal: (id) =>
         set((s) => ({ journal: s.journal.filter((e) => e.id !== id) })),
-
-      reactToJournal: (id, emoji) =>
-        set((s) => ({
-          journal: s.journal.map((e) => {
-            if (e.id !== id) return e;
-            const current = e.reactions ?? [];
-            const has = current.includes(emoji);
-            return { ...e, reactions: has ? current.filter((r) => r !== emoji) : [...current, emoji] };
-          }),
-        })),
 
       logSession: (s) => {
         set((st) => ({

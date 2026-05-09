@@ -13,15 +13,15 @@ type PremiumState = {
   markUpgradePromptSeen: () => void;
 };
 
-/**
- * Local premium flag.
- *
- * In production this is unlocked by a successful App Store / Play Store
- * in-app purchase (StoreKit / Google Play Billing). For now it's a simple
- * persisted local flag with a dev toggle in the Profile page so the locked
- * UI can be tested.
- */
-export const usePremium = create<PremiumState>()(
+// ---------------------------------------------------------------------------
+// TODO(payments): Set TESTING_PREMIUM_BYPASS = false and remove this block
+// before enabling real App Store / Play Store payments in production.
+// When true, every isPremium check returns true so testers can access all
+// premium features without going through the payment flow.
+// ---------------------------------------------------------------------------
+const TESTING_PREMIUM_BYPASS = true;
+
+const _premiumStore = create<PremiumState>()(
   persist(
     (set, get) => ({
       isPremium: false,
@@ -38,3 +38,26 @@ export const usePremium = create<PremiumState>()(
     { name: "felt-premium" }
   )
 );
+
+/**
+ * Premium state hook — drop-in replacement for the Zustand store selector API.
+ *
+ * When TESTING_PREMIUM_BYPASS is true every selector sees isPremium=true and
+ * plan="monthly" (if no plan is stored), so all premium-gated UI renders as
+ * unlocked.  Paywall overlays, LockedFeature wrappers, and PremiumButton
+ * components are all bypassed without any component-level changes.
+ *
+ * To re-enable the paywall: set TESTING_PREMIUM_BYPASS = false above.
+ */
+export function usePremium<T>(
+  selector: (state: PremiumState) => T,
+  equals?: (a: T, b: T) => boolean,
+): T {
+  if (TESTING_PREMIUM_BYPASS) {
+    return _premiumStore(
+      (s) => selector({ ...s, isPremium: true, plan: s.plan ?? "monthly" }),
+      equals,
+    );
+  }
+  return _premiumStore(selector, equals);
+}

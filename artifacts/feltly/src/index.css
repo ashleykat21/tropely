@@ -65,19 +65,19 @@
     --mood-ink: hsl(var(--mood-h) 30% 14%);
 
     --gradient-mood: radial-gradient(
-        150% 100% at 0% 0%,
-        hsl(var(--mood-h) calc(var(--mood-s) + 15%) 80% / 0.9) 0%,
-        transparent 55%
+        170% 110% at 0% 0%,
+        hsl(var(--mood-h) calc(var(--mood-s) + 25%) 68% / 1.0) 0%,
+        transparent 52%
       ),
       radial-gradient(
-        130% 100% at 100% 100%,
-        hsl(var(--mood-h) calc(var(--mood-s) + 20%) 76% / 0.8) 0%,
-        transparent 50%
+        150% 110% at 100% 100%,
+        hsl(var(--mood-h) calc(var(--mood-s) + 30%) 62% / 0.95) 0%,
+        transparent 48%
       ),
       radial-gradient(
-        80% 60% at 60% 40%,
-        hsl(var(--mood-h) var(--mood-s) 88% / 0.45) 0%,
-        transparent 70%
+        90% 70% at 55% 40%,
+        hsl(var(--mood-h) calc(var(--mood-s) + 10%) 78% / 0.7) 0%,
+        transparent 65%
       ),
       linear-gradient(160deg, hsl(34 38% 91%) 0%, hsl(32 36% 86%) 100%);
 

@@ -10,7 +10,7 @@ name = "expo"
 version = "1.0.0"
 
 [[services]]
-ensurePreviewReachable = "/"
+ensurePreviewReachable = "/status"
 name = "expo"
 paths = [ "/mobile/" ]
 localPort = 24021
