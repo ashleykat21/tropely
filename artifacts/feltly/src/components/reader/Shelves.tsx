@@ -370,7 +370,7 @@ export function Shelves() {
               ? "hidden"
               : active === "series"
               ? "space-y-3"
-              : "grid gap-2 grid-cols-4 sm:grid-cols-6 lg:grid-cols-8"
+              : "grid gap-2 grid-cols-5 sm:grid-cols-7 lg:grid-cols-9"
           }
         >
           {/* Series browser */}

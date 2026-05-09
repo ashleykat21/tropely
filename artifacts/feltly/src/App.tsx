@@ -14,6 +14,7 @@ import Companion from "./pages/Companion.tsx";
 import Auth from "./pages/Auth.tsx";
 import Wrap from "./pages/Wrap.tsx";
 import Twins from "./pages/Twins.tsx";
+import BuddyReadsPage from "./pages/BuddyReads.tsx";
 import BookDetail from "./pages/BookDetail.tsx";
 import Premium from "./pages/Premium.tsx";
 import Tropes from "./pages/Tropes.tsx";
@@ -108,6 +109,7 @@ function AppGate() {
         <Route path="/companion"  element={<Companion />} />
         <Route path="/wrap"       element={<Wrap />} />
         <Route path="/twins"      element={<Twins />} />
+        <Route path="/buddy-reads" element={<BuddyReadsPage />} />
         <Route path="/book/:id"   element={<BookDetail />} />
         <Route path="/premium"    element={<Premium />} />
         <Route path="/tropes"     element={<Tropes />} />

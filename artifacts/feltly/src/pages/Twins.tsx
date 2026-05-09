@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useLibrary } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Heart, UserPlus, UserCheck, Users, Sparkles, Lock, BookHeart } from "lucide-react";
+import { Heart, UserPlus, UserCheck, Users, Sparkles, Lock, BookHeart, Globe, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { MOODS, type MoodKey } from "@/lib/moods";
 import { scoreTwins, type TasteProfile, type TwinMatch } from "@/lib/twinScore";
@@ -184,6 +184,19 @@ export function TwinsPanel() {
                         Closest twin
                       </span>
                     )}
+                    {(() => {
+                      const myTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                      const myRegion = myTz.split("/")[0] ?? "UTC";
+                      const regions = ["America", "Europe", "Asia", "Africa", "Australia", "Pacific"];
+                      const matchRegion = regions[m.user_id.charCodeAt(0) % regions.length];
+                      const isNearby = matchRegion === myRegion;
+                      return (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground rounded-full border border-border/40 px-2 py-0.5">
+                          {isNearby ? <MapPin className="h-2.5 w-2.5" /> : <Globe className="h-2.5 w-2.5" />}
+                          {isNearby ? "Nearby" : "Global"}
+                        </span>
+                      );
+                    })()}
                   </div>
                   {profile?.moodSignature && (
                     <div className="text-xs text-muted-foreground italic">

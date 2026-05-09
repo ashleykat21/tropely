@@ -47,11 +47,12 @@ const MOBILE_PRIMARY = [
 ];
 
 const MOBILE_MORE: { to: string; key: string; icon: typeof Home }[] = [
+  { to: "/buddy-reads", key: "nav.buddy", icon: Users },
+  { to: "/twins", key: "nav.twins", icon: Heart },
   { to: "/social", key: "nav.social", icon: Users },
   { to: "/companion", key: "nav.ai", icon: Sparkles },
   { to: "/insights", key: "nav.insights", icon: BarChart3 },
   { to: "/tropes", key: "nav.tropes", icon: Layers },
-  { to: "/twins", key: "nav.twins", icon: Heart },
   { to: "/wrap", key: "nav.wrap", icon: Calendar },
   { to: "/premium", key: "nav.premium", icon: Crown },
 ];

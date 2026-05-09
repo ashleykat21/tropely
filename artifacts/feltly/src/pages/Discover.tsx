@@ -203,7 +203,7 @@ const Discover = () => {
     });
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
+      .slice(0, 10)
       .map(([t]) => t);
   }, [baseFeed]);
 
@@ -388,6 +388,33 @@ const Discover = () => {
             ))}
           </div>
         </div>
+
+        {/* Per-genre trope chips — show up to 10 tropes from the selected genre */}
+        {catFilter && (() => {
+          const cat = TROPE_CATEGORIES.find((c) => c.name === catFilter);
+          if (!cat || cat.tropes.length === 0) return null;
+          return (
+            <div className="space-y-1.5 -mt-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                {cat.emoji} Tropes in {cat.name}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {cat.tropes.slice(0, 10).map((trope) => (
+                  <button
+                    key={trope}
+                    onClick={() => {
+                      setQ(trope);
+                      search(trope);
+                    }}
+                    className="rounded-full border border-border/60 bg-card/70 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-card transition"
+                  >
+                    {trope}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Feed tabs */}
         <div className="flex items-center justify-between gap-4 flex-wrap">

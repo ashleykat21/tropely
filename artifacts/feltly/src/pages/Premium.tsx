@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { usePremium, type PremiumPlan } from "@/lib/usePremium";
+import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   Sparkles, Check, Lock, Brain, Snowflake, Bell, Users, Music2,
   User, Timer, Palette, FolderPlus, Share2, FileText, Tablet,
-  Heart, BarChart3, Zap, Calendar, ArrowLeft, BookOpen,
+  Heart, BarChart3, Zap, Calendar, ArrowLeft, BookOpen, Copy, Gift,
 } from "lucide-react";
 import { UpgradePrompt } from "@/components/premium/UpgradePrompt";
 
@@ -52,7 +53,7 @@ const CATEGORIES: FeatureCategory[] = [
     color: "text-emerald-600",
     features: [
       { label: "Activity feed", free: "Full access", premium: "Full access" },
-      { label: "Buddy read rooms", free: "1 room, 2 members", premium: "Unlimited" },
+      { label: "Buddy read rooms", free: "1 room, 3 members", premium: "Unlimited" },
       { label: "Reading Twins matching", free: "View only", premium: "Full match + messages" },
     ],
   },
@@ -129,6 +130,24 @@ export default function Premium() {
   const setPlan = usePremium((s) => s.setPlan);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<PremiumPlan>("annual");
+  const [copied, setCopied] = useState(false);
+  const { user } = useAuth();
+
+  const referralCode = user?.id
+    ? `TROPE-${user.id.slice(-6).toUpperCase()}`
+    : "TROPE-XXXXXX";
+  const referralLink = `${window.location.origin}?ref=${referralCode}`;
+
+  const copyReferral = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      toast.success("Referral link copied!");
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      toast.error("Couldn't copy — try manually selecting the link.");
+    }
+  }, [referralLink]);
 
   const handleSelect = (key: PremiumPlan) => {
     setPlan(key);
@@ -237,6 +256,34 @@ export default function Premium() {
             </div>
           </section>
         )}
+
+        {/* Referral */}
+        <section className="rounded-2xl border border-border/50 mood-surface p-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Gift className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-display text-2xl">Invite a friend, get a month free</h2>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Share your referral link. When a friend signs up and subscribes, you both get one free month of Premium.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-xl border border-border/60 bg-background/60 px-3 py-2 text-sm font-mono truncate select-all">
+              {referralLink}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              className="rounded-full shrink-0 gap-1.5"
+              onClick={copyReferral}
+            >
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied!" : "Copy"}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Your free month is applied automatically once your friend's first payment processes.
+          </p>
+        </section>
 
         {/* Feature comparison */}
         <section className="space-y-6">

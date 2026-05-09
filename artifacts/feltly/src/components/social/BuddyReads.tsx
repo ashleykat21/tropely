@@ -12,7 +12,7 @@ import { usePremium } from "@/lib/usePremium";
 import { BuddyMoodComparison } from "./BuddyMoodComparison";
 import { type MoodKey } from "@/lib/moods";
 
-const FREE_MEMBER_CAP = 2;
+const FREE_MEMBER_CAP = 3;
 const FREE_ROOM_CAP = 1;
 
 type Room = {
@@ -41,6 +41,8 @@ export function BuddyReads() {
   const { user } = useAuth();
   const isPremium = usePremium((s) => s.isPremium);
   const { books, currentId, sessions } = useLibrary();
+  const age = useLibrary((s) => s.age);
+  const isSafeMode = age !== null && age < 13;
   const current = books.find((b) => b.id === currentId);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -519,24 +521,31 @@ export function BuddyReads() {
                   </div>
 
                   {(mine || isOwner) && (
-                    <div className="border-t border-border/50 p-2 flex items-center gap-2">
-                      <Input
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            send();
-                          }
-                        }}
-                        placeholder={`Send from p.${myPage}…`}
-                        className="h-11"
-                        aria-label="Buddy read message"
-                      />
-                      <Button className="rounded-full h-11 w-11 p-0 shrink-0" onClick={send} disabled={!draft.trim()} aria-label="Send message">
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    isSafeMode ? (
+                      <div className="border-t border-border/50 p-3 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                        <span>Safe mode — messaging is restricted for readers under 13. A parent can update this in Profile.</span>
+                      </div>
+                    ) : (
+                      <div className="border-t border-border/50 p-2 flex items-center gap-2">
+                        <Input
+                          value={draft}
+                          onChange={(e) => setDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              send();
+                            }
+                          }}
+                          placeholder={`Send from p.${myPage}…`}
+                          className="h-11"
+                          aria-label="Buddy read message"
+                        />
+                        <Button className="rounded-full h-11 w-11 p-0 shrink-0" onClick={send} disabled={!draft.trim()} aria-label="Send message">
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )
                   )}
                 </div>
               )}
