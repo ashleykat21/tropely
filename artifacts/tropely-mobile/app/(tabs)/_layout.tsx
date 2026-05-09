@@ -44,15 +44,24 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* ── 4 main tabs ── */}
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Shelf",
           tabBarIcon: ({ color }) =>
             isIOS
               ? <SymbolView name="books.vertical" tintColor={color} size={22} />
               : <Feather name="book" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="buddy-reads"
+        options={{
+          title: "Buddy",
+          tabBarIcon: ({ color }) =>
+            isIOS
+              ? <SymbolView name="person.2" tintColor={color} size={22} />
+              : <Feather name="users" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -76,30 +85,29 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="insights"
+        options={{
+          title: "Insights",
+          tabBarIcon: ({ color }) =>
+            isIOS
+              ? <SymbolView name="chart.bar" tintColor={color} size={22} />
+              : <Feather name="bar-chart-2" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
-          title: "Me",
+          title: "Profile",
           tabBarIcon: ({ color }) =>
             isIOS
               ? <SymbolView name="person" tintColor={color} size={22} />
               : <Feather name="user" size={21} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="more"
-        options={{
-          title: "More",
-          tabBarIcon: ({ color }) =>
-            isIOS
-              ? <SymbolView name="ellipsis" tintColor={color} size={22} />
-              : <Feather name="grid" size={21} color={color} />,
-        }}
-      />
 
-      {/* ── Hidden from tab bar but still navigable ── */}
-      <Tabs.Screen name="buddy-reads" options={{ href: null }} />
-      <Tabs.Screen name="insights"    options={{ href: null }} />
-      <Tabs.Screen name="library"     options={{ href: null }} />
+      {/* Hidden — not in tab bar */}
+      <Tabs.Screen name="library" options={{ href: null }} />
+      <Tabs.Screen name="more"    options={{ href: null }} />
     </Tabs>
   );
 }

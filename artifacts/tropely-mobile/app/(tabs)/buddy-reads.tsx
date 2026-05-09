@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useStore } from "@/lib/store";
 
 // ─── Palette ──────────────────────────────────────────────────────────────────
 const C = {
@@ -210,12 +211,37 @@ const TAB_BAR_HEIGHT = 84;
 export default function BuddyReadsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const familyAccount = useStore((s) => s.familyAccount);
 
   const [expanded, setExpanded] = useState<Set<number>>(new Set([2]));
   const [reactions, setReactions] = useState<Record<string, boolean>>({});
 
   function toggle(id: number) {
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+
+  // ── Family account gate ────────────────────────────────────────────────────
+  if (!familyAccount) {
+    return (
+      <View style={[s.root, { paddingTop: Platform.OS==="web" ? 67 : insets.top, justifyContent: "center", alignItems: "center", paddingHorizontal: 32 }]}>
+        <Text style={{ fontSize: 56, marginBottom: 20 }}>👨‍👩‍👧‍👦</Text>
+        <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center", marginBottom: 10 }}>
+          Read Together
+        </Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.sub, textAlign: "center", lineHeight: 22, marginBottom: 32 }}>
+          Buddy Reads is a family feature. Enable family mode to read books together, share progress, and discuss chapters with your household.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: C.primary, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, marginBottom: 14 }}
+          onPress={() => router.push("/(tabs)/profile")}
+        >
+          <Text style={{ fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" }}>Enable in Profile →</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: C.muted, textAlign: "center" }}>
+          Go to Profile → Account → Family account
+        </Text>
+      </View>
+    );
   }
 
   return (

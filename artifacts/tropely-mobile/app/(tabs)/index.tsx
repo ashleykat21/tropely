@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StreakBadge } from "@/components/StreakBadge";
 import { QuickLogModal } from "@/components/QuickLogModal";
 import { useColors } from "@/hooks/useColors";
 import { MOODS } from "@/lib/moods";
@@ -223,159 +224,64 @@ function ShelfRow({ label, books, theme, selectedId, onPress, onAdd, showGhosts 
   );
 }
 
-// ─── Currently Reading card (single book) ─────────────────────────────────────
-function CurrentlyReadingCard({
-  book,
-  onBump,
-  onPress,
-}: {
-  book: Book;
-  onBump: (delta: number) => void;
-  onPress: () => void;
-}) {
+// ─── Now Reading card (single book, compact) ──────────────────────────────────
+function NowReadingCard({ book, onBump }: { book: Book; onBump: (delta: number) => void }) {
   const colors = useColors();
   const accent = book.mood ? MOODS[book.mood].accent : colors.primary;
   const pct = book.pages && book.pages > 0 ? Math.min(book.progress / book.pages, 1) : 0;
   const pagesLeft = book.pages ? Math.max(0, book.pages - book.progress) : null;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.88}
-      onPress={onPress}
-      style={{
-        width: 260,
-        borderRadius: 20,
-        backgroundColor: colors.card,
-        borderWidth: 1,
-        borderColor: accent + "40",
-        overflow: "hidden",
-      }}
-    >
-      {/* Accent strip */}
-      <View style={{ height: 3, backgroundColor: accent }} />
-
-      <View style={{ padding: 14 }}>
-        {/* Cover + info row */}
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "flex-start" }}>
-          {/* Cover */}
-          <View style={{
-            width: 64, height: 90, borderRadius: 8, flexShrink: 0,
-            backgroundColor: accent + "22", alignItems: "center",
-            justifyContent: "center", overflow: "hidden",
-            shadowColor: accent, shadowOffset: { width: 2, height: 4 },
-            shadowOpacity: 0.35, shadowRadius: 6, elevation: 5,
-          }}>
-            {book.cover
-              ? <Image source={{ uri: book.cover }} style={{ width: 64, height: 90 }} resizeMode="cover" />
-              : <Text style={{ fontSize: 28 }}>📚</Text>}
-          </View>
-
-          {/* Info */}
-          <View style={{ flex: 1, paddingTop: 2 }}>
-            <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", color: accent,
-              letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
-              Now Reading
-            </Text>
-            <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: colors.foreground, lineHeight: 20 }}
-              numberOfLines={2}>{book.title}</Text>
-            <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 3 }}
-              numberOfLines={1}>{book.author}</Text>
-            {book.mood && (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
-                <Text style={{ fontSize: 11 }}>{MOODS[book.mood].emoji}</Text>
-                <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: accent }}>
-                  {MOODS[book.mood].label}
-                </Text>
-              </View>
-            )}
-          </View>
+    <View style={{
+      marginHorizontal: 16, marginTop: 14, marginBottom: 4,
+      borderRadius: 18, padding: 14,
+      backgroundColor: colors.card, borderWidth: 1, borderColor: accent + "35",
+    }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        {/* Cover */}
+        <View style={{ width: 50, height: 70, borderRadius: 8, backgroundColor: accent + "20",
+          alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+          {book.cover
+            ? <Image source={{ uri: book.cover }} style={{ width: 50, height: 70 }} resizeMode="cover" />
+            : <Text style={{ fontSize: 24 }}>📚</Text>}
         </View>
 
-        {/* Progress */}
-        <View style={{ marginTop: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 5 }}>
-            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
-              {book.pages
-                ? `Page ${book.progress} of ${book.pages}`
-                : book.progress > 0 ? `Page ${book.progress}` : "Not started"}
-            </Text>
-            {pagesLeft !== null && pagesLeft > 0 && (
-              <Text style={{ fontSize: 11, fontFamily: "Inter_600SemiBold", color: accent }}>
-                {pagesLeft} left
-              </Text>
-            )}
-          </View>
-          <View style={{ height: 5, borderRadius: 3, backgroundColor: colors.muted, overflow: "hidden" }}>
-            <View style={{ width: `${pct * 100}%` as any, height: 5, backgroundColor: accent, borderRadius: 3 }} />
-          </View>
-          <Text style={{ fontSize: 10, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 4, textAlign: "right" }}>
-            {Math.round(pct * 100)}%
+        {/* Info */}
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, fontFamily: "Inter_600SemiBold", color: accent,
+            letterSpacing: 1, textTransform: "uppercase", marginBottom: 3 }}>
+            Now Reading
           </Text>
+          <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: colors.foreground }}
+            numberOfLines={1}>{book.title}</Text>
+          <Text style={{ fontSize: 12, fontFamily: "Inter_400Regular", color: colors.mutedForeground, marginTop: 2, marginBottom: 8 }}>
+            {book.pages
+              ? `Page ${book.progress} of ${book.pages}${pagesLeft !== null && pagesLeft > 0 ? ` · ${pagesLeft} to go` : ""}`
+              : book.progress > 0 ? `Page ${book.progress}` : "Not started yet"}
+          </Text>
+          <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.muted, overflow: "hidden" }}>
+            <View style={{ width: `${pct * 100}%` as any, height: 4, backgroundColor: accent, borderRadius: 2 }} />
+          </View>
         </View>
 
-        {/* Quick bump buttons */}
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+        {/* Quick page bumps */}
+        <View style={{ gap: 6, flexShrink: 0 }}>
           <TouchableOpacity
-            onPress={(e) => { e.stopPropagation?.(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBump(1); }}
-            style={{ flex: 1, backgroundColor: colors.muted, borderRadius: 10,
-              paddingVertical: 8, alignItems: "center" }}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBump(10); }}
+            style={{ backgroundColor: accent + "22", borderRadius: 10, paddingHorizontal: 10,
+              paddingVertical: 7, borderWidth: 1, borderColor: accent + "40", alignItems: "center" }}
           >
-            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground }}>+1 page</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: accent }}>+10</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={(e) => { e.stopPropagation?.(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBump(10); }}
-            style={{ flex: 1, backgroundColor: accent + "22", borderRadius: 10,
-              paddingVertical: 8, borderWidth: 1, borderColor: accent + "40", alignItems: "center" }}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onBump(1); }}
+            style={{ backgroundColor: colors.muted + "80", borderRadius: 10,
+              paddingHorizontal: 10, paddingVertical: 7, alignItems: "center" }}
           >
-            <Text style={{ fontSize: 12, fontFamily: "Inter_700Bold", color: accent }}>+10 pages</Text>
+            <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.mutedForeground }}>+1</Text>
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Currently Reading row (horizontal scroll of all reading books) ───────────
-function CurrentlyReadingRow({
-  books,
-  updateProgress,
-  onCardPress,
-  onAdd,
-}: {
-  books: Book[];
-  updateProgress: (id: string, p: number) => void;
-  onCardPress: (b: Book) => void;
-  onAdd: () => void;
-}) {
-  const colors = useColors();
-  if (books.length === 0) return null;
-  return (
-    <View style={{ marginBottom: 4 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-        paddingHorizontal: 20, marginBottom: 10, marginTop: 18 }}>
-        <Text style={{ fontSize: 13, fontFamily: "Inter_700Bold", color: colors.foreground }}>
-          Currently Reading
-        </Text>
-        <TouchableOpacity onPress={onAdd}>
-          <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: colors.primary }}>+ Add book</Text>
-        </TouchableOpacity>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 4 }}
-      >
-        {books.map((b) => (
-          <CurrentlyReadingCard
-            key={b.id}
-            book={b}
-            onBump={(delta) =>
-              updateProgress(b.id, Math.min(b.pages ?? Infinity, Math.max(0, b.progress + delta)))
-            }
-            onPress={() => onCardPress(b)}
-          />
-        ))}
-      </ScrollView>
     </View>
   );
 }
@@ -479,14 +385,26 @@ export default function HomeScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Currently Reading — horizontal card scroll */}
-        <CurrentlyReadingRow
-          books={reading}
-          updateProgress={updateProgress}
-          onCardPress={openBook}
-          onAdd={() => router.push("/discover")}
-        />
+        {/* Now Reading quick-progress card */}
+        {reading.length > 0 && (
+          <NowReadingCard
+            book={reading[0]}
+            onBump={(delta) => updateProgress(reading[0].id, Math.min(
+              reading[0].pages ?? Infinity,
+              Math.max(0, reading[0].progress + delta)
+            ))}
+          />
+        )}
 
+        <ShelfRow
+          label="📖  Currently Reading"
+          books={reading}
+          theme={theme}
+          selectedId={selectedBook?.id ?? null}
+          onPress={openBook}
+          onAdd={() => router.push("/discover")}
+          showGhosts
+        />
         <ShelfRow
           label="🔖  Want to Read"
           books={want}
