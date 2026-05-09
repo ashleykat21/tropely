@@ -47,7 +47,8 @@ export default function AuthScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (e: unknown) {
-      const err = e as { errors?: Array<{ message: string }> };
+      console.error("[auth] sign-in error:", JSON.stringify(e));
+      const err = e as { errors?: Array<{ message: string; code?: string }> };
       setError(err.errors?.[0]?.message ?? "Sign in failed");
     } finally {
       setLoading(false);
