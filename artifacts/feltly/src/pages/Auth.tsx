@@ -9,9 +9,36 @@ type Mode = "signin" | "signup" | "forgot" | "reset" | "verify";
 
 const CLERK_INIT_TIMEOUT_MS = 5_000;
 
+// Resolve session ID from whatever shape Clerk v6 returns
+function extractSessionId(result: unknown): string | null {
+  if (!result || typeof result !== "object") return null;
+  const r = result as Record<string, unknown>;
+  // Direct property
+  if (typeof r.createdSessionId === "string" && r.createdSessionId) return r.createdSessionId;
+  // Nested under signIn / signUp
+  const nested = (r.signIn ?? r.signUp) as Record<string, unknown> | undefined;
+  if (nested && typeof nested.createdSessionId === "string" && nested.createdSessionId)
+    return nested.createdSessionId;
+  // session object
+  const sess = r.session as Record<string, unknown> | undefined;
+  if (sess && typeof sess.id === "string" && sess.id) return sess.id;
+  return null;
+}
+
+function extractStatus(result: unknown): string {
+  if (!result || typeof result !== "object") return "unknown";
+  const r = result as Record<string, unknown>;
+  if (typeof r.status === "string") return r.status;
+  const nested = (r.signIn ?? r.signUp) as Record<string, unknown> | undefined;
+  if (nested && typeof nested.status === "string") return nested.status;
+  return "unknown";
+}
+
+const basePath = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
 export default function Auth() {
-  const { signIn } = useSignIn();
-  const { signUp } = useSignUp();
+  const { signIn } = useSignIn() as any;
+  const { signUp } = useSignUp() as any;
   const { setActive } = useClerk();
   const { isLoaded: clerkLoaded } = useUser();
   const clerkReady = clerkLoaded;
@@ -48,7 +75,25 @@ export default function Auth() {
     setMode(next);
   };
 
-  // ── Sign in ────────────────────────────────────────────────────────────────
+  // ── Google SSO ─────────────────────────────────────────────────────────────
+  const handleGoogleSSO = async () => {
+    if (!signIn || busy) return;
+    setError("");
+    setBusy(true);
+    try {
+      await signIn.create({
+        strategy: "oauth_google",
+        redirectUrl: `${window.location.origin}${basePath}/sign-in/sso-callback`,
+        actionCompleteRedirectUrl: "/",
+      });
+      // Clerk opens the Google popup/redirect — page navigates away
+    } catch (err) {
+      setError(clerkErr(err));
+      setBusy(false);
+    }
+  };
+
+  // ── Sign in / Sign up ──────────────────────────────────────────────────────
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
@@ -58,20 +103,23 @@ export default function Auth() {
       if (mode === "signup") {
         if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
 
-        // Clerk v6: create the account
-        const result = await (signUp as any).create({
+        const result = await signUp.create({
           emailAddress: email,
           password: pwd,
           ...(name.trim() ? { firstName: name.trim() } : {}),
         });
 
-        if (result?.status === "complete" && result?.createdSessionId) {
-          await setActive({ session: result.createdSessionId });
-          return; // keep busy — AppGate unmounts
+        // Also read from the proxy getter in case result shape differs
+        const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
+        const status = extractStatus(result);
+
+        if ((status === "complete" || status === "active") && sessionId) {
+          await setActive({ session: sessionId });
+          return;
         }
 
-        // Email verification required — use v6 verifications.sendEmailCode()
-        await (signUp as any).verifications.sendEmailCode();
+        // Email verification required
+        await signUp.verifications.sendEmailCode();
         setMode("verify");
         setVerifyCode("");
         setBusy(false);
@@ -79,16 +127,34 @@ export default function Auth() {
       } else {
         if (!signIn) { setError("Sign-in is not available. Please refresh."); setBusy(false); return; }
 
-        // Standard Clerk sign-in with email + password
-        const result = await (signIn as any).create({ identifier: email, password: pwd });
-        if (result?.status === "complete" && result?.createdSessionId) {
-          await setActive({ session: result.createdSessionId });
-          return; // keep busy — AppGate unmounts
+        const result = await signIn.create({ identifier: email, password: pwd });
+
+        // Read session from result AND proxy getter
+        const sessionId = extractSessionId(result) ?? signIn.createdSessionId ?? null;
+        const status = extractStatus(result);
+
+        console.debug("[Auth] signIn.create result:", { status, sessionId, result });
+
+        if (sessionId) {
+          await setActive({ session: sessionId });
+          return;
         }
-        setError(`Sign-in could not complete (status: ${result?.status ?? "unknown"}). Please check your credentials.`);
+
+        if (status === "complete") {
+          // session ID might be on the client directly
+          const clientSessionId = (signIn as any)?.session?.id;
+          if (clientSessionId) { await setActive({ session: clientSessionId }); return; }
+        }
+
+        if (status === "needs_first_factor" || status === "needs_identifier") {
+          setError("Password sign-in is not enabled for this account. Try Google sign-in or reset your password.");
+        } else {
+          setError(`Incorrect email or password. Please try again.`);
+        }
         setBusy(false);
       }
     } catch (err) {
+      console.debug("[Auth] error:", err);
       setError(clerkErr(err));
       setBusy(false);
     }
@@ -102,8 +168,7 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      // Clerk v6: resetPasswordEmailCode.sendCode()
-      await (signIn as any).resetPasswordEmailCode.sendCode({ identifier: email });
+      await signIn.resetPasswordEmailCode.sendCode({ identifier: email });
       setMode("reset");
     } catch (err) {
       setError(clerkErr(err));
@@ -120,13 +185,12 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      // Clerk v6: verify the code first, then submit the new password
-      await (signIn as any).resetPasswordEmailCode.verifyCode({ code: resetCode });
-      const result = await (signIn as any).resetPasswordEmailCode.submitPassword({ password: newPwd });
-      const sessionId = result?.createdSessionId ?? result?.signIn?.createdSessionId;
+      await signIn.resetPasswordEmailCode.verifyCode({ code: resetCode });
+      const result = await signIn.resetPasswordEmailCode.submitPassword({ password: newPwd });
+      const sessionId = extractSessionId(result) ?? signIn.createdSessionId ?? null;
       if (sessionId) {
         await setActive({ session: sessionId });
-        return; // keep busy
+        return;
       }
       setError("Reset incomplete. Please try again.");
       setBusy(false);
@@ -144,14 +208,21 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      // Clerk v6: verifications.verifyEmailCode()
-      const result = await (signUp as any).verifications.verifyEmailCode({ code: verifyCode });
-      const sessionId = result?.createdSessionId ?? result?.signUp?.createdSessionId;
+      const result = await signUp.verifications.verifyEmailCode({ code: verifyCode });
+      const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
+      console.debug("[Auth] verifyEmailCode result:", { result, sessionId });
       if (sessionId) {
         await setActive({ session: sessionId });
-        return; // keep busy
+        return;
       }
-      setError("Verification incomplete. Please try again.");
+      // Fallback: check Clerk client directly
+      const status = extractStatus(result);
+      if (status === "complete") {
+        setError("Verification complete but no session found. Please try signing in.");
+        switchMode("signin");
+      } else {
+        setError("Verification incomplete. Please check the code and try again.");
+      }
       setBusy(false);
     } catch (err) {
       setError(clerkErr(err));
@@ -234,6 +305,32 @@ export default function Auth() {
           </div>
         )}
 
+        {/* Google SSO — available on sign-in and sign-up screens */}
+        {(mode === "signin" || mode === "signup") && (
+          <button
+            type="button"
+            onClick={handleGoogleSSO}
+            disabled={disabled}
+            className="w-full flex items-center justify-center gap-3 rounded-full border border-border bg-background py-2.5 px-4 text-sm font-medium shadow-sm hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+        )}
+
+        {(mode === "signin" || mode === "signup") && (
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex-1 h-px bg-border" />
+            <span>or</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+        )}
+
         {(mode === "signin" || mode === "signup") && (
           <form onSubmit={submit} noValidate className="space-y-3">
             {mode === "signup" && (
@@ -298,7 +395,7 @@ export default function Auth() {
               <Input id="verify-code" required value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" autoComplete="one-time-code" inputMode="numeric" disabled={disabled} />
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 leading-relaxed">
-              Check your spam / junk folder if you don't see the email within a minute.
+              Check your spam / junk folder — dev-mode emails sometimes land there. Alternatively, go back and sign up with Google to skip email verification.
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Verifying…" : "Verify email"}
@@ -312,7 +409,7 @@ export default function Auth() {
                 setBusy(true);
                 setError("");
                 try {
-                  await (signUp as any).verifications.sendEmailCode();
+                  await signUp.verifications.sendEmailCode();
                 } catch (err) {
                   setError(clerkErr(err));
                 } finally {
