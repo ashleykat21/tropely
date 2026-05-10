@@ -62,6 +62,8 @@ async function executeOp(op: QueuedOp): Promise<boolean> {
         credentials: "include",
         body: JSON.stringify(op.row),
       });
+      // 401/403 = no valid session — drop the op so it doesn't spam forever.
+      if (res.status === 401 || res.status === 403) return true;
       return res.ok;
     }
     if (op.kind === "insert" && op.table === "activity") {
@@ -71,6 +73,7 @@ async function executeOp(op: QueuedOp): Promise<boolean> {
         credentials: "include",
         body: JSON.stringify(op.row),
       });
+      if (res.status === 401 || res.status === 403) return true;
       return res.ok;
     }
     return true;
