@@ -18,7 +18,7 @@ import { ReadingPace } from "./ReadingPace";
 import { EstimatedFinishDate } from "./EstimatedFinishDate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Minus, PauseCircle, PlayCircle, RotateCcw, Smartphone, Heart, Headphones, Square, Trash2, ChevronDown, ChevronUp as ChevronUpIcon } from "lucide-react";
+import { Plus, Minus, PauseCircle, PlayCircle, RotateCcw, Smartphone, Heart, Headphones, Square, Trash2, ChevronDown, ChevronUp as ChevronUpIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { fetchPosition, getDeviceLabel, pushPosition, type RemotePosition } from "@/lib/positionSync";
 import { usePremium } from "@/lib/usePremium";
@@ -28,9 +28,44 @@ import { TropeButton } from "./TropeButton";
 import { MoodPlaylist } from "@/components/insights/MoodPlaylist";
 
 export function CurrentBookCard() {
-  const { books, currentId, updateProgress, addReaction, reflections, readSnapshots, moveShelf, startReread, toggleFavorite, updateAudioProgress } = useLibrary();
+  const { books, currentId, setCurrent, updateProgress, addReaction, reflections, readSnapshots, moveShelf, startReread, toggleFavorite, updateAudioProgress } = useLibrary();
   const isPremium = usePremium((s) => s.isPremium);
-  const book = books.find((b) => b.id === currentId) ?? books.find((b) => b.shelf === "reading");
+
+  // All books the user is currently reading — used for the carousel.
+  const readingBooks = books.filter((b) => b.shelf === "reading");
+
+  // Track which reading book is shown. Initialise from currentId position.
+  const initIdx = Math.max(0, readingBooks.findIndex((b) => b.id === currentId));
+  const [activeIdx, setActiveIdx] = useState(initIdx);
+
+  // If currentId changes externally (e.g. from Home's "set current" picker),
+  // keep the carousel index in sync.
+  useEffect(() => {
+    const idx = readingBooks.findIndex((b) => b.id === currentId);
+    if (idx >= 0) setActiveIdx(idx);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentId]);
+
+  const clampedIdx = Math.min(activeIdx, Math.max(0, readingBooks.length - 1));
+  const book =
+    readingBooks[clampedIdx] ??
+    books.find((b) => b.id === currentId) ??
+    books.find((b) => b.shelf === "reading");
+
+  const goNext = () => {
+    if (readingBooks.length < 2) return;
+    const next = (clampedIdx + 1) % readingBooks.length;
+    setActiveIdx(next);
+    setCurrent(readingBooks[next].id);
+  };
+
+  const goPrev = () => {
+    if (readingBooks.length < 2) return;
+    const prev = (clampedIdx - 1 + readingBooks.length) % readingBooks.length;
+    setActiveIdx(prev);
+    setCurrent(readingBooks[prev].id);
+  };
+
   const [pageInput, setPageInput] = useState<string>(book ? String(book.progress) : "0");
   const [reflectOpen, setReflectOpen] = useState(false);
   const triggeredFor = useRef<string | null>(null);
@@ -192,6 +227,51 @@ export function CurrentBookCard() {
       transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
       className="grain relative overflow-hidden rounded-3xl mood-surface p-4 sm:p-6 shadow-soft border border-border/40"
     >
+
+      {/* Multi-book carousel nav — only shown when reading 2+ books */}
+      {readingBooks.length > 1 && (
+        <div className="flex items-center justify-between mb-4 -mx-1">
+          <button
+            onClick={goPrev}
+            className="inline-grid h-8 w-8 place-items-center rounded-full border border-border/60 bg-background/60 hover:bg-background transition"
+            aria-label="Previous book"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex flex-col items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {clampedIdx + 1} of {readingBooks.length} reading
+            </span>
+            <div className="flex gap-1.5">
+              {readingBooks.map((b, i) => (
+                <button
+                  key={b.id}
+                  onClick={() => { setActiveIdx(i); setCurrent(b.id); }}
+                  aria-label={b.title}
+                  className="transition-all duration-200"
+                >
+                  <span
+                    className={`block rounded-full transition-all duration-200 ${
+                      i === clampedIdx
+                        ? "w-5 h-1.5 bg-foreground"
+                        : "w-1.5 h-1.5 bg-foreground/25 hover:bg-foreground/50"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={goNext}
+            className="inline-grid h-8 w-8 place-items-center rounded-full border border-border/60 bg-background/60 hover:bg-background transition"
+            aria-label="Next book"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <div className="grid gap-5 sm:grid-cols-[148px_1fr] sm:gap-6">
         <div className="mx-auto w-32 sm:w-36 animate-drift">

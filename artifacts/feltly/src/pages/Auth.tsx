@@ -70,31 +70,48 @@ export default function Auth() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const result = await signUp!.create({
-          emailAddress: email,
-          password: pwd,
-          firstName: name || email.split("@")[0],
-        });
+        if (!signUp) {
+          setError("Sign-up is not available. Please refresh and try again.");
+          setBusy(false);
+          return;
+        }
+        const createParams: Record<string, string> = { emailAddress: email, password: pwd };
+        if (name.trim()) createParams.firstName = name.trim();
+        const result = await signUp.create(createParams);
         const r = result as { status?: string; createdSessionId?: string };
         if (r.status === "complete" && r.createdSessionId) {
           // Keep busy=true — AppGate unmounts this component once the session
           // propagates. Resetting busy here allows a re-render that can
           // disconnect the form and trigger "Form submission canceled".
           await setActive({ session: r.createdSessionId });
-        } else {
+        } else if (r.status === "missing_requirements" || !r.createdSessionId) {
           // Email verification required — send the code and show the verify step.
-          await signUp!.prepareEmailAddressVerification({ strategy: "email_code" });
+          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
           setMode("verify");
           setVerifyCode("");
           setBusy(false);
+        } else {
+          setError("Account creation incomplete. Please try again.");
+          setBusy(false);
         }
       } else {
-        const result = await signIn!.create({ identifier: email, password: pwd });
+        if (!signIn) {
+          setError("Sign-in is not available. Please refresh and try again.");
+          setBusy(false);
+          return;
+        }
+        const result = await signIn.create({ identifier: email, password: pwd });
         const r = result as { status?: string; createdSessionId?: string };
         if (r.status === "complete" && r.createdSessionId) {
           await setActive({ session: r.createdSessionId });
+        } else if (r.status === "needs_first_factor") {
+          setError("Additional verification required. Please check your email.");
+          setBusy(false);
+        } else if (r.status === "needs_second_factor") {
+          setError("Two-factor authentication required. Please use the Clerk-hosted sign-in.");
+          setBusy(false);
         } else {
-          setError("Sign-in incomplete. Please try again.");
+          setError("Sign-in incomplete. Please check your credentials and try again.");
           setBusy(false);
         }
       }
@@ -108,10 +125,11 @@ export default function Auth() {
   const sendReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
+    if (!signIn) { setError("Sign-in is not available. Please refresh and try again."); return; }
     setError("");
     setBusy(true);
     try {
-      await signIn!.create({ strategy: "reset_password_email_code", identifier: email });
+      await signIn.create({ strategy: "reset_password_email_code", identifier: email });
       setMode("reset");
     } catch (err) {
       setError(clerkErr(err));
@@ -124,10 +142,11 @@ export default function Auth() {
   const confirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
+    if (!signIn) { setError("Sign-in is not available. Please refresh and try again."); setBusy(false); return; }
     setError("");
     setBusy(true);
     try {
-      const result = await signIn!.attemptFirstFactor({
+      const result = await signIn.attemptFirstFactor({
         strategy: "reset_password_email_code",
         code: resetCode,
         password: newPwd,
@@ -149,10 +168,11 @@ export default function Auth() {
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
+    if (!signUp) { setError("Sign-up is not available. Please refresh and try again."); setBusy(false); return; }
     setError("");
     setBusy(true);
     try {
-      const result = await signUp!.attemptEmailAddressVerification({ code: verifyCode });
+      const result = await signUp.attemptEmailAddressVerification({ code: verifyCode });
       const r = result as { status?: string; createdSessionId?: string };
       if (r.status === "complete" && r.createdSessionId) {
         await setActive({ session: r.createdSessionId });
