@@ -1,7 +1,5 @@
 [build]
-  command = """
-    pnpm install && cd artifacts/feltly && pnpm run build && ls dist/index.html
-  """
+  command = "npm install --prefix artifacts/feltly --legacy-peer-deps && npm run build --prefix artifacts/feltly"
   publish = "artifacts/feltly/dist"
 
 [build.environment]
