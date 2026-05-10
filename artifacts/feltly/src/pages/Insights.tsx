@@ -3,7 +3,7 @@ import { useLibrary } from "@/lib/store";
 import { MOODS, type MoodKey } from "@/lib/moods";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { Sparkles, BookOpen, Headphones, Lock, Fingerprint, Smile, Trophy, PlayCircle, Clock } from "lucide-react";
+import { Sparkles, BookOpen, Headphones, Fingerprint, Smile, Trophy, PlayCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { TopTropesInsight } from "@/components/insights/TopTropesInsight";
@@ -28,11 +28,13 @@ import { BestTimeInsight } from "@/components/insights/BestTimeInsight";
 import { LockedFeature } from "@/components/premium/LockedFeature";
 import { YearlyGoalCard } from "@/components/reader/YearlyGoalCard";
 import { usePremium } from "@/lib/usePremium";
+import { ReadingChallenges } from "@/components/insights/ReadingChallenges";
+import { ReadingSpeedCalculator } from "@/components/insights/ReadingSpeedCalculator";
 
 function WrapEntryButton() {
   const isPremium = usePremium((s) => s.isPremium);
-  const nav = useNavigate();
   const year = new Date().getFullYear();
+
   if (isPremium) {
     return (
       <Link
@@ -44,19 +46,15 @@ function WrapEntryButton() {
       </Link>
     );
   }
+
   return (
-    <button
-      onClick={() =>
-        toast("Tropely Wrap is a premium feature", {
-          description: "Upgrade to unlock your annual year-in-review.",
-          icon: <Lock className="h-4 w-4" />,
-        })
-      }
-      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/40 backdrop-blur px-3 py-1.5 text-sm text-muted-foreground cursor-not-allowed opacity-70"
+    <Link
+      to="/wrap?free=1"
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/40 backdrop-blur px-3 py-1.5 text-sm hover:bg-card/70 transition"
     >
-      <Lock className="h-3.5 w-3.5" />
-      {year} Tropely Wrap · Premium
-    </button>
+      <Sparkles className="h-3.5 w-3.5 opacity-60" style={{ color: "var(--mood-strong)" }} />
+      Your {year} reading highlights
+    </Link>
   );
 }
 
@@ -93,16 +91,10 @@ const Insights = () => {
     return m;
   }, [books]);
 
-  // When arriving with a focusSessionId from a Companion citation, scroll the
-  // matching session into view and briefly highlight it. Clear the navigation
-  // state so a back/refresh doesn't re-trigger the highlight.
   useEffect(() => {
     if (!focusSessionId) return;
     const target = sessionRefs.current.get(focusSessionId);
     if (!target) {
-      // Either the session list hasn't hydrated yet or the cited session
-      // isn't in our data. Clear navigation state if the session truly
-      // isn't resolvable so a refresh doesn't loop on it.
       if (sessionsForDisplay.length > 0 && !sessionsForDisplay.some((s) => s.id === focusSessionId)) {
         nav(location.pathname, { replace: true, state: null });
       }
@@ -274,6 +266,7 @@ const Insights = () => {
         <YearlyGoalCard />
         <MicroGoals />
         <ReadingChapters />
+        <ReadingChallenges />
         <BestTimeInsight />
         <MoodDriftInsight />
 
@@ -284,7 +277,6 @@ const Insights = () => {
               <h2 className="font-display text-2xl">Your trope universe</h2>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Pill-tab switcher */}
               <div className="flex gap-1 rounded-full border border-border/60 bg-card/80 backdrop-blur p-1">
                 {TROPE_VIEWS.map((v) => {
                   const Icon = v.icon;
@@ -506,22 +498,22 @@ const Insights = () => {
 
         <HighlightsGallery />
         <ReadingCalendar />
+        <ReadingHeatMap />
+        <ReadingSpeedCalculator />
         <ReadingPersonality />
 
-        {/* Premium analytics teaser — all advanced widgets in one place */}
-        <LockedFeature description="Unlock deeper analytics: Reading DNA, weekly mood splits, taste fingerprint, annual heat map, monthly mood reports, and advanced pattern deep-dives.">
+        <LockedFeature description="Unlock deeper analytics: Reading DNA, weekly mood splits, taste fingerprint, monthly mood reports, and advanced pattern deep-dives.">
           <div className="rounded-2xl border border-border/40 bg-card/60 p-6 space-y-4">
             <div className="space-y-1">
               <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Premium</p>
               <h2 className="font-display text-2xl">Deeper analytics</h2>
-              <p className="text-sm text-muted-foreground">Six more insight layers, unlocked together.</p>
+              <p className="text-sm text-muted-foreground">Five more insight layers, unlocked together.</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {[
                 { label: "Reading DNA", desc: "Mood profile · session patterns · format split" },
                 { label: "Weekly mood split", desc: "8-week mood shift by read vs. listened" },
                 { label: "Taste fingerprint", desc: "Every genre and theme weighted across your library" },
-                { label: "Annual heat map", desc: "Every reading day, coloured by mood and intensity" },
                 { label: "Monthly reports", desc: "How your reading shifted month by month" },
                 { label: "Deep-dive analytics", desc: "Slumps, peak hours and mood-vs-genre patterns" },
               ].map((item) => (

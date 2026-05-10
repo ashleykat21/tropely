@@ -18,6 +18,7 @@ import BuddyReadsPage from "./pages/BuddyReads.tsx";
 import BookDetail from "./pages/BookDetail.tsx";
 import Premium from "./pages/Premium.tsx";
 import Tropes from "./pages/Tropes.tsx";
+import PublicProfile from "./pages/PublicProfile.tsx";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { useLibrarySync } from "@/lib/useLibrarySync";
 import { useCompanionFinishedToast } from "@/lib/useCompanionFinishedToast";
@@ -127,6 +128,7 @@ function AppGate() {
         <Route path="/book/:id"   element={<BookDetail />} />
         <Route path="/premium"    element={<Premium />} />
         <Route path="/tropes"     element={<Tropes />} />
+        <Route path="/u/:username" element={<PublicProfile />} />
         <Route path="/sign-in/*"  element={<SignInPage />} />
         <Route path="/sign-up/*"  element={<SignUpPage />} />
         <Route path="*"           element={<NotFound />} />

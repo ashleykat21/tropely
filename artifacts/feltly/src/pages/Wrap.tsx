@@ -455,83 +455,127 @@ export default function Wrap() {
 
   const slide = slides[i];
 
-  // ── Premium paywall ─────────────────────────────────────────────────────
+  // ── Free teaser: show first 3 slides + upgrade prompt ───────────────────
   if (!isPremium) {
-    const WRAP_FEATURES = [
-      "Full year-in-review across all slides",
-      "Longest streak & reading consistency",
-      "Peak month chart & mood breakdown",
-      "Book of the year from your reflections",
-      "Shareable wrap card image",
-    ];
+    const teaserSlides = slides.slice(0, Math.min(3, slides.length));
+    const teaserSlide = teaserSlides[i] ?? teaserSlides[0];
+    const isTeaserEnd = i >= teaserSlides.length - 1;
+
     return (
-      <main
-        className="min-h-screen flex flex-col items-center justify-center px-6"
-      >
-        <button
-          onClick={() => nav("/")}
-          className="absolute top-5 right-5 text-muted-foreground hover:text-foreground transition"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5" />
-        </button>
-        <div className="max-w-md w-full space-y-6 text-center">
-          <div className="inline-grid h-14 w-14 place-items-center rounded-2xl bg-foreground text-background mx-auto">
-            <Sparkles className="h-6 w-6" />
+      <main className="min-h-screen flex flex-col">
+        <header className="flex items-center justify-between px-5 py-4 sm:px-8 sm:py-5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 opacity-60" style={{ color: "var(--mood-strong)" }} />
+            <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              Tropely Wrap · {year} · Highlights
+            </span>
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
-              Tropely Wrap · {year}
-            </p>
-            <h1 className="font-display text-4xl sm:text-5xl leading-[1.05]">
-              Your year in{" "}
-              <span className="italic" style={{ color: "var(--mood-strong)" }}>
-                feeling
-              </span>
-              .
-            </h1>
-          </div>
-          <ul className="space-y-2 text-left">
-            {WRAP_FEATURES.map((f) => (
-              <li key={f} className="flex items-center gap-2.5 text-sm">
-                <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground/10">
-                  <Check className="h-3 w-3" />
-                </span>
-                {f}
-              </li>
-            ))}
-          </ul>
-          <div className="grid gap-2 sm:grid-cols-3 pt-2">
-            {([
-              { key: "monthly" as const, label: "Monthly", price: "$6", sub: "per month" },
-              { key: "annual"  as const, label: "Annual",  price: "$35", sub: "per year", highlight: true },
-              { key: "lifetime"as const, label: "Lifetime",price: "$75", sub: "one-time" },
-            ]).map(({ key, label, price, sub, highlight }) => (
-              <div key={key} className={cn("rounded-xl border p-3 text-left space-y-2", highlight ? "border-foreground" : "border-border/60")}>
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
-                  <div className="font-display text-xl">{price}</div>
-                  <div className="text-[11px] text-muted-foreground">{sub}</div>
-                </div>
-                <Button
-                  size="sm"
-                  variant={highlight ? "default" : "outline"}
-                  className="w-full rounded-full text-xs"
-                  onClick={() => {
-                    setPlan(key);
-                    toast.success(`${label} plan activated (dev)`);
-                  }}
-                >
-                  {key === "lifetime" ? "Buy once" : `Start ${label}`}
-                </Button>
+          <button
+            onClick={() => nav("/")}
+            className="text-muted-foreground hover:text-foreground transition"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
+
+        <div className="flex-1 flex items-center justify-center px-6 pb-20">
+          {!isTeaserEnd ? (
+            <div key={teaserSlide.id} className="max-w-2xl w-full text-center space-y-6 animate-fade-up">
+              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                {teaserSlide.eyebrow}
+              </p>
+              <h1 className="font-display text-5xl sm:text-7xl leading-[1.05]">{teaserSlide.title}</h1>
+              <div className="flex justify-center">{teaserSlide.body}</div>
+            </div>
+          ) : (
+            <div className="max-w-md w-full space-y-6 text-center animate-fade-up">
+              <div className="inline-grid h-14 w-14 place-items-center rounded-2xl bg-foreground text-background mx-auto">
+                <Sparkles className="h-6 w-6" />
               </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
-            <Lock className="h-2.5 w-2.5" />
-            Handled by the App Store · cancel any time
-          </p>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
+                  Want the full picture?
+                </p>
+                <h2 className="font-display text-3xl sm:text-4xl leading-tight">
+                  Unlock your complete{" "}
+                  <span className="italic" style={{ color: "var(--mood-strong)" }}>
+                    year in feeling
+                  </span>
+                  .
+                </h2>
+              </div>
+              <ul className="space-y-2 text-left text-sm text-muted-foreground">
+                {[
+                  "Longest streak & reading consistency",
+                  "Peak reading month chart",
+                  "Book of the year from your reflections",
+                  "Shareable wrap card image",
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-2.5">
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-foreground/10">
+                      <Check className="h-3 w-3 text-foreground" />
+                    </span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {([
+                  { key: "monthly" as const, label: "Monthly", price: "$6", sub: "per month" },
+                  { key: "annual"  as const, label: "Annual",  price: "$35", sub: "per year", highlight: true },
+                  { key: "lifetime"as const, label: "Lifetime",price: "$75", sub: "one-time" },
+                ]).map(({ key, label, price, sub, highlight }) => (
+                  <div key={key} className={cn("rounded-xl border p-3 text-left space-y-2", highlight ? "border-foreground" : "border-border/60")}>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+                      <div className="font-display text-xl">{price}</div>
+                      <div className="text-[11px] text-muted-foreground">{sub}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant={highlight ? "default" : "outline"}
+                      className="w-full rounded-full text-xs"
+                      onClick={() => { setPlan(key); toast.success(`${label} plan activated (dev)`); }}
+                    >
+                      {key === "lifetime" ? "Buy once" : `Start ${label}`}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                <Lock className="h-2.5 w-2.5" />
+                Handled by the App Store · cancel any time
+              </p>
+            </div>
+          )}
         </div>
+
+        <footer className="fixed bottom-0 inset-x-0 px-6 pb-6 pt-4">
+          <div className="max-w-2xl mx-auto space-y-3">
+            <div className="flex gap-1">
+              {[...teaserSlides, null].map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setI(idx)}
+                  className={cn(
+                    "h-1 flex-1 rounded-full transition",
+                    idx <= i ? "bg-foreground" : "bg-muted"
+                  )}
+                  aria-label={`Slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" onClick={() => setI((v) => Math.max(0, v - 1))} disabled={i === 0} className="rounded-full">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back
+              </Button>
+              <Button onClick={() => setI((v) => Math.min(teaserSlides.length, v + 1))} disabled={isTeaserEnd} className="rounded-full">
+                Next <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </footer>
       </main>
     );
   }

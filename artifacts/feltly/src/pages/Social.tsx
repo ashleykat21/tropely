@@ -6,7 +6,7 @@ import { useLibrary } from "@/lib/store";
 import { MOODS } from "@/lib/moods";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { EyeOff, UserPlus, UserCheck, Ban, Globe, Users as UsersIcon, Lock, ShieldCheck } from "lucide-react";
+import { EyeOff, Eye, UserPlus, UserCheck, Ban, Globe, Users as UsersIcon, Lock, ShieldCheck } from "lucide-react";
 import { MoodSignatureCard } from "@/components/social/MoodSignatureCard";
 import { BuddyReads } from "@/components/social/BuddyReads";
 import { TwinsPanel } from "./Twins";
@@ -49,6 +49,7 @@ export default function Social() {
   const { profiles: familyProfiles, activeProfileId } = useFamilyStore();
   const activeProfile = familyProfiles.find((p) => p.id === activeProfileId);
   const isSoftLocked = activeProfile?.role === "child" && (age ?? 99) <= 10 && !!parentalPin && !buddyUnlocked;
+  const [blurTitles, setBlurTitles] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav("/auth");
@@ -173,9 +174,23 @@ export default function Social() {
             </span>
             .
           </h1>
-          <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
-            <EyeOff className="h-3.5 w-3.5" /> Spoiler-safe by design — no plot, just emotion.
-          </p>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              <EyeOff className="h-3.5 w-3.5" /> Spoiler-safe by design — no plot, just emotion.
+            </p>
+            <button
+              onClick={() => setBlurTitles((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition ${
+                blurTitles
+                  ? "bg-foreground text-background border-foreground"
+                  : "border-border hover:bg-foreground/5 text-muted-foreground"
+              }`}
+              title={blurTitles ? "Show book titles" : "Blur book titles"}
+            >
+              {blurTitles ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              {blurTitles ? "Show titles" : "Blur titles"}
+            </button>
+          </div>
           <p className="text-xs text-muted-foreground">
             Following <span className="text-foreground font-medium">{following.size}</span>
             {" · "}
@@ -325,10 +340,10 @@ export default function Social() {
                           </div>
                           <p className="text-foreground text-sm">
                             {a.emoji && <span className="mr-1.5">{a.emoji}</span>}
-                            {a.kind === "started" ? <>started <span className="font-display">{a.bookTitle}</span></> :
-                             a.kind === "finished" ? <>finished <span className="font-display">{a.bookTitle}</span></> :
-                             <>felt <span className="italic">{a.kind}</span> about <span className="font-display">{a.bookTitle}</span></>}
-                            {a.bookAuthor && <span className="text-muted-foreground"> · {a.bookAuthor}</span>}
+                            {a.kind === "started" ? <>started <span className={`font-display transition-all ${blurTitles ? "blur-sm select-none" : ""}`}>{a.bookTitle}</span></> :
+                             a.kind === "finished" ? <>finished <span className={`font-display transition-all ${blurTitles ? "blur-sm select-none" : ""}`}>{a.bookTitle}</span></> :
+                             <>felt <span className="italic">{a.kind}</span> about <span className={`font-display transition-all ${blurTitles ? "blur-sm select-none" : ""}`}>{a.bookTitle}</span></>}
+                            {a.bookAuthor && <span className={`text-muted-foreground transition-all ${blurTitles ? "blur-sm select-none" : ""}`}> · {a.bookAuthor}</span>}
                           </p>
                           {m && (
                             <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-foreground rounded-full px-2 py-0.5 border border-border/40" style={{ background: `hsl(${m.h} ${m.s}% ${m.l}% / 0.12)` }}>
@@ -398,14 +413,14 @@ export default function Social() {
                   <p className="text-foreground">
                     {a.emoji && <span className="mr-1.5">{a.emoji}</span>}
                     {a.kind === "started" ? (
-                      <>started <span className="font-display">{a.bookTitle}</span></>
+                      <>started <span className={`font-display transition-all ${blurTitles ? "blur-sm select-none" : ""}`}>{a.bookTitle}</span></>
                     ) : a.kind === "finished" ? (
-                      <>finished <span className="font-display">{a.bookTitle}</span></>
+                      <>finished <span className={`font-display transition-all ${blurTitles ? "blur-sm select-none" : ""}`}>{a.bookTitle}</span></>
                     ) : (
                       <>felt <span className="italic">{a.kind}</span> about{" "}
-                        <span className="font-display">{a.bookTitle}</span></>
+                        <span className={`font-display transition-all ${blurTitles ? "blur-sm select-none" : ""}`}>{a.bookTitle}</span></>
                     )}
-                    {a.bookAuthor && <span className="text-muted-foreground"> · {a.bookAuthor}</span>}
+                    {a.bookAuthor && <span className={`text-muted-foreground transition-all ${blurTitles ? "blur-sm select-none" : ""}`}> · {a.bookAuthor}</span>}
                   </p>
                   {m && (
                     <div

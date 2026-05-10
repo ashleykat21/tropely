@@ -147,7 +147,8 @@ export function Shelves() {
     next.splice(swapIdx, 0, moved);
     next.forEach((b, i) => setBookPriority(b.id, i));
   };
-  const themed = isPremium && shelfTheme.texture !== "none";
+  const FREE_TEXTURES: string[] = ["linen"];
+  const themed = (isPremium || FREE_TEXTURES.includes(shelfTheme.texture)) && shelfTheme.texture !== "none";
   const themeStyle = themed
     ? {
         background: shelfTheme.background,
