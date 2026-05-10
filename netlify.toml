@@ -1,13 +1,11 @@
 [build]
   base = "."
-  command = "npm install --prefix artifacts/feltly --legacy-peer-deps --ignore-scripts && npm run build --prefix artifacts/feltly"
+  command = "cd artifacts/feltly && node_modules/.bin/vite build --config vite.config.ts"
   publish = "artifacts/feltly/dist"
 
 [build.environment]
   NODE_VERSION = "24"
   HUSKY = "0"
-  COREPACK_ENABLE = "0"
-  npm_config_ignore_scripts = "true"
 
 [[redirects]]
   from   = "/*"
