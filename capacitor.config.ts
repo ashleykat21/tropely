@@ -5,7 +5,6 @@ const config: CapacitorConfig = {
   appName: "Tropely",
   webDir: "dist",
   server: {
-    // Allows Clerk to talk to your app on mobile
     androidScheme: "https",
     iosScheme: "com.nevora.tropely"
   },
@@ -16,7 +15,6 @@ const config: CapacitorConfig = {
     CapacitorUpdater: {
       autoUpdate: true,
     },
-    // Adding this ensures Clerk knows where to send the user back after login
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
     },
