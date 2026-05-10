@@ -1,10 +1,11 @@
 [build]
   base = "."
-  command = "npm install --prefix artifacts/feltly --legacy-peer-deps && npm run build --prefix artifacts/feltly"
+  command = "npm install --prefix artifacts/feltly --legacy-peer-deps --ignore-scripts && npm run build --prefix artifacts/feltly"
   publish = "artifacts/feltly/dist"
 
 [build.environment]
   NODE_VERSION = "20"
+  HUSKY = "0"
 
 [[redirects]]
   from   = "/*"
