@@ -6,6 +6,8 @@
 [build.environment]
   NODE_VERSION = "24"
   HUSKY = "0"
+  COREPACK_ENABLE = "0"
+  npm_config_ignore_scripts = "true"
 
 [[redirects]]
   from   = "/*"
