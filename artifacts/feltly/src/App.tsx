@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
@@ -105,7 +105,7 @@ function AppGate() {
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="*"          element={<Auth />} />
+        <Route path="*"          element={<Navigate to="/sign-in" replace />} />
       </Routes>
     );
   }
