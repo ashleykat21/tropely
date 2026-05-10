@@ -3,7 +3,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "com.nevora.tropely",
   appName: "Tropely",
-  webDir: "dist",
+  webDir: "artifacts/feltly/dist",
   server: {
     androidScheme: "https",
     iosScheme: "com.nevora.tropely"
