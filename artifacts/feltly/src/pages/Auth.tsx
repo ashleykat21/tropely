@@ -79,14 +79,13 @@ export default function Auth() {
       } else {
         if (!signIn) { setError("Sign-in is not available. Please refresh."); setBusy(false); return; }
 
-        // Clerk v6: password() is the new single-step password sign-in
-        const result = await (signIn as any).password({ identifier: email, password: pwd });
-        const sessionId = result?.createdSessionId ?? result?.signIn?.createdSessionId;
-        if (sessionId) {
-          await setActive({ session: sessionId });
+        // Standard Clerk sign-in with email + password
+        const result = await (signIn as any).create({ identifier: email, password: pwd });
+        if (result?.status === "complete" && result?.createdSessionId) {
+          await setActive({ session: result.createdSessionId });
           return; // keep busy — AppGate unmounts
         }
-        setError("Sign-in incomplete. Please check your credentials and try again.");
+        setError(`Sign-in could not complete (status: ${result?.status ?? "unknown"}). Please check your credentials.`);
         setBusy(false);
       }
     } catch (err) {
@@ -298,9 +297,31 @@ export default function Auth() {
               <Label htmlFor="verify-code">Verification code</Label>
               <Input id="verify-code" required value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" autoComplete="one-time-code" inputMode="numeric" disabled={disabled} />
             </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 leading-relaxed">
+              Check your spam / junk folder if you don't see the email within a minute.
+            </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Verifying…" : "Verify email"}
             </Button>
+            <button
+              type="button"
+              disabled={disabled}
+              className="w-full text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
+              onClick={async () => {
+                if (!signUp || busy) return;
+                setBusy(true);
+                setError("");
+                try {
+                  await (signUp as any).verifications.sendEmailCode();
+                } catch (err) {
+                  setError(clerkErr(err));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Resend code
+            </button>
           </form>
         )}
 
