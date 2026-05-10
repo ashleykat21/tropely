@@ -25,7 +25,7 @@ timeoutMs = 20000
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_b3JpZW50ZWQtY3Jvdy0xMi5jbGVyay5hY2NvdW50cy5kZXYk"
 VAPID_PUBLIC_KEY = "BEC2JFL6s0zEj3_MN8Itd4Ddg5_hbhNXsFkttrrKPki1nLy6sf0nt2Lq1RRCa-noUN9lR3S_z5yEBRoGy8XrdyE"
 VAPID_PRIVATE_KEY = "5N0pOvWRP8TaV4OyKkZsozMSM6zxuZRiPAZqwcp_vH0"
-VAPID_SUBJECT = "mailto:hello@tropely.app"
+VAPID_SUBJECT = "mailto:support@usenevora.com"
 VITE_VAPID_PUBLIC_KEY = "BEC2JFL6s0zEj3_MN8Itd4Ddg5_hbhNXsFkttrrKPki1nLy6sf0nt2Lq1RRCa-noUN9lR3S_z5yEBRoGy8XrdyE"
 
 [[ports]]
