@@ -105,7 +105,7 @@ function AppGate() {
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="*"          element={<Navigate to="/sign-in" replace />} />
+        <Route path="*"          element={<Auth />} />
       </Routes>
     );
   }
@@ -157,8 +157,6 @@ const App = () => {
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
-      signInUrl={`${basePath}/sign-in`}
-      signUpUrl={`${basePath}/sign-up`}
     >
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>

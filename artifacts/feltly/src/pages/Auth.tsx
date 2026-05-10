@@ -7,34 +7,21 @@ import { BookHeart, AlertCircle, AlertTriangle } from "lucide-react";
 
 type Mode = "signin" | "signup" | "forgot" | "reset" | "verify";
 
-// How long to wait for Clerk to initialise before declaring failure.
 const CLERK_INIT_TIMEOUT_MS = 5_000;
 
 export default function Auth() {
-  // NOTE: no useNavigate / no useEffect(isSignedIn → nav).
-  // Navigation happens automatically: once setActive() resolves Clerk marks
-  // the user as signed-in, AuthProvider picks it up, AppGate switches from
-  // <Auth/> to <Routes/>.  Calling nav() here races with that unmount.
-
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const { setActive } = useClerk();
-  // In Clerk v6, isLoaded was removed from useSignIn()/useSignUp() return values.
-  // Use useUser().isLoaded which reflects clerk.loaded correctly.
   const { isLoaded: clerkLoaded } = useUser();
-
-  // True once Clerk has finished its initial load cycle.
   const clerkReady = clerkLoaded;
 
-  // If Clerk hasn't initialised after CLERK_INIT_TIMEOUT_MS we declare
-  // failure and show a key-status error instead of a frozen "Loading…".
   const [clerkFailed, setClerkFailed] = useState(false);
   useEffect(() => {
     if (clerkReady) return;
     const id = setTimeout(() => setClerkFailed(true), CLERK_INIT_TIMEOUT_MS);
     return () => clearTimeout(id);
   }, [clerkReady]);
-  // Clear failed state if Clerk somehow resolves later.
   useEffect(() => {
     if (clerkReady) setClerkFailed(false);
   }, [clerkReady]);
@@ -49,7 +36,6 @@ export default function Auth() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Inputs and buttons are interactive only when Clerk is ready and not busy.
   const disabled = !clerkReady || busy;
 
   const clerkErr = (err: unknown) => {
@@ -62,7 +48,7 @@ export default function Auth() {
     setMode(next);
   };
 
-  // ── sign in / sign up ──────────────────────────────────────────────────────
+  // ── Sign in ────────────────────────────────────────────────────────────────
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
@@ -70,50 +56,38 @@ export default function Auth() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        if (!signUp) {
-          setError("Sign-up is not available. Please refresh and try again.");
-          setBusy(false);
-          return;
+        if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
+
+        // Clerk v6: create the account
+        const result = await (signUp as any).create({
+          emailAddress: email,
+          password: pwd,
+          ...(name.trim() ? { firstName: name.trim() } : {}),
+        });
+
+        if (result?.status === "complete" && result?.createdSessionId) {
+          await setActive({ session: result.createdSessionId });
+          return; // keep busy — AppGate unmounts
         }
-        const createParams: Record<string, string> = { emailAddress: email, password: pwd };
-        if (name.trim()) createParams.firstName = name.trim();
-        const result = await signUp.create(createParams);
-        const r = result as { status?: string; createdSessionId?: string };
-        if (r.status === "complete" && r.createdSessionId) {
-          // Keep busy=true — AppGate unmounts this component once the session
-          // propagates. Resetting busy here allows a re-render that can
-          // disconnect the form and trigger "Form submission canceled".
-          await setActive({ session: r.createdSessionId });
-        } else if (r.status === "missing_requirements" || !r.createdSessionId) {
-          // Email verification required — send the code and show the verify step.
-          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-          setMode("verify");
-          setVerifyCode("");
-          setBusy(false);
-        } else {
-          setError("Account creation incomplete. Please try again.");
-          setBusy(false);
-        }
+
+        // Email verification required — use v6 verifications.sendEmailCode()
+        await (signUp as any).verifications.sendEmailCode();
+        setMode("verify");
+        setVerifyCode("");
+        setBusy(false);
+
       } else {
-        if (!signIn) {
-          setError("Sign-in is not available. Please refresh and try again.");
-          setBusy(false);
-          return;
+        if (!signIn) { setError("Sign-in is not available. Please refresh."); setBusy(false); return; }
+
+        // Clerk v6: password() is the new single-step password sign-in
+        const result = await (signIn as any).password({ identifier: email, password: pwd });
+        const sessionId = result?.createdSessionId ?? result?.signIn?.createdSessionId;
+        if (sessionId) {
+          await setActive({ session: sessionId });
+          return; // keep busy — AppGate unmounts
         }
-        const result = await signIn.create({ identifier: email, password: pwd });
-        const r = result as { status?: string; createdSessionId?: string };
-        if (r.status === "complete" && r.createdSessionId) {
-          await setActive({ session: r.createdSessionId });
-        } else if (r.status === "needs_first_factor") {
-          setError("Additional verification required. Please check your email.");
-          setBusy(false);
-        } else if (r.status === "needs_second_factor") {
-          setError("Two-factor authentication required. Please use the Clerk-hosted sign-in.");
-          setBusy(false);
-        } else {
-          setError("Sign-in incomplete. Please check your credentials and try again.");
-          setBusy(false);
-        }
+        setError("Sign-in incomplete. Please check your credentials and try again.");
+        setBusy(false);
       }
     } catch (err) {
       setError(clerkErr(err));
@@ -121,15 +95,16 @@ export default function Auth() {
     }
   };
 
-  // ── forgot password — step 1 ───────────────────────────────────────────────
+  // ── Forgot password — step 1 ───────────────────────────────────────────────
   const sendReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
-    if (!signIn) { setError("Sign-in is not available. Please refresh and try again."); return; }
+    if (!signIn) { setError("Sign-in is not available. Please refresh."); return; }
     setError("");
     setBusy(true);
     try {
-      await signIn.create({ strategy: "reset_password_email_code", identifier: email });
+      // Clerk v6: resetPasswordEmailCode.sendCode()
+      await (signIn as any).resetPasswordEmailCode.sendCode({ identifier: email });
       setMode("reset");
     } catch (err) {
       setError(clerkErr(err));
@@ -138,55 +113,53 @@ export default function Auth() {
     }
   };
 
-  // ── forgot password — step 2 ───────────────────────────────────────────────
+  // ── Forgot password — step 2: verify code + submit new password ────────────
   const confirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
-    if (!signIn) { setError("Sign-in is not available. Please refresh and try again."); setBusy(false); return; }
+    if (!signIn) { setError("Sign-in is not available. Please refresh."); setBusy(false); return; }
     setError("");
     setBusy(true);
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: "reset_password_email_code",
-        code: resetCode,
-        password: newPwd,
-      } as Parameters<typeof signIn.attemptFirstFactor>[0]);
-      const r = result as { status?: string; createdSessionId?: string };
-      if (r.status === "complete" && r.createdSessionId) {
-        await setActive({ session: r.createdSessionId });
-      } else {
-        setError("Reset incomplete. Please try again.");
-        setBusy(false);
+      // Clerk v6: verify the code first, then submit the new password
+      await (signIn as any).resetPasswordEmailCode.verifyCode({ code: resetCode });
+      const result = await (signIn as any).resetPasswordEmailCode.submitPassword({ password: newPwd });
+      const sessionId = result?.createdSessionId ?? result?.signIn?.createdSessionId;
+      if (sessionId) {
+        await setActive({ session: sessionId });
+        return; // keep busy
       }
+      setError("Reset incomplete. Please try again.");
+      setBusy(false);
     } catch (err) {
       setError(clerkErr(err));
       setBusy(false);
     }
   };
 
-  // ── email verification — step after sign-up ───────────────────────────────
+  // ── Email verification after sign-up ──────────────────────────────────────
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
-    if (!signUp) { setError("Sign-up is not available. Please refresh and try again."); setBusy(false); return; }
+    if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
     setError("");
     setBusy(true);
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: verifyCode });
-      const r = result as { status?: string; createdSessionId?: string };
-      if (r.status === "complete" && r.createdSessionId) {
-        await setActive({ session: r.createdSessionId });
-      } else {
-        setError("Verification incomplete. Please try again.");
-        setBusy(false);
+      // Clerk v6: verifications.verifyEmailCode()
+      const result = await (signUp as any).verifications.verifyEmailCode({ code: verifyCode });
+      const sessionId = result?.createdSessionId ?? result?.signUp?.createdSessionId;
+      if (sessionId) {
+        await setActive({ session: sessionId });
+        return; // keep busy
       }
+      setError("Verification incomplete. Please try again.");
+      setBusy(false);
     } catch (err) {
       setError(clerkErr(err));
       setBusy(false);
     }
   };
 
-  // ── submit button label ────────────────────────────────────────────────────
   const submitLabel = (): string => {
     if (!clerkReady) return "Loading…";
     if (busy) {
@@ -197,8 +170,6 @@ export default function Auth() {
   };
 
   // ── Clerk failed to initialise ────────────────────────────────────────────
-  // Shown only when Clerk hasn't resolved within CLERK_INIT_TIMEOUT_MS.
-  // Most common cause: VITE_CLERK_PUBLISHABLE_KEY is wrong or missing.
   if (clerkFailed && !clerkReady) {
     const keySnippet = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
       ? `${String(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY).slice(0, 14)}…`
@@ -217,8 +188,7 @@ export default function Auth() {
             <p className="font-medium">Authentication failed to load</p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Clerk did not initialise within {CLERK_INIT_TIMEOUT_MS / 1000} seconds.
-              Verify that <strong>VITE_CLERK_PUBLISHABLE_KEY</strong> is set correctly
-              in your environment variables and that the Clerk application is active.
+              Verify that <strong>VITE_CLERK_PUBLISHABLE_KEY</strong> is set correctly.
             </p>
             <p className="text-xs text-muted-foreground">
               Current key: <code className="bg-muted px-1 py-0.5 rounded">{keySnippet}</code>
@@ -234,7 +204,6 @@ export default function Auth() {
     <main className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
       <div className="w-full max-w-md space-y-8">
 
-        {/* Logo */}
         <div className="flex items-center gap-2 justify-center">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-foreground text-background">
             <BookHeart className="h-4 w-4" />
@@ -242,7 +211,6 @@ export default function Auth() {
           <div className="font-display text-2xl">Tropely</div>
         </div>
 
-        {/* Heading */}
         <div className="space-y-2 text-center">
           <h1 className="font-display text-4xl leading-tight">
             {mode === "signin" && "Welcome back."}
@@ -255,12 +223,11 @@ export default function Auth() {
             {mode === "signin" && "Pick up where the feeling left off."}
             {mode === "signup" && "Track reading by emotion, not stars."}
             {mode === "forgot" && "We'll email you a one-time reset code."}
-            {mode === "reset" && "Check your inbox for the 6-digit code."}
+            {mode === "reset" && "Check your inbox for the 6-digit code, then set a new password."}
             {mode === "verify" && `We sent a 6-digit code to ${email}.`}
           </p>
         </div>
 
-        {/* Inline error */}
         {error && (
           <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -268,58 +235,28 @@ export default function Auth() {
           </div>
         )}
 
-        {/* ── Sign in / Sign up ── */}
         {(mode === "signin" || mode === "signup") && (
           <form onSubmit={submit} noValidate className="space-y-3">
             {mode === "signup" && (
               <div className="space-y-1.5">
                 <Label htmlFor="auth-name">Display name</Label>
-                <Input
-                  id="auth-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  autoComplete="name"
-                  disabled={disabled}
-                />
+                <Input id="auth-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" disabled={disabled} />
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="auth-email">Email</Label>
-              <Input
-                id="auth-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                disabled={disabled}
-              />
+              <Input id="auth-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={disabled} />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="auth-pwd">Password</Label>
                 {mode === "signin" && (
-                  <button
-                    type="button"
-                    onClick={() => switchMode("forgot")}
-                    disabled={disabled}
-                    className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
-                  >
+                  <button type="button" onClick={() => switchMode("forgot")} disabled={disabled} className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50">
                     Forgot password?
                   </button>
                 )}
               </div>
-              <Input
-                id="auth-pwd"
-                type="password"
-                required
-                minLength={8}
-                value={pwd}
-                onChange={(e) => setPwd(e.target.value)}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                disabled={disabled}
-              />
+              <Input id="auth-pwd" type="password" required minLength={8} value={pwd} onChange={(e) => setPwd(e.target.value)} autoComplete={mode === "signup" ? "new-password" : "current-password"} disabled={disabled} />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {submitLabel()}
@@ -327,20 +264,11 @@ export default function Auth() {
           </form>
         )}
 
-        {/* ── Forgot — step 1 ── */}
         {mode === "forgot" && (
           <form onSubmit={sendReset} noValidate className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="reset-email">Email</Label>
-              <Input
-                id="reset-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                disabled={disabled}
-              />
+              <Input id="reset-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={disabled} />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Sending…" : "Send reset code"}
@@ -348,33 +276,15 @@ export default function Auth() {
           </form>
         )}
 
-        {/* ── Forgot — step 2 ── */}
         {mode === "reset" && (
           <form onSubmit={confirmReset} noValidate className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="reset-code">Reset code</Label>
-              <Input
-                id="reset-code"
-                required
-                value={resetCode}
-                onChange={(e) => setResetCode(e.target.value)}
-                placeholder="6-digit code"
-                autoComplete="one-time-code"
-                disabled={disabled}
-              />
+              <Input id="reset-code" required value={resetCode} onChange={(e) => setResetCode(e.target.value)} placeholder="6-digit code" autoComplete="one-time-code" disabled={disabled} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="reset-newpwd">New password</Label>
-              <Input
-                id="reset-newpwd"
-                type="password"
-                required
-                minLength={8}
-                value={newPwd}
-                onChange={(e) => setNewPwd(e.target.value)}
-                autoComplete="new-password"
-                disabled={disabled}
-              />
+              <Input id="reset-newpwd" type="password" required minLength={8} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} autoComplete="new-password" disabled={disabled} />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Saving…" : "Set new password"}
@@ -382,21 +292,11 @@ export default function Auth() {
           </form>
         )}
 
-        {/* ── Email verification after sign-up ── */}
         {mode === "verify" && (
           <form onSubmit={handleVerify} noValidate className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="verify-code">Verification code</Label>
-              <Input
-                id="verify-code"
-                required
-                value={verifyCode}
-                onChange={(e) => setVerifyCode(e.target.value)}
-                placeholder="6-digit code"
-                autoComplete="one-time-code"
-                inputMode="numeric"
-                disabled={disabled}
-              />
+              <Input id="verify-code" required value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" autoComplete="one-time-code" inputMode="numeric" disabled={disabled} />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Verifying…" : "Verify email"}
@@ -404,7 +304,6 @@ export default function Auth() {
           </form>
         )}
 
-        {/* ── Bottom link ── */}
         <p className="text-center text-sm text-muted-foreground">
           {mode === "signin" && (
             <>New here?{" "}
