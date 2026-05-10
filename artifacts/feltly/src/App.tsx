@@ -95,6 +95,20 @@ function MissingKeyScreen() {
 // ── Top-level gate ────────────────────────────────────────────────────────────
 
 function AppGate() {
+  const { user, loading } = useAuth();
+
+  if (loading) return <Splash />;
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
+        <Route path="*"          element={<Auth />} />
+      </Routes>
+    );
+  }
+
   return (
     <>
       <LibrarySyncRunner />
