@@ -16,12 +16,14 @@ import Wrap from "./pages/Wrap.tsx";
 import Twins from "./pages/Twins.tsx";
 import BuddyReadsPage from "./pages/BuddyReads.tsx";
 import BookDetail from "./pages/BookDetail.tsx";
+import Library from "./pages/Library.tsx";
 import Premium from "./pages/Premium.tsx";
 import Tropes from "./pages/Tropes.tsx";
 import PublicProfile from "./pages/PublicProfile.tsx";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { useLibrarySync } from "@/lib/useLibrarySync";
 import { useCompanionFinishedToast } from "@/lib/useCompanionFinishedToast";
+import { useSeriesFinishedPrompt } from "@/lib/useSeriesFinishedPrompt";
 import { BookHeart, AlertTriangle } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,11 @@ function LibrarySyncRunner() {
 
 function CompanionFinishedToastRunner() {
   useCompanionFinishedToast();
+  return null;
+}
+
+function SeriesFinishedPromptRunner() {
+  useSeriesFinishedPrompt();
   return null;
 }
 
@@ -114,6 +121,7 @@ function AppGate() {
     <>
       <LibrarySyncRunner />
       <CompanionFinishedToastRunner />
+      <SeriesFinishedPromptRunner />
       <Routes>
         <Route path="/"           element={<Index />} />
         <Route path="/discover"   element={<Discover />} />
@@ -125,6 +133,7 @@ function AppGate() {
         <Route path="/wrap"       element={<Wrap />} />
         <Route path="/twins"      element={<Twins />} />
         <Route path="/buddy-reads" element={<BuddyReadsPage />} />
+        <Route path="/library"    element={<Library />} />
         <Route path="/book/:id"   element={<BookDetail />} />
         <Route path="/premium"    element={<Premium />} />
         <Route path="/tropes"     element={<Tropes />} />

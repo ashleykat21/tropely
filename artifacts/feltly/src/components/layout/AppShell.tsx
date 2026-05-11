@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus } from "lucide-react";
+import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus, Library } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useLibrary } from "@/lib/store";
 import { applyMood } from "@/lib/moods";
@@ -26,6 +26,7 @@ import { toast } from "sonner";
 
 const NAV = [
   { to: "/", key: "nav.home", icon: Home },
+  { to: "/library", key: "nav.library", icon: Library },
   { to: "/discover", key: "nav.discover", icon: Compass },
   { to: "/journal", key: "nav.journal", icon: NotebookPen },
   { to: "/profile", key: "nav.you", icon: User },
@@ -34,8 +35,8 @@ const NAV = [
 // Mobile bottom nav: 4 primary destinations + a "More" sheet for the rest.
 const MOBILE_PRIMARY = [
   { to: "/", key: "nav.home", icon: Home },
+  { to: "/library", key: "nav.library", icon: Library },
   { to: "/discover", key: "nav.discover", icon: Compass },
-  { to: "/journal", key: "nav.journal", icon: NotebookPen },
   { to: "/profile", key: "nav.you", icon: User },
 ];
 
@@ -390,19 +391,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   )}
                 >
                   <span className="relative inline-flex">
-                    {isProfile && activeProfile?.emoji ? (
-                      <span
-                        className={cn("text-xl leading-none transition", active && "scale-110")}
-                        style={active ? { filter: "drop-shadow(0 0 4px var(--mood-strong))" } : undefined}
-                      >
-                        {activeProfile.emoji}
-                      </span>
-                    ) : (
-                      <n.icon
-                        className={cn("h-5 w-5 transition", active && "scale-110")}
-                        style={active ? { color: "var(--mood-strong)" } : undefined}
-                      />
-                    )}
+                    <n.icon
+                      className={cn("h-5 w-5 transition", active && "scale-110")}
+                      style={active ? { color: "var(--mood-strong)" } : undefined}
+                    />
                     {n.to === "/" && streak.current > 0 && (
                       <span className="absolute -top-1.5 -right-2.5 inline-flex items-center gap-0.5 rounded-full bg-foreground text-background text-[8px] font-bold leading-none px-1 py-0.5">
                         <Flame className="h-2 w-2" />

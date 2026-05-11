@@ -206,6 +206,29 @@ export function Shelves() {
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>
+            <button
+              onClick={() => {
+                if (!isPremium) {
+                  toast("Immersive bookshelf is a premium feature", {
+                    description: "Upgrade to unlock the cozy bookshelf experience.",
+                    action: { label: "Upgrade", onClick: () => nav("/premium") },
+                  });
+                  return;
+                }
+                setSpineMode(false);
+                setBookcaseMode(true);
+              }}
+              title={isPremium ? "Immersive bookshelf" : "Premium — immersive bookshelf"}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
+                bookcaseMode
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              {!isPremium && <Lock className="h-2.5 w-2.5 opacity-50" />}
+            </button>
           </div>
           {/* Customize button — bookshelf mode only */}
           {bookcaseMode && isPremium && (
@@ -512,20 +535,13 @@ export function Shelves() {
                               boxShadow: "inset -2px 0 4px rgba(0,0,0,0.2), 2px 0 5px rgba(0,0,0,0.12), inset 1px 0 3px rgba(255,255,255,0.06)",
                             }}
                           >
-                            {b.cover ? (
-                              <img
-                                src={b.cover}
-                                alt={b.title}
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div
-                                className="absolute inset-0"
-                                style={{
-                                  background: `hsl(${(b.title.charCodeAt(0) * 37 + b.title.charCodeAt(1 % b.title.length) * 13) % 360} 45% 45%)`,
-                                }}
-                              />
-                            )}
+                            <div
+                              className="absolute inset-0"
+                              style={{
+                                background: `hsl(${(b.title.charCodeAt(0) * 37 + b.title.charCodeAt(1 % b.title.length) * 13) % 360} 38% ${38 + (b.author.charCodeAt(0) % 4) * 6}%)`,
+                              }}
+                            />
+                            <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,0.22) 0%, transparent 28%, rgba(255,255,255,0.07) 65%, rgba(0,0,0,0.15) 100%)" }} />
                             {/* Title overlay as vertical text */}
                             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                               <span
@@ -599,7 +615,8 @@ export function Shelves() {
                       {collBooks.map((b) => (
                         <button key={b.id} onClick={() => { setCurrent(b.id); nav(`/book/${b.id}`); }} className="group/spine shrink-0 relative focus:outline-none" title={`${b.title} · ${b.author}`}>
                           <div className="relative overflow-hidden transition-transform group-hover/spine:-translate-y-1" style={{ width: 28, height: 116, borderRadius: "2px 4px 4px 2px", boxShadow: "inset -2px 0 4px rgba(0,0,0,0.2), 2px 0 5px rgba(0,0,0,0.12)" }}>
-                            {b.cover ? <img src={b.cover} alt={b.title} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0" style={{ background: `hsl(${(b.title.charCodeAt(0) * 37 + b.title.charCodeAt(1 % b.title.length) * 13) % 360} 45% 45%)` }} />}
+                            <div className="absolute inset-0" style={{ background: `hsl(${(b.title.charCodeAt(0) * 37 + b.title.charCodeAt(1 % b.title.length) * 13) % 360} 38% ${38 + (b.author.charCodeAt(0) % 4) * 6}%)` }} />
+                            <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(0,0,0,0.22) 0%, transparent 28%, rgba(255,255,255,0.07) 65%, rgba(0,0,0,0.15) 100%)" }} />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/20"><span className="text-white font-semibold" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: 7, textShadow: "0 1px 3px rgba(0,0,0,0.6)", maxHeight: 108, overflow: "hidden", whiteSpace: "nowrap" }}>{b.title}</span></div>
                           </div>
                         </button>

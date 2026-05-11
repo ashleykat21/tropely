@@ -5,6 +5,7 @@ export type Locale = "en" | "es" | "fr" | "de" | "pt" | "it" | "ja" | "zh" | "nl
 const DICTS: Record<Locale, Record<string, string>> = {
   en: {
     "nav.home": "Home",
+    "nav.library": "Library",
     "nav.discover": "Discover",
     "nav.tropes": "Tropes",
     "nav.journal": "Journal",
@@ -35,6 +36,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
   },
   es: {
     "nav.home": "Inicio",
+    "nav.library": "Biblioteca",
     "nav.discover": "Descubrir",
     "nav.journal": "Diario",
     "nav.ai": "Compañero",
@@ -62,7 +64,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language_help": "Elige el idioma de Tropely.",
   },
   fr: {
-    "nav.home": "Accueil", "nav.discover": "Explorer", "nav.journal": "Journal",
+    "nav.home": "Accueil", "nav.library": "Bibliothèque", "nav.discover": "Explorer", "nav.journal": "Journal",
     "nav.ai": "Compagnon", "nav.social": "Social", "nav.twins": "Jumeaux",
     "nav.insights": "Analyses", "nav.you": "Vous", "nav.more": "Plus",
     "nav.wrap": "Bilan", "nav.premium": "Premium",
@@ -76,7 +78,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "Langue", "settings.language_help": "Choisissez la langue de Tropely.",
   },
   de: {
-    "nav.home": "Start", "nav.discover": "Entdecken", "nav.journal": "Tagebuch",
+    "nav.home": "Start", "nav.library": "Bibliothek", "nav.discover": "Entdecken", "nav.journal": "Tagebuch",
     "nav.ai": "Begleiter", "nav.social": "Sozial", "nav.twins": "Zwillinge",
     "nav.insights": "Einblicke", "nav.you": "Du", "nav.more": "Mehr",
     "nav.wrap": "Rückblick", "nav.premium": "Premium",
@@ -90,7 +92,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "Sprache", "settings.language_help": "Wähle die Sprache für Tropely.",
   },
   pt: {
-    "nav.home": "Início", "nav.discover": "Descobrir", "nav.journal": "Diário",
+    "nav.home": "Início", "nav.library": "Biblioteca", "nav.discover": "Descobrir", "nav.journal": "Diário",
     "nav.ai": "Companheiro", "nav.social": "Social", "nav.twins": "Gémeos",
     "nav.insights": "Análises", "nav.you": "Você", "nav.more": "Mais",
     "nav.wrap": "Retrospetiva", "nav.premium": "Premium",
@@ -104,7 +106,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "Idioma", "settings.language_help": "Escolha o idioma da Tropely.",
   },
   it: {
-    "nav.home": "Home", "nav.discover": "Scopri", "nav.journal": "Diario",
+    "nav.home": "Home", "nav.library": "Libreria", "nav.discover": "Scopri", "nav.journal": "Diario",
     "nav.ai": "Compagno", "nav.social": "Social", "nav.twins": "Gemelli",
     "nav.insights": "Analisi", "nav.you": "Tu", "nav.more": "Altro",
     "nav.wrap": "Resoconto", "nav.premium": "Premium",
@@ -118,7 +120,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "Lingua", "settings.language_help": "Scegli la lingua di Tropely.",
   },
   ja: {
-    "nav.home": "ホーム", "nav.discover": "発見", "nav.journal": "ジャーナル",
+    "nav.home": "ホーム", "nav.library": "ライブラリ", "nav.discover": "発見", "nav.journal": "ジャーナル",
     "nav.ai": "コンパニオン", "nav.social": "ソーシャル", "nav.twins": "ツインズ",
     "nav.insights": "分析", "nav.you": "あなた", "nav.more": "その他",
     "nav.wrap": "まとめ", "nav.premium": "プレミアム",
@@ -132,7 +134,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "言語", "settings.language_help": "Tropelyの言語を選択。",
   },
   zh: {
-    "nav.home": "首页", "nav.discover": "发现", "nav.journal": "日志",
+    "nav.home": "首页", "nav.library": "书库", "nav.discover": "发现", "nav.journal": "日志",
     "nav.ai": "伙伴", "nav.social": "社交", "nav.twins": "书友",
     "nav.insights": "洞察", "nav.you": "我", "nav.more": "更多",
     "nav.wrap": "年度回顾", "nav.premium": "高级版",
@@ -146,7 +148,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "语言", "settings.language_help": "选择 Tropely 的语言。",
   },
   nl: {
-    "nav.home": "Home", "nav.discover": "Ontdek", "nav.journal": "Dagboek",
+    "nav.home": "Home", "nav.library": "Bibliotheek", "nav.discover": "Ontdek", "nav.journal": "Dagboek",
     "nav.ai": "Metgezel", "nav.social": "Sociaal", "nav.twins": "Tweelingen",
     "nav.insights": "Inzichten", "nav.you": "Jij", "nav.more": "Meer",
     "nav.wrap": "Jaaroverzicht", "nav.premium": "Premium",
@@ -160,7 +162,7 @@ const DICTS: Record<Locale, Record<string, string>> = {
     "settings.language": "Taal", "settings.language_help": "Kies de taal voor Tropely.",
   },
   sv: {
-    "nav.home": "Hem", "nav.discover": "Utforska", "nav.journal": "Journal",
+    "nav.home": "Hem", "nav.library": "Bibliotek", "nav.discover": "Utforska", "nav.journal": "Journal",
     "nav.ai": "Följeslagare", "nav.social": "Socialt", "nav.twins": "Tvillingar",
     "nav.insights": "Insikter", "nav.you": "Du", "nav.more": "Mer",
     "nav.wrap": "Årskrönika", "nav.premium": "Premium",
