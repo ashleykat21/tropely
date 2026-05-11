@@ -154,6 +154,8 @@ const App = () => {
     );
   }
 
+  console.log("Runtime Key Check:", import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}
