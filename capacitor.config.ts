@@ -5,9 +5,10 @@ const config: CapacitorConfig = {
   appName: "Tropely",
   webDir: "artifacts/feltly/dist",
   server: {
+    url: "https://usenevora.com",
     androidScheme: "https",
     iosScheme: "https",
-    hostname: "usenevora.com"
+    cleartext: false
   },
   ios: {
     contentInset: "automatic",
