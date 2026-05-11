@@ -75,6 +75,9 @@ export function Shelves() {
       next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
+  const [activeCollTab, setActiveCollTab] = useState<string | null>(null);
+  const [newShelfName, setNewShelfName] = useState("");
+  const [showNewShelf, setShowNewShelf] = useState(false);
   const [editingShelf, setEditingShelf] = useState<TabKey | null>(null);
   const [shelfNameDraft, setShelfNameDraft] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -203,29 +206,6 @@ export function Shelves() {
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>
-            <button
-              onClick={() => {
-                if (!isPremium) {
-                  toast("Immersive bookshelf is a premium feature", {
-                    description: "Upgrade to unlock the cozy bookshelf experience.",
-                    action: { label: "Upgrade", onClick: () => nav("/premium") },
-                  });
-                  return;
-                }
-                setSpineMode(false);
-                setBookcaseMode(true);
-              }}
-              title={isPremium ? "Immersive bookshelf" : "Premium — immersive bookshelf"}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
-                bookcaseMode
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Sliders className="h-3.5 w-3.5" />
-              {!isPremium && <Lock className="h-2.5 w-2.5 opacity-60" />}
-            </button>
           </div>
           {/* Customize button — bookshelf mode only */}
           {bookcaseMode && isPremium && (
@@ -274,7 +254,7 @@ export function Shelves() {
             ) : (
               <button
                 key={t.key}
-                onClick={() => { setActive(t.key); setCategoryFilter(null); }}
+                onClick={() => { setActive(t.key); setActiveCollTab(null); setCategoryFilter(null); }}
                 onDoubleClick={() => {
                   if (!isPremium || t.key === "series") return;
                   setEditingShelf(t.key as Shelf);
@@ -282,14 +262,14 @@ export function Shelves() {
                 }}
                 className={cn(
                   "group/tab flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
-                  active === t.key
+                  active === t.key && !activeCollTab
                     ? "bg-foreground text-background"
                     : "text-muted-foreground hover:text-foreground"
                 )}
                 title={isPremium ? "Double-click to rename" : label}
               >
                 {label}
-                {isPremium && active === t.key && (
+                {isPremium && active === t.key && !activeCollTab && (
                   <Pencil
                     className="h-2.5 w-2.5 opacity-0 group-hover/tab:opacity-50 transition ml-0.5 cursor-pointer"
                     onClick={(e) => { e.stopPropagation(); if (t.key === "series") return; setEditingShelf(t.key as Shelf); setShelfNameDraft(customShelfNames[t.key as Shelf] || ""); }}
@@ -298,6 +278,54 @@ export function Shelves() {
               </button>
             );
           })}
+          {/* User-created shelf pills (non-series collections) */}
+          {collections.filter((c) => !c.isSeries).map((c) => (
+            <button
+              key={c.id}
+              onClick={() => { setActiveCollTab(c.id); setCategoryFilter(null); }}
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
+                activeCollTab === c.id
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {c.name}
+            </button>
+          ))}
+          {/* + New shelf pill */}
+          {showNewShelf ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newShelfName.trim()) return;
+                createCollection(newShelfName.trim(), false);
+                setNewShelfName("");
+                setShowNewShelf(false);
+                toast.success("Shelf created.");
+              }}
+              className="flex items-center gap-1 px-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                autoFocus
+                value={newShelfName}
+                onChange={(e) => setNewShelfName(e.target.value)}
+                className="w-24 rounded-md border border-border bg-background/80 px-2 py-0.5 text-xs focus:outline-none"
+                placeholder="Shelf name…"
+              />
+              <button type="submit" className="p-1 text-muted-foreground hover:text-foreground"><Check className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => setShowNewShelf(false)} className="p-1 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+            </form>
+          ) : (
+            <button
+              onClick={() => setShowNewShelf(true)}
+              className="flex items-center gap-0.5 rounded-full px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition"
+              title="New shelf"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -379,7 +407,7 @@ export function Shelves() {
       {/* ── Spine view — all shelves as horizontal scrollable rows ─────────── */}
       {spineMode && !bookcaseMode && (
         <div className="space-y-6">
-          {TABS.filter((t) => t.key !== "series").map((t) => {
+          {TABS.filter((t) => t.key !== "series" && t.key !== "reading").map((t) => {
             const shelfKey = t.key as Shelf;
             const label = customShelfNames[shelfKey] || t.label;
             const isPrivate = privateShelves.has(shelfKey);
@@ -538,6 +566,64 @@ export function Shelves() {
               </div>
             );
           })}
+
+          {/* User-created shelf rows in spine view */}
+          {collections.filter((c) => !c.isSeries).map((c) => {
+            const collBooks = c.bookIds.map((id) => books.find((b) => b.id === id)).filter(Boolean) as typeof books;
+            const isPrivate = privateShelves.has(c.id);
+            return (
+              <div key={c.id}>
+                <div className="flex items-center justify-between mb-2 px-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-display text-base font-semibold">{c.name}</span>
+                    <span className="text-xs text-muted-foreground">{collBooks.length} {collBooks.length === 1 ? "book" : "books"}</span>
+                  </div>
+                  <button
+                    onClick={() => toggleShelfPrivacy(c.id)}
+                    className={cn(
+                      "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+                      isPrivate
+                        ? "border-border/60 bg-card/60 text-muted-foreground"
+                        : "border-blue-200 bg-blue-50/60 text-blue-500"
+                    )}
+                  >
+                    {isPrivate ? <EyeOff className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                    <span>{isPrivate ? "Private" : "Public"}</span>
+                  </button>
+                </div>
+                {collBooks.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/50 py-6 text-center text-xs text-muted-foreground">No books yet — add from the grid view</div>
+                ) : (
+                  <div className="relative">
+                    <div className="flex gap-[3px] overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
+                      {collBooks.map((b) => (
+                        <button key={b.id} onClick={() => { setCurrent(b.id); nav(`/book/${b.id}`); }} className="group/spine shrink-0 relative focus:outline-none" title={`${b.title} · ${b.author}`}>
+                          <div className="relative overflow-hidden transition-transform group-hover/spine:-translate-y-1" style={{ width: 28, height: 116, borderRadius: "2px 4px 4px 2px", boxShadow: "inset -2px 0 4px rgba(0,0,0,0.2), 2px 0 5px rgba(0,0,0,0.12)" }}>
+                            {b.cover ? <img src={b.cover} alt={b.title} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0" style={{ background: `hsl(${(b.title.charCodeAt(0) * 37 + b.title.charCodeAt(1 % b.title.length) * 13) % 360} 45% 45%)` }} />}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20"><span className="text-white font-semibold" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: 7, textShadow: "0 1px 3px rgba(0,0,0,0.6)", maxHeight: 108, overflow: "hidden", whiteSpace: "nowrap" }}>{b.title}</span></div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="h-[5px] rounded-b-sm" style={{ background: "linear-gradient(180deg, hsl(28 48% 58%) 0%, hsl(25 42% 50%) 100%)", boxShadow: "0 2px 6px rgba(0,0,0,0.14)" }} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* New shelf button in spine view */}
+          {showNewShelf ? (
+            <form onSubmit={(e) => { e.preventDefault(); if (!newShelfName.trim()) return; createCollection(newShelfName.trim(), false); setNewShelfName(""); setShowNewShelf(false); toast.success("Shelf created."); }} className="flex items-center gap-2">
+              <input autoFocus value={newShelfName} onChange={(e) => setNewShelfName(e.target.value)} className="flex-1 rounded-xl border border-border bg-background/80 px-3 py-2 text-sm focus:outline-none" placeholder="Name your new shelf…" />
+              <button type="submit" className="rounded-xl bg-foreground text-background px-3 py-2 text-xs font-semibold">Create</button>
+              <button type="button" onClick={() => setShowNewShelf(false)} className="rounded-xl bg-card border border-border px-3 py-2 text-xs">Cancel</button>
+            </form>
+          ) : (
+            <button onClick={() => setShowNewShelf(true)} className="flex items-center gap-2 rounded-xl border border-dashed border-border/60 px-4 py-3 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/30 transition w-full">
+              <Plus className="h-4 w-4" /> New shelf
+            </button>
+          )}
         </div>
       )}
 
@@ -554,15 +640,32 @@ export function Shelves() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
           className={
-            (bookcaseMode || spineMode) && active !== "series"
+            (bookcaseMode || spineMode) && active !== "series" && !activeCollTab
               ? "hidden"
-              : active === "series"
+              : active === "series" && !activeCollTab
               ? "space-y-3"
               : "grid gap-2 grid-cols-5 sm:grid-cols-7 lg:grid-cols-9"
           }
         >
+          {/* Collection tab grid — shows books from the selected user shelf */}
+          {activeCollTab && !spineMode && (() => {
+            const coll = collections.find((c) => c.id === activeCollTab);
+            if (!coll) return null;
+            const collBooks = coll.bookIds.map((id) => books.find((b) => b.id === id)).filter(Boolean) as typeof books;
+            if (collBooks.length === 0) return (
+              <div className="col-span-full rounded-2xl border border-dashed border-border/60 p-10 text-center text-muted-foreground text-sm">No books on this shelf yet. Add books via the book detail page.</div>
+            );
+            return collBooks.map((b) => (
+              <button key={b.id} onClick={() => { setCurrent(b.id); nav(`/book/${b.id}`); }} className="w-full text-left space-y-1 rounded-lg p-1 transition hover:bg-white/40">
+                <BookCover src={b.cover} title={b.title} />
+                <div className="font-display text-[10px] leading-tight line-clamp-2 truncate">{b.title}</div>
+                <div className="text-[9px] text-muted-foreground truncate">{b.author}</div>
+              </button>
+            ));
+          })()}
+
           {/* Series browser */}
-          {active === "series" && (() => {
+          {active === "series" && !activeCollTab && (() => {
             const seriesColls = collections.filter((c) => c.isSeries);
             if (seriesColls.length === 0) {
               return (

@@ -22,21 +22,8 @@ const Ctx = createContext<AuthCtx>({
 // key, CSP block, network error).
 const MAX_LOADING_MS = 8_000;
 
-// DEV-ONLY: provides a fake logged-in user so the UI is viewable without Clerk
-function DevAuthProvider({ children }: { children: ReactNode }) {
-  const fakeUser: AuthUser = { id: "dev-user", email: "dev@tropely.app", displayName: "Dev Preview" };
-  return (
-    <Ctx.Provider value={{ user: fakeUser, session: { user: fakeUser }, loading: false, signOut: async () => {} }}>
-      {children}
-    </Ctx.Provider>
-  );
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  if (import.meta.env.DEV) return <DevAuthProvider>{children}</DevAuthProvider>;
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { user, isLoaded } = useUser();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { signOut: clerkSignOut } = useClerk();
   const [timedOut, setTimedOut] = useState(false);
 

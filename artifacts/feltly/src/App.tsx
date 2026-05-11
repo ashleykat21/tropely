@@ -98,12 +98,9 @@ function MissingKeyScreen() {
 function AppGate() {
   const { user, loading } = useAuth();
 
-  // DEV-ONLY bypass: remove before shipping
-  const devBypass = import.meta.env.DEV;
+  if (loading) return <Splash />;
 
-  if (loading && !devBypass) return <Splash />;
-
-  if (!user && !devBypass) {
+  if (!user) {
     return (
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
@@ -143,22 +140,6 @@ function AppGate() {
 // ── App ───────────────────────────────────────────────────────────────────────
 
 const App = () => {
-  const inner = (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Sonner />
-        <BrowserRouter basename={basePath}>
-          <AuthProvider>
-            <AppGate />
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-
-  // DEV-ONLY: skip Clerk entirely so the app is viewable on localhost
-  if (import.meta.env.DEV) return inner;
-
   if (!clerkPubKey) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -172,7 +153,16 @@ const App = () => {
 
   return (
     <ClerkProvider publishableKey={clerkPubKey}>
-      {inner}
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Sonner />
+          <BrowserRouter basename={basePath}>
+            <AuthProvider>
+              <AppGate />
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
     </ClerkProvider>
   );
 };

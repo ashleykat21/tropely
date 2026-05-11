@@ -12,8 +12,6 @@ import { MOODS } from "@/lib/moods";
 import { toast } from "sonner";
 import { LogOut, ShieldCheck, Target, Bell, BellOff, Download, Sparkles, Lock, EyeOff, Quote, Flame, User, KeyRound, Users, Upload, Compass, Type, Monitor, Trash2, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { isPushSupported, isPushEnabled, subscribeToPush, unsubscribeFromPush, sendTestPush } from "@/lib/push";
-import { ManageFamilySheet } from "@/components/family/ManageFamilySheet";
-import { useFamilyStore } from "@/lib/familyStore";
 import { cn } from "@/lib/utils";
 import { MoodSignatureCard } from "@/components/social/MoodSignatureCard";
 import {
@@ -486,8 +484,6 @@ export default function Profile() {
   const [pinDraft, setPinDraft] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinStep, setPinStep] = useState<"view" | "set">("view");
-  const [manageFamilyOpen, setManageFamilyOpen] = useState(false);
-  const { profiles, activeProfileId } = useFamilyStore();
   const isPremium = usePremium((s) => s.isPremium);
   const plan = usePremium((s) => s.plan);
   const setPlan = usePremium((s) => s.setPlan);
@@ -867,6 +863,19 @@ export default function Profile() {
               )}
             </div>
           </div>
+          {age !== null && age <= 13 && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3 space-y-1">
+              <p className="text-sm font-semibold text-blue-800 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 shrink-0" /> Safe reading mode is on
+              </p>
+              <ul className="text-xs text-blue-700 space-y-0.5 ml-6 list-disc">
+                <li>Book recommendations are filtered for ages 13 and under</li>
+                <li>Direct messaging with other users is disabled</li>
+                <li>Social features show age-appropriate content only</li>
+                <li>A parent or guardian can adjust these settings at any time</li>
+              </ul>
+            </div>
+          )}
         </section>
 
         {age !== null && age <= 10 && (
@@ -1150,40 +1159,6 @@ export default function Profile() {
 
         <SyncedDevicesSection signOut={signOut} />
 
-        {/* Family profiles */}
-        <section className="rounded-2xl bg-card/70 p-6 border border-border/40 space-y-4">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4" style={{ color: "var(--mood-strong)" }} />
-            <h2 className="font-display text-2xl">Family profiles</h2>
-          </div>
-          <p className="text-sm text-muted-foreground -mt-1">
-            Give each family member their own reading library, shelves, and streak.
-          </p>
-          <div className="flex flex-wrap gap-2 items-center">
-            {profiles.map((p) => (
-              <div
-                key={p.id}
-                className={cn(
-                  "flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm",
-                  p.id === activeProfileId
-                    ? "bg-foreground text-background border-foreground"
-                    : "border-border/60 text-muted-foreground"
-                )}
-              >
-                <span className="text-base leading-none">{p.emoji}</span>
-                {p.name}
-              </div>
-            ))}
-          </div>
-          <Button
-            variant="outline"
-            className="rounded-full gap-2"
-            onClick={() => setManageFamilyOpen(true)}
-          >
-            <Users className="h-4 w-4" /> Manage family
-          </Button>
-          <ManageFamilySheet open={manageFamilyOpen} onClose={() => setManageFamilyOpen(false)} />
-        </section>
 
         <section className="rounded-2xl bg-card/70 p-6 border border-border/40 space-y-4">
           <div className="flex items-center justify-between gap-2">

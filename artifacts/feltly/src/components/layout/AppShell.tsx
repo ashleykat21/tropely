@@ -18,8 +18,6 @@ import { computeChapters, topUnlockedChapter } from "@/lib/chapters";
 import { computeStreak } from "@/lib/streak";
 import { MessagesPanel } from "@/components/social/MessagesPanel";
 import { QuickLogSheet } from "@/components/reader/QuickLogSheet";
-import { ProfileSwitcher } from "@/components/family/ProfileSwitcher";
-import { useFamilyStore } from "@/lib/familyStore";
 import { subscribePending } from "@/lib/offlineQueue";
 import { ChangelogSheet } from "./ChangelogSheet";
 import { FeedbackSheet } from "@/components/feedback/FeedbackSheet";
@@ -66,8 +64,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasSeenWalkthrough = useLibrary((s) => s.hasSeenWalkthrough);
   const { user } = useAuth();
   const { t } = useLocale();
-  const { profiles: familyProfiles, activeProfileId } = useFamilyStore();
-  const activeProfile = familyProfiles.find((p) => p.id === activeProfileId);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [onboardingStartAt, setOnboardingStartAt] = useState(0);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
@@ -342,7 +338,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--mood-strong)] ring-2 ring-background" />
               )}
             </button>
-            <ProfileSwitcher />
             <GlobalSearch />
             <NotificationsBell />
             <AddBookDialog />

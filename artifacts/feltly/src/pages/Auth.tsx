@@ -419,7 +419,7 @@ export default function Auth() {
                 setBusy(true);
                 setError("");
                 try {
-                  await signUp.verifications.sendEmailCode();
+                  await withTimeout(signUp.verifications.sendEmailCode());
                 } catch (err) {
                   setError(clerkErr(err));
                 } finally {
