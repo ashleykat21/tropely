@@ -8,7 +8,7 @@ import { TROPE_CATEGORIES, tropeCategory } from "@/lib/tropes";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePremium } from "@/lib/usePremium";
-import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Sliders } from "lucide-react";
+import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Sliders, Globe, Eye, EyeOff } from "lucide-react";
 import { ShareCardModal } from "./ShareCardModal";
 import { TbrMoodIntentBadge, TbrIntentStrip } from "./TbrMoodIntent";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,14 @@ export function Shelves() {
   const [newCollName, setNewCollName] = useState("");
   const [isSeries, setIsSeries] = useState(false);
   const [expandedColl, setExpandedColl] = useState<string | null>(null);
+  const [spineMode, setSpineMode] = useState(true);
+  const [privateShelves, setPrivateShelves] = useState<Set<string>>(new Set());
+  const toggleShelfPrivacy = (key: string) =>
+    setPrivateShelves((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   const [editingShelf, setEditingShelf] = useState<TabKey | null>(null);
   const [shelfNameDraft, setShelfNameDraft] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -172,11 +180,23 @@ export function Shelves() {
           {/* View toggle */}
           <div className="flex gap-0.5 rounded-full border border-border/60 bg-card/80 backdrop-blur p-0.5">
             <button
-              onClick={() => { setBookcaseMode(false); setShowCustomizer(false); }}
+              onClick={() => { setSpineMode(true); setBookcaseMode(false); setShowCustomizer(false); }}
+              title="Spine view"
+              className={cn(
+                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
+                spineMode && !bookcaseMode
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <BookMarked className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => { setSpineMode(false); setBookcaseMode(false); setShowCustomizer(false); }}
               title="Grid view"
               className={cn(
                 "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
-                !bookcaseMode
+                !spineMode && !bookcaseMode
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:text-foreground"
               )}
@@ -192,9 +212,10 @@ export function Shelves() {
                   });
                   return;
                 }
+                setSpineMode(false);
                 setBookcaseMode(true);
               }}
-              title={isPremium ? "Bookshelf view" : "Premium — bookshelf view"}
+              title={isPremium ? "Immersive bookshelf" : "Premium — immersive bookshelf"}
               className={cn(
                 "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
                 bookcaseMode
@@ -202,7 +223,7 @@ export function Shelves() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <BookMarked className="h-3.5 w-3.5" />
+              <Sliders className="h-3.5 w-3.5" />
               {!isPremium && <Lock className="h-2.5 w-2.5 opacity-60" />}
             </button>
           </div>
@@ -223,7 +244,8 @@ export function Shelves() {
             </button>
           )}
         </div>
-        <div className="flex gap-1 rounded-full border border-border/60 bg-card/80 backdrop-blur p-1">
+        {/* Tab bar — hidden in spine mode */}
+        <div className={cn("flex gap-1 rounded-full border border-border/60 bg-card/80 backdrop-blur p-1", spineMode && "hidden")}>
           {TABS.map((t) => {
             const label = (t.key !== "series" ? customShelfNames[t.key as Shelf] : undefined) || t.label;
             const isEditing = isPremium && editingShelf === t.key;
@@ -279,8 +301,8 @@ export function Shelves() {
         </div>
       </div>
 
-      {/* Library search — hidden on series tab */}
-      {active !== "series" && <div className="relative -mt-1">
+      {/* Library search — hidden on series tab and in spine mode */}
+      {!spineMode && active !== "series" && <div className="relative -mt-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <input
           value={librarySearch}
@@ -298,8 +320,8 @@ export function Shelves() {
         )}
       </div>}
 
-      {/* Category-level trope filter — hidden on series tab */}
-      {active !== "series" && availableCategories.length > 0 && (
+      {/* Category-level trope filter — hidden on series tab and in spine mode */}
+      {!spineMode && active !== "series" && availableCategories.length > 0 && (
         <div className="flex flex-wrap gap-1.5 -mt-1">
           <button
             onClick={() => setCategoryFilter(null)}
@@ -330,8 +352,8 @@ export function Shelves() {
         </div>
       )}
 
-      {/* Sort controls — hidden on series tab */}
-      {active !== "want" && active !== "series" && sortedDisplayFiltered.length > 1 && (
+      {/* Sort controls — hidden on series tab and in spine mode */}
+      {!spineMode && active !== "want" && active !== "series" && sortedDisplayFiltered.length > 1 && (
         <div className="flex items-center gap-1.5 flex-wrap -mt-1">
           <ArrowUpDown className="h-3 w-3 text-muted-foreground shrink-0" />
           {(["recent", "az", "pages", ...(active === "finished" ? ["rating"] : [])] as SortKey[]).map((k) => {
@@ -354,6 +376,171 @@ export function Shelves() {
         </div>
       )}
 
+      {/* ── Spine view — all shelves as horizontal scrollable rows ─────────── */}
+      {spineMode && !bookcaseMode && (
+        <div className="space-y-6">
+          {TABS.filter((t) => t.key !== "series").map((t) => {
+            const shelfKey = t.key as Shelf;
+            const label = customShelfNames[shelfKey] || t.label;
+            const isPrivate = privateShelves.has(shelfKey);
+            const isEditing = editingShelf === t.key;
+            const shelfBooks = books
+              .filter((b) => {
+                if (b.shelf !== shelfKey) return false;
+                if (b.ageRating && userAge != null && b.ageRating > userAge) return false;
+                return true;
+              })
+              .sort((a, b) => b.addedAt - a.addedAt);
+
+            return (
+              <div key={shelfKey}>
+                {/* Row header */}
+                <div className="flex items-center justify-between mb-2 px-0.5">
+                  <div className="flex items-center gap-2">
+                    {isEditing ? (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          setCustomShelfName(shelfKey, shelfNameDraft);
+                          setEditingShelf(null);
+                          toast.success("Shelf renamed.");
+                        }}
+                        className="flex items-center gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          autoFocus
+                          value={shelfNameDraft}
+                          onChange={(e) => setShelfNameDraft(e.target.value)}
+                          className="w-32 rounded-lg border border-border bg-background/80 px-2 py-0.5 text-sm font-display focus:outline-none"
+                          placeholder={t.label}
+                        />
+                        <button type="submit" className="p-1 text-muted-foreground hover:text-foreground"><Check className="h-3.5 w-3.5" /></button>
+                        <button type="button" onClick={() => setEditingShelf(null)} className="p-1 text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+                      </form>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          if (!isPremium) return;
+                          setEditingShelf(shelfKey);
+                          setShelfNameDraft(customShelfNames[shelfKey] || "");
+                        }}
+                        className="flex items-center gap-1.5 group/name"
+                        title={isPremium ? "Click to rename shelf" : label}
+                      >
+                        <span className="font-display text-base font-semibold" style={dark ? { color: "white" } : undefined}>
+                          {label}
+                        </span>
+                        {isPremium && (
+                          <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover/name:opacity-60 transition" />
+                        )}
+                      </button>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {shelfBooks.length} {shelfBooks.length === 1 ? "book" : "books"}
+                    </span>
+                  </div>
+                  {/* Privacy toggle */}
+                  <button
+                    onClick={() => toggleShelfPrivacy(shelfKey)}
+                    className={cn(
+                      "flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+                      isPrivate
+                        ? "border-border/60 bg-card/60 text-muted-foreground"
+                        : "border-blue-200 bg-blue-50/60 text-blue-500 dark:border-blue-800 dark:bg-blue-950/40"
+                    )}
+                    title={isPrivate ? "Private shelf — click to make public" : "Public shelf — click to make private"}
+                  >
+                    {isPrivate ? <EyeOff className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                    <span>{isPrivate ? "Private" : "Public"}</span>
+                  </button>
+                </div>
+
+                {/* Horizontal spine scroll */}
+                {shelfBooks.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/50 py-6 text-center text-xs text-muted-foreground">
+                    No books here yet
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div
+                      className="flex gap-[3px] overflow-x-auto pb-2"
+                      style={{ scrollbarWidth: "none" }}
+                    >
+                      {shelfBooks.map((b) => (
+                        <button
+                          key={b.id}
+                          onClick={() => { setCurrent(b.id); nav(`/book/${b.id}`); }}
+                          className="group/spine shrink-0 relative focus:outline-none"
+                          title={`${b.title} · ${b.author}`}
+                        >
+                          {/* Spine card */}
+                          <div
+                            className="relative overflow-hidden transition-transform group-hover/spine:-translate-y-1"
+                            style={{
+                              width: 28,
+                              height: 116,
+                              borderRadius: "2px 4px 4px 2px",
+                              boxShadow: "inset -2px 0 4px rgba(0,0,0,0.2), 2px 0 5px rgba(0,0,0,0.12), inset 1px 0 3px rgba(255,255,255,0.06)",
+                            }}
+                          >
+                            {b.cover ? (
+                              <img
+                                src={b.cover}
+                                alt={b.title}
+                                className="absolute inset-0 w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="absolute inset-0"
+                                style={{
+                                  background: `hsl(${(b.title.charCodeAt(0) * 37 + b.title.charCodeAt(1 % b.title.length) * 13) % 360} 45% 45%)`,
+                                }}
+                              />
+                            )}
+                            {/* Title overlay as vertical text */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <span
+                                className="text-white font-semibold leading-none"
+                                style={{
+                                  writingMode: "vertical-rl",
+                                  textOrientation: "mixed",
+                                  transform: "rotate(180deg)",
+                                  fontSize: 7,
+                                  letterSpacing: "0.03em",
+                                  textShadow: "0 1px 3px rgba(0,0,0,0.6)",
+                                  maxHeight: 108,
+                                  overflow: "hidden",
+                                  whiteSpace: "nowrap",
+                                  textOverflow: "ellipsis",
+                                  padding: "4px 0",
+                                }}
+                              >
+                                {b.title}
+                              </span>
+                            </div>
+                            {/* Left edge highlight */}
+                            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-white/10 rounded-l-sm" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    {/* Wooden shelf plank */}
+                    <div
+                      className="h-[5px] rounded-b-sm"
+                      style={{
+                        background: "linear-gradient(180deg, hsl(28 48% 58%) 0%, hsl(25 42% 50%) 100%)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.14)",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Bookshelf view — premium immersive mode */}
       {bookcaseMode && active !== "series" && (
         <BookshelfView books={sortedDisplayFiltered} style={bookcaseStyle} />
@@ -367,7 +554,7 @@ export function Shelves() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
           className={
-            bookcaseMode && active !== "series"
+            (bookcaseMode || spineMode) && active !== "series"
               ? "hidden"
               : active === "series"
               ? "space-y-3"
