@@ -98,9 +98,12 @@ function MissingKeyScreen() {
 function AppGate() {
   const { user, loading } = useAuth();
 
-  if (loading) return <Splash />;
+  // DEV-ONLY bypass: remove before shipping
+  const devBypass = import.meta.env.DEV;
 
-  if (!user) {
+  if (loading && !devBypass) return <Splash />;
+
+  if (!user && !devBypass) {
     return (
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
@@ -140,9 +143,22 @@ function AppGate() {
 // ── App ───────────────────────────────────────────────────────────────────────
 
 const App = () => {
-  // Guard: if the Clerk publishable key was not injected at build time, show a
-  // clear error instead of passing undefined to ClerkProvider, which would cause
-  // Clerk to never resolve isLoaded and hang on the splash screen forever.
+  const inner = (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Sonner />
+        <BrowserRouter basename={basePath}>
+          <AuthProvider>
+            <AppGate />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+
+  // DEV-ONLY: skip Clerk entirely so the app is viewable on localhost
+  if (import.meta.env.DEV) return inner;
+
   if (!clerkPubKey) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -154,22 +170,9 @@ const App = () => {
     );
   }
 
-  console.log("Runtime Key Check:", import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
-
   return (
-    <ClerkProvider
-      publishableKey={clerkPubKey}
-    >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Sonner />
-          <BrowserRouter basename={basePath}>
-            <AuthProvider>
-              <AppGate />
-            </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
+    <ClerkProvider publishableKey={clerkPubKey}>
+      {inner}
     </ClerkProvider>
   );
 };
