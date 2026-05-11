@@ -53,3 +53,6 @@ Thumbs.db
 .env.local
 .env.production
 .env.*.local
+
+# Vite public env vars (Clerk publishable key is intentionally public)
+!artifacts/feltly/.env
