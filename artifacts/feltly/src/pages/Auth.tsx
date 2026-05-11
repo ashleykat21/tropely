@@ -81,10 +81,10 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      await signIn.authenticateWithRedirect({
+      await signIn.create({
         strategy: "oauth_google",
         redirectUrl: `${window.location.origin}${basePath}/sign-in/sso-callback`,
-        redirectUrlComplete: `${window.location.origin}/`,
+        actionCompleteRedirectUrl: `${window.location.origin}/`,
       });
       // Clerk navigates the page to Google — control does not return here
     } catch (err) {
@@ -119,7 +119,7 @@ export default function Auth() {
         }
 
         // Email verification required
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        await signUp.verifications.sendEmailCode();
         setMode("verify");
         setVerifyCode("");
         setBusy(false);
@@ -208,7 +208,7 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: verifyCode });
+      const result = await signUp.verifications.verifyEmailCode({ code: verifyCode });
       const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
       console.debug("[Auth] verifyEmailCode result:", { result, sessionId });
       if (sessionId) {
