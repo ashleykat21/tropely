@@ -4,7 +4,7 @@
   "license": "MIT",
   "packageManager": "pnpm@10.26.1",
   "scripts": {
-    "build": "npm install --prefix artifacts/feltly --legacy-peer-deps --ignore-scripts && npm run build --prefix artifacts/feltly",
+    "build": "npm install --prefix artifacts/feltly --legacy-peer-deps --ignore-scripts && cd artifacts/feltly && ./node_modules/.bin/vite build --config vite.config.ts",
     "prepare": "node -e \"process.exit(0)\"",
     "typecheck:libs": "tsc --build",
     "typecheck": "tsc --build"
