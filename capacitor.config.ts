@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: "artifacts/feltly/dist",
   server: {
     androidScheme: "https",
-    iosScheme: "https"
+    iosScheme: "https",
+    hostname: "usenevora.com"
   },
   ios: {
     contentInset: "automatic",
