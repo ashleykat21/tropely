@@ -49,11 +49,12 @@ function SeriesFinishedPromptRunner() {
 }
 
 // ── Clerk-hosted fallback pages ───────────────────────────────────────────────
+// Paths here are router-relative (BrowserRouter basename handles the prefix).
 
 function SignInPage() {
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+      <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" />
     </div>
   );
 }
@@ -61,7 +62,7 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+      <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" />
     </div>
   );
 }
@@ -93,7 +94,7 @@ function MissingKeyScreen() {
         <p className="font-display text-2xl">Tropely</p>
         <p className="text-sm text-muted-foreground leading-relaxed">
           <strong>VITE_CLERK_PUBLISHABLE_KEY</strong> is not set.
-          Add it to your Netlify environment variables and redeploy.
+          Add it to your environment variables and restart.
         </p>
       </div>
     </div>
@@ -147,6 +148,8 @@ function AppGate() {
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
+// BrowserRouter sits OUTSIDE ClerkProvider so Clerk can integrate with the
+// React Router history object for redirect handling (required for Capacitor).
 
 const App = () => {
   if (!clerkPubKey) {
@@ -161,18 +164,22 @@ const App = () => {
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Sonner />
-          <BrowserRouter basename={basePath}>
+    <BrowserRouter basename={basePath}>
+      <ClerkProvider
+        publishableKey={clerkPubKey}
+        afterSignInUrl="/"
+        afterSignUpUrl="/"
+      >
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Sonner />
             <AuthProvider>
               <AppGate />
             </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ClerkProvider>
+    </BrowserRouter>
   );
 };
 

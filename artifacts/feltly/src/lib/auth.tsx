@@ -19,8 +19,10 @@ const Ctx = createContext<AuthCtx>({
 
 // Maximum time we will show the splash before forcing the app past the loading
 // state. Guards against Clerk never resolving (e.g. missing/wrong publishable
-// key, CSP block, network error).
-const MAX_LOADING_MS = 8_000;
+// key, CSP block, network error, or domain lock on a live Clerk key).
+// Kept short so the app stays responsive on native Capacitor where Clerk may
+// be blocked by the capacitor://localhost origin not yet allowlisted.
+const MAX_LOADING_MS = 4_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isLoaded } = useUser();
