@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: "artifacts/feltly/dist",
   server: {
     androidScheme: "https",
-    iosScheme: "com.nevora.tropely"
+    iosScheme: "https"
   },
   ios: {
     contentInset: "automatic",

@@ -7,7 +7,7 @@ import { BookHeart, AlertCircle, AlertTriangle } from "lucide-react";
 
 type Mode = "signin" | "signup" | "forgot" | "reset" | "verify";
 
-const CLERK_INIT_TIMEOUT_MS = 5_000;
+const CLERK_INIT_TIMEOUT_MS = 30_000;
 
 // Resolve session ID from whatever shape Clerk v6 returns
 function extractSessionId(result: unknown): string | null {
