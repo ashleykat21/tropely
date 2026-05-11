@@ -9,6 +9,16 @@ type Mode = "signin" | "signup" | "forgot" | "reset" | "verify";
 
 const CLERK_INIT_TIMEOUT_MS = 30_000;
 
+// Wraps any Clerk API promise with a hard timeout so the UI never freezes
+function withTimeout<T>(promise: Promise<T>, ms = 12_000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Request timed out after ${ms / 1000}s. Check your internet connection and try again.`)), ms)
+    ),
+  ]);
+}
+
 // Resolve session ID from whatever shape Clerk v6 returns
 function extractSessionId(result: unknown): string | null {
   if (!result || typeof result !== "object") return null;
@@ -81,11 +91,11 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      await signIn.create({
+      await withTimeout(signIn.create({
         strategy: "oauth_google",
         redirectUrl: `${window.location.origin}${basePath}/sign-in/sso-callback`,
         actionCompleteRedirectUrl: `${window.location.origin}/`,
-      });
+      }));
       // Clerk navigates the page to Google — control does not return here
     } catch (err) {
       setError(clerkErr(err));
@@ -103,23 +113,23 @@ export default function Auth() {
       if (mode === "signup") {
         if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
 
-        const result = await signUp.create({
+        const result = await withTimeout(signUp.create({
           emailAddress: email,
           password: pwd,
           ...(name.trim() ? { firstName: name.trim() } : {}),
-        });
+        }));
 
         // Also read from the proxy getter in case result shape differs
         const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
         const status = extractStatus(result);
 
         if ((status === "complete" || status === "active") && sessionId) {
-          await setActive({ session: sessionId });
+          await withTimeout(setActive({ session: sessionId }));
           return;
         }
 
         // Email verification required
-        await signUp.verifications.sendEmailCode();
+        await withTimeout(signUp.verifications.sendEmailCode());
         setMode("verify");
         setVerifyCode("");
         setBusy(false);
@@ -127,7 +137,7 @@ export default function Auth() {
       } else {
         if (!signIn) { setError("Sign-in is not available. Please refresh."); setBusy(false); return; }
 
-        const result = await signIn.create({ identifier: email, password: pwd });
+        const result = await withTimeout(signIn.create({ identifier: email, password: pwd }));
 
         // Read session from result AND proxy getter
         const sessionId = extractSessionId(result) ?? signIn.createdSessionId ?? null;
@@ -136,14 +146,14 @@ export default function Auth() {
         console.debug("[Auth] signIn.create result:", { status, sessionId, result });
 
         if (sessionId) {
-          await setActive({ session: sessionId });
+          await withTimeout(setActive({ session: sessionId }));
           return;
         }
 
         if (status === "complete") {
           // session ID might be on the client directly
           const clientSessionId = (signIn as any)?.session?.id;
-          if (clientSessionId) { await setActive({ session: clientSessionId }); return; }
+          if (clientSessionId) { await withTimeout(setActive({ session: clientSessionId })); return; }
         }
 
         if (status === "needs_first_factor" || status === "needs_identifier") {
@@ -168,7 +178,7 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      await signIn.resetPasswordEmailCode.sendCode({ identifier: email });
+      await withTimeout(signIn.resetPasswordEmailCode.sendCode({ identifier: email }));
       setMode("reset");
     } catch (err) {
       setError(clerkErr(err));
@@ -185,11 +195,11 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      await signIn.resetPasswordEmailCode.verifyCode({ code: resetCode });
-      const result = await signIn.resetPasswordEmailCode.submitPassword({ password: newPwd });
+      await withTimeout(signIn.resetPasswordEmailCode.verifyCode({ code: resetCode }));
+      const result = await withTimeout(signIn.resetPasswordEmailCode.submitPassword({ password: newPwd }));
       const sessionId = extractSessionId(result) ?? signIn.createdSessionId ?? null;
       if (sessionId) {
-        await setActive({ session: sessionId });
+        await withTimeout(setActive({ session: sessionId }));
         return;
       }
       setError("Reset incomplete. Please try again.");
@@ -208,11 +218,11 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      const result = await signUp.verifications.verifyEmailCode({ code: verifyCode });
+      const result = await withTimeout(signUp.verifications.verifyEmailCode({ code: verifyCode }));
       const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
       console.debug("[Auth] verifyEmailCode result:", { result, sessionId });
       if (sessionId) {
-        await setActive({ session: sessionId });
+        await withTimeout(setActive({ session: sessionId }));
         return;
       }
       // Fallback: check Clerk client directly
