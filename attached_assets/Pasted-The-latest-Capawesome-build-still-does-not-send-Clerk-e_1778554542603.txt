@@ -1,0 +1,92 @@
+The latest Capawesome build still does not send Clerk email codes.
+
+Current Clerk logs show:
+- sign_up_created
+- sign_up_email_address_created
+
+But they still do NOT show:
+- sign_up_email_address_verification_prepared
+
+This means the app is creating the sign-up and adding the email address, but it is still not triggering the email-code verification email.
+
+Do not blame Clerk settings. The Clerk dashboard settings are correct:
+- Sign-up with email ON
+- Require email address ON
+- Verify at sign-up ON
+- Email verification code selected
+- Sign-in with email ON
+- Email verification code ON
+- Google auth OFF
+
+Please fix the actual active auth code.
+
+Important:
+1. Search the whole project for every sign-up implementation:
+   useSignUp
+   signUp.create
+   signUp.prepareEmailAddressVerification
+   prepareEmailAddressVerification
+   attemptEmailAddressVerification
+   sendEmailCode
+   verifyEmailCode
+   signUp.verifications
+   SignUp
+   SignUpForm
+   AuthPage
+
+2. Identify which sign-up component is actually rendered in the app.
+
+3. Replace the active custom sign-up flow with this exact sequence:
+
+   await signUp.create({
+     emailAddress,
+     password,
+   });
+
+   await signUp.prepareEmailAddressVerification({
+     strategy: "email_code",
+   });
+
+   Then show the code input screen.
+
+4. Do NOT skip prepareEmailAddressVerification based on signUp.create status.
+5. Do NOT use old methods like:
+   signUp.verifications.sendEmailCode()
+   signUp.verifications.verifyEmailCode()
+   sendEmailCode()
+   verifyEmailCode()
+
+6. On code submit, use:
+
+   const result = await signUp.attemptEmailAddressVerification({
+     code,
+   });
+
+   if (result.status === "complete") {
+     await setActive({ session: result.createdSessionId });
+   }
+
+7. Add visible error handling:
+   - If prepareEmailAddressVerification fails, show the error on screen.
+   - Also console.error the full Clerk error.
+
+8. Add temporary logs:
+   console.log("creating sign up");
+   console.log("sign up created");
+   console.log("preparing email verification");
+   console.log("email verification prepared");
+   console.log("attempting email verification");
+
+9. Run:
+   npm run build
+
+10. Commit and push:
+   git status
+   git add .
+   git commit -m "Ensure Clerk email verification code is prepared"
+   git push
+
+11. Tell me the latest commit hash.
+
+Do not commit .env, node_modules, dist, or private keys.
+Do not re-enable Google auth.

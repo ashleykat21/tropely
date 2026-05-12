@@ -92,23 +92,22 @@ export default function Auth() {
         if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
 
         console.log("creating sign up");
-        await withTimeout(signUp.create({
+        await signUp.create({
           emailAddress: email,
           password: pwd,
           ...(name.trim() ? { firstName: name.trim() } : {}),
-        }));
-        console.log("sign up created", { status: signUp.status });
+        });
+        console.log("sign up created");
 
-        // Always send the email verification code — never skip based on status.
         console.log("preparing email verification");
         try {
-          await withTimeout(
-            signUp.prepareEmailAddressVerification({ strategy: "email_code" })
-          );
+          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
           console.log("email verification prepared");
         } catch (prepErr) {
           console.error("prepareEmailAddressVerification failed:", prepErr);
-          throw prepErr;
+          setError(clerkErr(prepErr));
+          setBusy(false);
+          return;
         }
 
         setMode("verify");
@@ -197,19 +196,19 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      const result = await withTimeout(
-        signUp.attemptEmailAddressVerification({ code: verifyCode })
-      );
+      console.log("attempting email verification");
+      const result = await signUp.attemptEmailAddressVerification({ code: verifyCode });
       console.log("attemptEmailAddressVerification result:", { status: result?.status, createdSessionId: result?.createdSessionId });
 
       if (result.status === "complete") {
-        await withTimeout(setActive({ session: result.createdSessionId }));
+        await setActive({ session: result.createdSessionId });
         return;
       }
 
       setError("Invalid or expired code. Please check and try again.");
       setBusy(false);
     } catch (err) {
+      console.error("attemptEmailAddressVerification error:", err);
       setError(clerkErr(err));
       setBusy(false);
     }
