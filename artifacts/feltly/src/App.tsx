@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SignIn, SignUp } from "@clerk/react";
@@ -11,7 +11,6 @@ import Insights from "./pages/Insights.tsx";
 import Social from "./pages/Social.tsx";
 import Profile from "./pages/Profile.tsx";
 import Companion from "./pages/Companion.tsx";
-import Auth from "./pages/Auth.tsx";
 import Wrap from "./pages/Wrap.tsx";
 import Twins from "./pages/Twins.tsx";
 import BuddyReadsPage from "./pages/BuddyReads.tsx";
@@ -53,7 +52,7 @@ function SeriesFinishedPromptRunner() {
 function SignInPage() {
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" />
+      <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
     </div>
   );
 }
@@ -61,7 +60,7 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" />
+      <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
     </div>
   );
 }
@@ -93,7 +92,7 @@ function AppGate() {
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="*"          element={<Auth />} />
+        <Route path="*"          element={<Navigate to="/sign-in" replace />} />
       </Routes>
     );
   }
