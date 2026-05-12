@@ -1,0 +1,81 @@
+The Clerk email code now sends the first code and the app reaches the code entry screen.
+
+But two issues remain:
+1. Entering the correct code shows:
+   "Verification incomplete. Please check the code and try again."
+2. Tapping "Resend code" does not send a new code.
+3. The screen still shows outdated text saying users can sign up with Google, but Google auth is disabled.
+
+Please fix the active email verification screen.
+
+Requirements:
+
+1. Find the active code verification component/page.
+
+2. On Verify email button submit, use exactly:
+
+   const cleanCode = code.trim();
+
+   const result = await signUp.attemptEmailAddressVerification({
+     code: cleanCode,
+   });
+
+   console.log("verification result", result.status);
+
+   if (result.status === "complete") {
+     await setActive({ session: result.createdSessionId });
+     navigate("/");
+     return;
+   }
+
+   Show a clear error only if result.status is not "complete".
+
+3. Do not use old methods like:
+   signUp.verifications.verifyEmailCode()
+   verifyEmailCode()
+   signUp.attemptVerification()
+
+4. Make sure the code input stores only the 6-digit string.
+   - trim spaces
+   - do not uppercase/lowercase
+   - do not convert to number
+   - do not allow letters if possible
+   - keep it as a string
+
+5. Fix the Resend code button to call:
+
+   await signUp.prepareEmailAddressVerification({
+     strategy: "email_code",
+   });
+
+   Then show a message like:
+   "New code sent. Please check your inbox."
+
+6. Add console logs:
+   console.log("resending email verification code");
+   console.log("email verification code resent");
+   console.log("attempting verification with code", cleanCode);
+   console.log("verification result", result.status);
+
+7. If Clerk throws an error, show the actual Clerk error message on screen and console.error the full error.
+
+8. Remove this outdated text:
+   "Alternatively, go back and sign up with Google to skip email verification."
+
+   Replace it with:
+   "Check your spam or junk folder. Use the newest code if you requested more than one."
+
+9. Keep Google OAuth disabled.
+10. Keep Clerk using VITE_CLERK_PUBLISHABLE_KEY.
+11. Run:
+    npm run build
+
+12. Commit and push:
+    git status
+    git add .
+    git commit -m "Fix Clerk email code verification and resend"
+    git push
+
+13. Tell me the latest commit hash.
+
+Do not commit .env, node_modules, dist, or private keys.

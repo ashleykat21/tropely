@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSignIn, useSignUp, useClerk, useUser } from "@clerk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,8 @@ export default function Auth() {
   const [verifyCode, setVerifyCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [resendMsg, setResendMsg] = useState("");
+  const navigate = useNavigate();
 
   const disabled = !clerkReady || busy;
 
@@ -194,18 +197,21 @@ export default function Auth() {
     if (!clerkReady || busy) return;
     if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
     setError("");
+    setResendMsg("");
     setBusy(true);
     try {
-      console.log("attempting email verification");
-      const result = await signUp.attemptEmailAddressVerification({ code: verifyCode });
-      console.log("attemptEmailAddressVerification result:", { status: result?.status, createdSessionId: result?.createdSessionId });
+      const cleanCode = verifyCode.trim();
+      console.log("attempting verification with code", cleanCode);
+      const result = await signUp.attemptEmailAddressVerification({ code: cleanCode });
+      console.log("verification result", result.status);
 
       if (result.status === "complete") {
         await setActive({ session: result.createdSessionId });
+        navigate("/");
         return;
       }
 
-      setError("Invalid or expired code. Please check and try again.");
+      setError("Verification incomplete. Please check the code and try again.");
       setBusy(false);
     } catch (err) {
       console.error("attemptEmailAddressVerification error:", err);
@@ -219,10 +225,14 @@ export default function Auth() {
     if (!signUp || busy) return;
     setBusy(true);
     setError("");
+    setResendMsg("");
     try {
-      // Clerk v6 correct API
-      await withTimeout(signUp.prepareEmailAddressVerification({ strategy: "email_code" }));
+      console.log("resending email verification code");
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      console.log("email verification code resent");
+      setResendMsg("New code sent. Please check your inbox.");
     } catch (err) {
+      console.error("resend error:", err);
       setError(clerkErr(err));
     } finally {
       setBusy(false);
@@ -423,16 +433,21 @@ export default function Auth() {
                 id="verify-code"
                 required
                 value={verifyCode}
-                onChange={(e) => setVerifyCode(e.target.value)}
+                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="6-digit code"
                 autoComplete="one-time-code"
                 inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
                 disabled={disabled}
               />
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground leading-relaxed">
-              Check your spam or junk folder if you don't see it within a minute.
+              Check your spam or junk folder. Use the newest code if you requested more than one.
             </div>
+            {resendMsg && (
+              <div className="text-xs text-center text-green-600 dark:text-green-400">{resendMsg}</div>
+            )}
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Verifying…" : "Verify email"}
             </Button>
