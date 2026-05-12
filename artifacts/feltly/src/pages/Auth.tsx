@@ -91,25 +91,26 @@ export default function Auth() {
       if (mode === "signup") {
         if (!signUp) { setError("Sign-up is not available. Please refresh."); setBusy(false); return; }
 
-        const result = await withTimeout(signUp.create({
+        console.log("creating sign up");
+        await withTimeout(signUp.create({
           emailAddress: email,
           password: pwd,
           ...(name.trim() ? { firstName: name.trim() } : {}),
         }));
+        console.log("sign up created", { status: signUp.status });
 
-        const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
-        const status = extractStatus(result);
-
-        // If Clerk already completed the sign-up (e.g. no verification needed)
-        if ((status === "complete" || status === "active") && sessionId) {
-          await withTimeout(setActive({ session: sessionId }));
-          return;
+        // Always send the email verification code — never skip based on status.
+        console.log("preparing email verification");
+        try {
+          await withTimeout(
+            signUp.prepareEmailAddressVerification({ strategy: "email_code" })
+          );
+          console.log("email verification prepared");
+        } catch (prepErr) {
+          console.error("prepareEmailAddressVerification failed:", prepErr);
+          throw prepErr;
         }
 
-        // Trigger the email verification code — Clerk v6 correct API
-        await withTimeout(
-          signUp.prepareEmailAddressVerification({ strategy: "email_code" })
-        );
         setMode("verify");
         setVerifyCode("");
         setBusy(false);
@@ -196,26 +197,17 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      // Clerk v6 correct API for email code verification
       const result = await withTimeout(
         signUp.attemptEmailAddressVerification({ code: verifyCode })
       );
-      console.debug("[Auth] attemptEmailAddressVerification result:", result);
+      console.log("attemptEmailAddressVerification result:", { status: result?.status, createdSessionId: result?.createdSessionId });
 
-      const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
-      const status = extractStatus(result);
-
-      if (sessionId) {
-        await withTimeout(setActive({ session: sessionId }));
+      if (result.status === "complete") {
+        await withTimeout(setActive({ session: result.createdSessionId }));
         return;
       }
 
-      if (status === "complete") {
-        setError("Verification complete but no session found. Please try signing in.");
-        switchMode("signin");
-      } else {
-        setError("Invalid or expired code. Please check and try again.");
-      }
+      setError("Invalid or expired code. Please check and try again.");
       setBusy(false);
     } catch (err) {
       setError(clerkErr(err));
