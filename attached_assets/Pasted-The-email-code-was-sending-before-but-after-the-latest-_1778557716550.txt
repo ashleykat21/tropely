@@ -1,0 +1,69 @@
+The email code was sending before, but after the latest verification/resend changes, it is not sending again and Clerk logs do not show any code-sent/prepared event.
+
+Please fix this carefully without breaking the send step.
+
+Current problem:
+- Sign-up reaches Clerk enough to create sign_up_created / sign_up_email_address_created sometimes.
+- But now no email code is sent.
+- Clerk logs do not show email verification/code prepared.
+- We need both prepare and verify working.
+
+Required flow:
+1. After signUp.create({ emailAddress, password }), always call:
+
+await signUp.prepareEmailAddressVerification({
+  strategy: "email_code",
+});
+
+2. Only after prepareEmailAddressVerification succeeds, show the code-entry screen.
+
+3. On Resend code, call the same prepare method again:
+
+await signUp.prepareEmailAddressVerification({
+  strategy: "email_code",
+});
+
+4. On Verify email, use:
+
+const cleanCode = code.trim();
+
+const result = await signUp.attemptEmailAddressVerification({
+  code: cleanCode,
+});
+
+if (result.status === "complete") {
+  await setActive({ session: result.createdSessionId });
+  navigate("/");
+  return;
+}
+
+5. Do not use these old/broken methods anywhere:
+signUp.verifications.sendEmailCode()
+signUp.verifications.verifyEmailCode()
+sendEmailCode()
+verifyEmailCode()
+attemptVerification()
+
+6. Add visible error output from Clerk errors, not generic messages only.
+7. Add console logs:
+console.log("creating sign up");
+console.log("sign up created");
+console.log("preparing email verification");
+console.log("email verification prepared");
+console.log("resending email verification code");
+console.log("email verification code resent");
+console.log("attempting verification");
+console.log("verification result", result.status);
+
+8. Search the whole project and confirm there is only one active sign-up flow being rendered.
+9. Keep Google OAuth disabled.
+10. Do not commit .env, node_modules, dist, or private keys.
+
+Then run:
+npm run build
+git status
+git add .
+git commit -m "Restore Clerk email code send and verification"
+git push
+
+Tell me the latest commit hash.

@@ -11,6 +11,7 @@ import Insights from "./pages/Insights.tsx";
 import Social from "./pages/Social.tsx";
 import Profile from "./pages/Profile.tsx";
 import Companion from "./pages/Companion.tsx";
+import Auth from "./pages/Auth.tsx";
 import Wrap from "./pages/Wrap.tsx";
 import Twins from "./pages/Twins.tsx";
 import BuddyReadsPage from "./pages/BuddyReads.tsx";
@@ -92,7 +93,7 @@ function AppGate() {
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="*"          element={<Navigate to="/sign-in" replace />} />
+        <Route path="*"          element={<Auth />} />
       </Routes>
     );
   }
