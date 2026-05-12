@@ -54,5 +54,6 @@ Thumbs.db
 .env.production
 .env.*.local
 
-# Vite public env vars (Clerk publishable key is intentionally public)
-!artifacts/feltly/.env
+# Vite cache
+artifacts/feltly/.vite
+artifacts/feltly/node_modules/.vite

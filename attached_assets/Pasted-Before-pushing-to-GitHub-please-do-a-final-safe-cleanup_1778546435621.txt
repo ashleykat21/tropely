@@ -1,0 +1,72 @@
+Before pushing to GitHub, please do a final safe cleanup and verification pass for Clerk + Capacitor native auth.
+
+Context:
+- This is a Vite React app being converted to fully native mobile with Capacitor/Capawesome.
+- Google OAuth is intentionally turned off for now.
+- Clerk should use email auth only for now.
+- Clerk publishable key is stored in artifacts/felty/.env as:
+  VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+- capacitor://localhost has already been added in Clerk allowed origins.
+- Do not expose or commit secrets.
+- Do not add Google OAuth back.
+
+Please do the following:
+
+1. Verify main.tsx:
+   - ClerkProvider exists only once.
+   - ClerkProvider uses:
+     import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+   - If the key is missing, throw a clear error.
+   - Do not use process.env.
+   - Do not hardcode the Clerk key.
+   - Do not include unnecessary web redirect/origin workarounds unless needed.
+   - Service worker should not register on native Capacitor.
+   - Capawesome/Capgo updater should only run on native Capacitor.
+
+2. Verify App.tsx:
+   - Make sure there is no second ClerkProvider.
+   - Remove any old MissingKeyScreen or duplicate Clerk fallback logic.
+   - Keep routing/providers clean inside App.
+
+3. Verify .gitignore:
+   - Make sure .env files are ignored.
+   - Make sure artifacts/felty/.env will not be committed.
+   - If needed, add:
+     .env
+     .env.local
+     .env.*.local
+     artifacts/felty/.env
+
+4. Create or update an example env file:
+   - Add artifacts/felty/.env.example if missing.
+   - It should contain only:
+     VITE_CLERK_PUBLISHABLE_KEY=pk_test_replace_me
+
+5. Verify Vite config:
+   - Use the correct dev server port.
+   - Do not create fallback ports that could confuse Capacitor.
+   - Keep strictPort true if already set intentionally.
+
+6. Clean caches/build output:
+   - Remove Vite cache and stale build output:
+     rm -rf artifacts/felty/node_modules/.vite artifacts/felty/dist
+
+7. Run verification commands from artifacts/felty:
+   - npm install if needed
+   - npm run build
+   - npm run dev -- --host 0.0.0.0
+
+8. Confirm the app loads with Clerk email auth and no Google auth button.
+   - If it still freezes, inspect browser console and fix the actual error.
+   - Do not bypass Clerk auth with mock auth.
+   - Do not remove Clerk.
+
+9. Before committing:
+   - Run:
+     git status
+   - Confirm .env is not listed.
+   - Confirm only source/config/example files are staged.
+   - Do not commit node_modules, dist, .env, or private keys.
+
+Goal:
+Make the Clerk key initialization stable for web preview and Capacitor native, keep Google auth disabled, and leave the repo safe to push to GitHub.
