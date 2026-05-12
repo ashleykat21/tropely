@@ -29,6 +29,10 @@ VAPID_SUBJECT = "mailto:support@usenevora.com"
 VITE_VAPID_PUBLIC_KEY = "BEC2JFL6s0zEj3_MN8Itd4Ddg5_hbhNXsFkttrrKPki1nLy6sf0nt2Lq1RRCa-noUN9lR3S_z5yEBRoGy8XrdyE"
 
 [[ports]]
+localPort = 3000
+externalPort = 8080
+
+[[ports]]
 localPort = 5173
 externalPort = 6800
 

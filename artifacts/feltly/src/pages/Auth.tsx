@@ -9,27 +9,25 @@ type Mode = "signin" | "signup" | "forgot" | "reset" | "verify";
 
 const CLERK_INIT_TIMEOUT_MS = 30_000;
 
-// Wraps any Clerk API promise with a hard timeout so the UI never freezes
 function withTimeout<T>(promise: Promise<T>, ms = 12_000): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Request timed out after ${ms / 1000}s. Check your internet connection and try again.`)), ms)
+      setTimeout(
+        () => reject(new Error(`Request timed out after ${ms / 1000}s. Check your connection and try again.`)),
+        ms
+      )
     ),
   ]);
 }
 
-// Resolve session ID from whatever shape Clerk v6 returns
 function extractSessionId(result: unknown): string | null {
   if (!result || typeof result !== "object") return null;
   const r = result as Record<string, unknown>;
-  // Direct property
   if (typeof r.createdSessionId === "string" && r.createdSessionId) return r.createdSessionId;
-  // Nested under signIn / signUp
   const nested = (r.signIn ?? r.signUp) as Record<string, unknown> | undefined;
   if (nested && typeof nested.createdSessionId === "string" && nested.createdSessionId)
     return nested.createdSessionId;
-  // session object
   const sess = r.session as Record<string, unknown> | undefined;
   if (sess && typeof sess.id === "string" && sess.id) return sess.id;
   return null;
@@ -43,8 +41,6 @@ function extractStatus(result: unknown): string {
   if (nested && typeof nested.status === "string") return nested.status;
   return "unknown";
 }
-
-const basePath = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
 export default function Auth() {
   const { signIn } = useSignIn() as any;
@@ -85,24 +81,6 @@ export default function Auth() {
     setMode(next);
   };
 
-  // ── Google SSO ─────────────────────────────────────────────────────────────
-  const handleGoogleSSO = async () => {
-    if (!signIn || busy) return;
-    setError("");
-    setBusy(true);
-    try {
-      await withTimeout(signIn.create({
-        strategy: "oauth_google",
-        redirectUrl: `${window.location.origin}${basePath}/sign-in/sso-callback`,
-        actionCompleteRedirectUrl: `${window.location.origin}/`,
-      }));
-      // Clerk navigates the page to Google — control does not return here
-    } catch (err) {
-      setError(clerkErr(err));
-      setBusy(false);
-    }
-  };
-
   // ── Sign in / Sign up ──────────────────────────────────────────────────────
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,17 +97,19 @@ export default function Auth() {
           ...(name.trim() ? { firstName: name.trim() } : {}),
         }));
 
-        // Also read from the proxy getter in case result shape differs
         const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
         const status = extractStatus(result);
 
+        // If Clerk already completed the sign-up (e.g. no verification needed)
         if ((status === "complete" || status === "active") && sessionId) {
           await withTimeout(setActive({ session: sessionId }));
           return;
         }
 
-        // Email verification required
-        await withTimeout(signUp.verifications.sendEmailCode());
+        // Trigger the email verification code — Clerk v6 correct API
+        await withTimeout(
+          signUp.prepareEmailAddressVerification({ strategy: "email_code" })
+        );
         setMode("verify");
         setVerifyCode("");
         setBusy(false);
@@ -139,11 +119,10 @@ export default function Auth() {
 
         const result = await withTimeout(signIn.create({ identifier: email, password: pwd }));
 
-        // Read session from result AND proxy getter
         const sessionId = extractSessionId(result) ?? signIn.createdSessionId ?? null;
         const status = extractStatus(result);
 
-        console.debug("[Auth] signIn.create result:", { status, sessionId, result });
+        console.debug("[Auth] signIn.create result:", { status, sessionId });
 
         if (sessionId) {
           await withTimeout(setActive({ session: sessionId }));
@@ -151,15 +130,14 @@ export default function Auth() {
         }
 
         if (status === "complete") {
-          // session ID might be on the client directly
           const clientSessionId = (signIn as any)?.session?.id;
           if (clientSessionId) { await withTimeout(setActive({ session: clientSessionId })); return; }
         }
 
         if (status === "needs_first_factor" || status === "needs_identifier") {
-          setError("Password sign-in is not enabled for this account. Try Google sign-in or reset your password.");
+          setError("Password sign-in is not enabled for this account. Try resetting your password.");
         } else {
-          setError(`Incorrect email or password. Please try again.`);
+          setError("Incorrect email or password. Please try again.");
         }
         setBusy(false);
       }
@@ -187,7 +165,7 @@ export default function Auth() {
     }
   };
 
-  // ── Forgot password — step 2: verify code + submit new password ────────────
+  // ── Forgot password — step 2: verify code + new password ──────────────────
   const confirmReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clerkReady || busy) return;
@@ -218,24 +196,44 @@ export default function Auth() {
     setError("");
     setBusy(true);
     try {
-      const result = await withTimeout(signUp.verifications.verifyEmailCode({ code: verifyCode }));
+      // Clerk v6 correct API for email code verification
+      const result = await withTimeout(
+        signUp.attemptEmailAddressVerification({ code: verifyCode })
+      );
+      console.debug("[Auth] attemptEmailAddressVerification result:", result);
+
       const sessionId = extractSessionId(result) ?? signUp.createdSessionId ?? null;
-      console.debug("[Auth] verifyEmailCode result:", { result, sessionId });
+      const status = extractStatus(result);
+
       if (sessionId) {
         await withTimeout(setActive({ session: sessionId }));
         return;
       }
-      // Fallback: check Clerk client directly
-      const status = extractStatus(result);
+
       if (status === "complete") {
         setError("Verification complete but no session found. Please try signing in.");
         switchMode("signin");
       } else {
-        setError("Verification incomplete. Please check the code and try again.");
+        setError("Invalid or expired code. Please check and try again.");
       }
       setBusy(false);
     } catch (err) {
       setError(clerkErr(err));
+      setBusy(false);
+    }
+  };
+
+  // ── Resend verification code ───────────────────────────────────────────────
+  const resendCode = async () => {
+    if (!signUp || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      // Clerk v6 correct API
+      await withTimeout(signUp.prepareEmailAddressVerification({ strategy: "email_code" }));
+    } catch (err) {
+      setError(clerkErr(err));
+    } finally {
       setBusy(false);
     }
   };
@@ -249,7 +247,7 @@ export default function Auth() {
     return mode === "signin" ? "Sign in" : "Create account";
   };
 
-  // ── Clerk failed to initialise ────────────────────────────────────────────
+  // ── Clerk failed to initialise ─────────────────────────────────────────────
   if (clerkFailed && !clerkReady) {
     const keySnippet = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
       ? `${String(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY).slice(0, 14)}…`
@@ -279,7 +277,7 @@ export default function Auth() {
     );
   }
 
-  // ── render ─────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <main className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
       <div className="w-full max-w-md space-y-8">
@@ -304,7 +302,7 @@ export default function Auth() {
             {mode === "signup" && "Track reading by emotion, not stars."}
             {mode === "forgot" && "We'll email you a one-time reset code."}
             {mode === "reset" && "Check your inbox for the 6-digit code, then set a new password."}
-            {mode === "verify" && `We sent a 6-digit code to ${email}.`}
+            {mode === "verify" && `We sent a verification code to ${email}.`}
           </p>
         </div>
 
@@ -315,54 +313,57 @@ export default function Auth() {
           </div>
         )}
 
-        {/* Google SSO — available on sign-in and sign-up screens */}
-        {(mode === "signin" || mode === "signup") && (
-          <button
-            type="button"
-            onClick={handleGoogleSSO}
-            disabled={disabled}
-            className="w-full flex items-center justify-center gap-3 rounded-full border border-border bg-background py-2.5 px-4 text-sm font-medium shadow-sm hover:bg-muted transition-colors disabled:opacity-50"
-          >
-            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            Continue with Google
-          </button>
-        )}
-
-        {(mode === "signin" || mode === "signup") && (
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="flex-1 h-px bg-border" />
-            <span>or</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-        )}
-
         {(mode === "signin" || mode === "signup") && (
           <form onSubmit={submit} noValidate className="space-y-3">
             {mode === "signup" && (
               <div className="space-y-1.5">
                 <Label htmlFor="auth-name">Display name</Label>
-                <Input id="auth-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" disabled={disabled} />
+                <Input
+                  id="auth-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                  disabled={disabled}
+                />
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="auth-email">Email</Label>
-              <Input id="auth-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={disabled} />
+              <Input
+                id="auth-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                disabled={disabled}
+              />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="auth-pwd">Password</Label>
                 {mode === "signin" && (
-                  <button type="button" onClick={() => switchMode("forgot")} disabled={disabled} className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50">
+                  <button
+                    type="button"
+                    onClick={() => switchMode("forgot")}
+                    disabled={disabled}
+                    className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
+                  >
                     Forgot password?
                   </button>
                 )}
               </div>
-              <Input id="auth-pwd" type="password" required minLength={8} value={pwd} onChange={(e) => setPwd(e.target.value)} autoComplete={mode === "signup" ? "new-password" : "current-password"} disabled={disabled} />
+              <Input
+                id="auth-pwd"
+                type="password"
+                required
+                minLength={8}
+                value={pwd}
+                onChange={(e) => setPwd(e.target.value)}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                disabled={disabled}
+              />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {submitLabel()}
@@ -374,7 +375,15 @@ export default function Auth() {
           <form onSubmit={sendReset} noValidate className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="reset-email">Email</Label>
-              <Input id="reset-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={disabled} />
+              <Input
+                id="reset-email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                disabled={disabled}
+              />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Sending…" : "Send reset code"}
@@ -386,11 +395,28 @@ export default function Auth() {
           <form onSubmit={confirmReset} noValidate className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="reset-code">Reset code</Label>
-              <Input id="reset-code" required value={resetCode} onChange={(e) => setResetCode(e.target.value)} placeholder="6-digit code" autoComplete="one-time-code" disabled={disabled} />
+              <Input
+                id="reset-code"
+                required
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                placeholder="6-digit code"
+                autoComplete="one-time-code"
+                disabled={disabled}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="reset-newpwd">New password</Label>
-              <Input id="reset-newpwd" type="password" required minLength={8} value={newPwd} onChange={(e) => setNewPwd(e.target.value)} autoComplete="new-password" disabled={disabled} />
+              <Input
+                id="reset-newpwd"
+                type="password"
+                required
+                minLength={8}
+                value={newPwd}
+                onChange={(e) => setNewPwd(e.target.value)}
+                autoComplete="new-password"
+                disabled={disabled}
+              />
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Saving…" : "Set new password"}
@@ -402,10 +428,19 @@ export default function Auth() {
           <form onSubmit={handleVerify} noValidate className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="verify-code">Verification code</Label>
-              <Input id="verify-code" required value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="6-digit code" autoComplete="one-time-code" inputMode="numeric" disabled={disabled} />
+              <Input
+                id="verify-code"
+                required
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value)}
+                placeholder="6-digit code"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                disabled={disabled}
+              />
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 leading-relaxed">
-              Check your spam / junk folder — dev-mode emails sometimes land there. Alternatively, go back and sign up with Google to skip email verification.
+            <div className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground leading-relaxed">
+              Check your spam or junk folder if you don't see it within a minute.
             </div>
             <Button type="submit" className="w-full rounded-full h-11" disabled={disabled}>
               {!clerkReady ? "Loading…" : busy ? "Verifying…" : "Verify email"}
@@ -414,18 +449,7 @@ export default function Auth() {
               type="button"
               disabled={disabled}
               className="w-full text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground disabled:opacity-50"
-              onClick={async () => {
-                if (!signUp || busy) return;
-                setBusy(true);
-                setError("");
-                try {
-                  await withTimeout(signUp.verifications.sendEmailCode());
-                } catch (err) {
-                  setError(clerkErr(err));
-                } finally {
-                  setBusy(false);
-                }
-              }}
+              onClick={resendCode}
             >
               Resend code
             </button>
@@ -435,20 +459,35 @@ export default function Auth() {
         <p className="text-center text-sm text-muted-foreground">
           {mode === "signin" && (
             <>New here?{" "}
-              <button type="button" onClick={() => switchMode("signup")} disabled={disabled} className="underline underline-offset-4 text-foreground disabled:opacity-50">
+              <button
+                type="button"
+                onClick={() => switchMode("signup")}
+                disabled={disabled}
+                className="underline underline-offset-4 text-foreground disabled:opacity-50"
+              >
                 Create an account
               </button>
             </>
           )}
           {mode === "signup" && (
             <>Already have an account?{" "}
-              <button type="button" onClick={() => switchMode("signin")} disabled={disabled} className="underline underline-offset-4 text-foreground disabled:opacity-50">
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                disabled={disabled}
+                className="underline underline-offset-4 text-foreground disabled:opacity-50"
+              >
                 Sign in
               </button>
             </>
           )}
           {(mode === "forgot" || mode === "reset" || mode === "verify") && (
-            <button type="button" onClick={() => switchMode("signin")} disabled={disabled} className="underline underline-offset-4 text-foreground disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => switchMode("signin")}
+              disabled={disabled}
+              className="underline underline-offset-4 text-foreground disabled:opacity-50"
+            >
               Back to sign in
             </button>
           )}
