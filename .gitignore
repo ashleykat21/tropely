@@ -53,6 +53,8 @@ Thumbs.db
 .env.local
 .env.production
 .env.*.local
+artifacts/feltly/.env
+artifacts/feltly/.env.local
 
 # Vite cache
 artifacts/feltly/.vite

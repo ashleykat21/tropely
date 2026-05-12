@@ -1,0 +1,120 @@
+I want this fixed in one pass before I make another Capawesome build.
+
+Current problem:
+- Clerk key works.
+- App can reach Clerk.
+- Email code sending worked once, but custom auth flow keeps breaking send/verify/resend.
+- I do not want to keep making Capawesome builds to test broken custom auth.
+- Google OAuth is disabled and must stay disabled.
+- The app is Vite React with ClerkProvider using VITE_CLERK_PUBLISHABLE_KEY.
+
+Goal:
+Remove the custom Clerk email-code auth flow entirely and use Clerk’s official built-in SignIn and SignUp components so Clerk handles:
+- sign-up
+- email verification code send
+- resend code
+- verify code
+- session activation
+
+Do not keep any custom signUp.create / prepareEmailAddressVerification / attemptEmailAddressVerification logic unless it is completely unused.
+
+Tasks:
+
+1. Search the entire project for all auth/sign-up/sign-in code:
+   - useSignUp
+   - useSignIn
+   - signUp.create
+   - prepareEmailAddressVerification
+   - attemptEmailAddressVerification
+   - sendEmailCode
+   - verifyEmailCode
+   - signUp.verifications
+   - SignUp
+   - SignIn
+   - Auth
+   - AuthPage
+   - SignUpForm
+   - SignInForm
+   - VerifyEmail
+   - Verification
+
+2. Identify the actual auth route/page the app renders when the user is unauthenticated.
+
+3. Replace the active unauthenticated auth UI with Clerk’s built-in components only.
+
+Use this structure or equivalent:
+
+import { SignIn, SignUp, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
+
+Routes should include:
+- /sign-in renders:
+  <SignIn
+    routing="path"
+    path="/sign-in"
+    signUpUrl="/sign-up"
+    afterSignInUrl="/"
+  />
+
+- /sign-up renders:
+  <SignUp
+    routing="path"
+    path="/sign-up"
+    signInUrl="/sign-in"
+    afterSignUpUrl="/"
+  />
+
+- unauthenticated fallback should navigate to /sign-in
+
+4. Remove the old custom verification screen text that says:
+   "Alternatively, go back and sign up with Google to skip email verification."
+
+5. Make sure there is no Google button or Google fallback text anywhere.
+
+6. Keep ClerkProvider only once in main.tsx.
+   It must use:
+   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+7. Add a temporary startup console log that does NOT print the key:
+   console.log("Clerk key present:", Boolean(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY));
+
+8. Add a visible temporary debug label on the auth page/footer:
+   "Auth build: Clerk built-in components"
+   This lets me confirm the Capawesome build is running the new auth screen.
+
+9. Do not commit:
+   - .env
+   - .env.local
+   - node_modules
+   - dist
+   - private keys
+
+10. Confirm .gitignore protects:
+   .env
+   .env.local
+   .env.*.local
+   artifacts/felty/.env
+
+11. Run:
+   npm run build
+
+12. Before committing, run:
+   git status
+
+13. Commit and push:
+   git add .
+   git commit -m "Use Clerk built-in email auth flow"
+   git push
+
+14. Report:
+   - latest commit hash
+   - whether npm run build passed
+   - which file renders SignIn
+   - which file renders SignUp
+   - confirm no custom signUp.create flow is still active
+   - confirm .env is not tracked
+
+Important:
+Do not re-enable Google OAuth.
+Do not add any custom email-code flow back.
+Do not use old broken methods.
+I want the next Capawesome build to show Clerk’s built-in auth UI and let Clerk handle all email verification/resend behavior.

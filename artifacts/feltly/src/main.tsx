@@ -7,6 +7,8 @@ import { Capacitor } from "@capacitor/core";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
+console.log("Clerk key present:", Boolean(PUBLISHABLE_KEY));
+
 if (!PUBLISHABLE_KEY) {
   throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in artifacts/feltly/.env");
 }

@@ -11,7 +11,6 @@ import Insights from "./pages/Insights.tsx";
 import Social from "./pages/Social.tsx";
 import Profile from "./pages/Profile.tsx";
 import Companion from "./pages/Companion.tsx";
-import Auth from "./pages/Auth.tsx";
 import Wrap from "./pages/Wrap.tsx";
 import Twins from "./pages/Twins.tsx";
 import BuddyReadsPage from "./pages/BuddyReads.tsx";
@@ -53,7 +52,10 @@ function SeriesFinishedPromptRunner() {
 function SignInPage() {
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
+      <div className="flex flex-col items-center gap-6 w-full">
+        <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
+        <p className="text-xs text-muted-foreground opacity-50">Auth build: Clerk built-in components</p>
+      </div>
     </div>
   );
 }
@@ -61,7 +63,10 @@ function SignInPage() {
 function SignUpPage() {
   return (
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
+      <div className="flex flex-col items-center gap-6 w-full">
+        <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
+        <p className="text-xs text-muted-foreground opacity-50">Auth build: Clerk built-in components</p>
+      </div>
     </div>
   );
 }
@@ -93,7 +98,7 @@ function AppGate() {
       <Routes>
         <Route path="/sign-in/*" element={<SignInPage />} />
         <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="*"          element={<Auth />} />
+        <Route path="*"          element={<Navigate to="/sign-in" replace />} />
       </Routes>
     );
   }
