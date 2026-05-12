@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider, SignIn, SignUp } from "@clerk/react";
+import { SignIn, SignUp } from "@clerk/react";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Discover from "./pages/Discover.tsx";
@@ -24,12 +24,12 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { useLibrarySync } from "@/lib/useLibrarySync";
 import { useCompanionFinishedToast } from "@/lib/useCompanionFinishedToast";
 import { useSeriesFinishedPrompt } from "@/lib/useSeriesFinishedPrompt";
-import { BookHeart, AlertTriangle } from "lucide-react";
+import { BookHeart } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+// BASE_URL is "/" on native Capacitor builds; strip trailing slash for BrowserRouter basename.
+const basePath = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
 
 // ── Side-effect runners ───────────────────────────────────────────────────────
 
@@ -48,8 +48,7 @@ function SeriesFinishedPromptRunner() {
   return null;
 }
 
-// ── Clerk-hosted fallback pages ───────────────────────────────────────────────
-// Paths here are router-relative (BrowserRouter basename handles the prefix).
+// ── Clerk-hosted sign-in / sign-up pages ──────────────────────────────────────
 
 function SignInPage() {
   return (
@@ -67,7 +66,7 @@ function SignUpPage() {
   );
 }
 
-// ── Splash shown while Clerk initialises ──────────────────────────────────────
+// ── Splash ────────────────────────────────────────────────────────────────────
 
 function Splash() {
   return (
@@ -77,25 +76,6 @@ function Splash() {
           <BookHeart className="h-5 w-5" />
         </div>
         <p className="font-display text-2xl">Tropely</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Shown when VITE_CLERK_PUBLISHABLE_KEY is not configured ───────────────────
-
-function MissingKeyScreen() {
-  return (
-    <div className="min-h-screen grid place-items-center mood-surface px-6">
-      <div className="flex flex-col items-center gap-4 text-center max-w-sm">
-        <div className="grid h-12 w-12 place-items-center rounded-xl bg-foreground text-background">
-          <AlertTriangle className="h-5 w-5" />
-        </div>
-        <p className="font-display text-2xl">Tropely</p>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          <strong>VITE_CLERK_PUBLISHABLE_KEY</strong> is not set.
-          Add it to your environment variables and restart.
-        </p>
       </div>
     </div>
   );
@@ -124,63 +104,44 @@ function AppGate() {
       <CompanionFinishedToastRunner />
       <SeriesFinishedPromptRunner />
       <Routes>
-        <Route path="/"           element={<Index />} />
-        <Route path="/discover"   element={<Discover />} />
-        <Route path="/journal"    element={<Journal />} />
-        <Route path="/insights"   element={<Insights />} />
-        <Route path="/social"     element={<Social />} />
-        <Route path="/profile"    element={<Profile />} />
-        <Route path="/companion"  element={<Companion />} />
-        <Route path="/wrap"       element={<Wrap />} />
-        <Route path="/twins"      element={<Twins />} />
+        <Route path="/"            element={<Index />} />
+        <Route path="/discover"    element={<Discover />} />
+        <Route path="/journal"     element={<Journal />} />
+        <Route path="/insights"    element={<Insights />} />
+        <Route path="/social"      element={<Social />} />
+        <Route path="/profile"     element={<Profile />} />
+        <Route path="/companion"   element={<Companion />} />
+        <Route path="/wrap"        element={<Wrap />} />
+        <Route path="/twins"       element={<Twins />} />
         <Route path="/buddy-reads" element={<BuddyReadsPage />} />
-        <Route path="/library"    element={<Library />} />
-        <Route path="/book/:id"   element={<BookDetail />} />
-        <Route path="/premium"    element={<Premium />} />
-        <Route path="/tropes"     element={<Tropes />} />
+        <Route path="/library"     element={<Library />} />
+        <Route path="/book/:id"    element={<BookDetail />} />
+        <Route path="/premium"     element={<Premium />} />
+        <Route path="/tropes"      element={<Tropes />} />
         <Route path="/u/:username" element={<PublicProfile />} />
-        <Route path="/sign-in/*"  element={<SignInPage />} />
-        <Route path="/sign-up/*"  element={<SignUpPage />} />
-        <Route path="*"           element={<NotFound />} />
+        <Route path="/sign-in/*"   element={<SignInPage />} />
+        <Route path="/sign-up/*"   element={<SignUpPage />} />
+        <Route path="*"            element={<NotFound />} />
       </Routes>
     </>
   );
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
-// BrowserRouter sits OUTSIDE ClerkProvider so Clerk can integrate with the
-// React Router history object for redirect handling (required for Capacitor).
+// ClerkProvider lives in main.tsx (wraps this component), so this file only
+// owns routing and app-level providers.
 
-const App = () => {
-  if (!clerkPubKey) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Sonner />
-          <MissingKeyScreen />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
-  return (
-    <BrowserRouter basename={basePath}>
-      <ClerkProvider
-        publishableKey={clerkPubKey}
-        afterSignInUrl="/"
-        afterSignUpUrl="/"
-      >
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Sonner />
-            <AuthProvider>
-              <AppGate />
-            </AuthProvider>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ClerkProvider>
-    </BrowserRouter>
-  );
-};
+const App = () => (
+  <BrowserRouter basename={basePath}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Sonner />
+        <AuthProvider>
+          <AppGate />
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </BrowserRouter>
+);
 
 export default App;

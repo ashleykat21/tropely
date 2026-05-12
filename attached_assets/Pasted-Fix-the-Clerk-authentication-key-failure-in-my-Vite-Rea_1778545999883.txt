@@ -1,0 +1,88 @@
+Fix the Clerk authentication key failure in my Vite React + Capacitor app.
+
+Current issue:
+The app shows “Authentication failed to load” and Clerk says it did not initialize. The app is inside:
+
+artifacts/felty
+
+Please do these changes in one go:
+
+1. Confirm the app is using the Clerk publishable key from the Vite environment variable:
+VITE_CLERK_PUBLISHABLE_KEY
+
+2. Open:
+artifacts/felty/src/main.tsx
+
+Replace the Clerk setup with a safe version that:
+- imports ClerkProvider from @clerk/clerk-react
+- reads the key with import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+- throws a clear error if the key is missing
+- wraps <App /> in <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+- does not include Google OAuth redirect settings for now
+- keeps the existing Capacitor updater code
+- keeps the service worker code if it already exists
+
+Use this structure:
+
+import { createRoot } from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
+import App from "./App.tsx";
+import "./index.css";
+import { initOfflineQueue } from "./lib/offlineQueue";
+import { Capacitor } from "@capacitor/core";
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!PUBLISHABLE_KEY) {
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in artifacts/felty/.env");
+}
+
+initOfflineQueue();
+
+if (Capacitor.isNativePlatform()) {
+  import("@capgo/capacitor-updater").then(({ CapacitorUpdater }) => {
+    CapacitorUpdater.notifyAppReady();
+  });
+}
+
+createRoot(document.getElementById("root")!).render(
+  <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+    <App />
+  </ClerkProvider>
+);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
+3. Create or update this file:
+artifacts/felty/.env
+
+It must contain exactly this variable name:
+VITE_CLERK_PUBLISHABLE_KEY=
+
+Do not use:
+CLERK_PUBLISHABLE_KEY
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+VITE_CLERK_KEY
+
+4. Do not put quotes around the key and do not add spaces around the equals sign.
+
+Correct format:
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_REPLACE_WITH_MY_REAL_KEY
+
+5. Search the project for old Clerk env variable names and replace frontend usage with:
+import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+
+6. Temporarily disable or remove Google OAuth buttons/social login behavior if it is causing freezing. Keep email-based Clerk auth working only.
+
+7. After changes, run from the correct folder:
+cd /workspaces/tropely-app/artifacts/felty
+npm run dev -- --host 0.0.0.0
+
+8. Confirm whether the app loads without the Clerk initialization error.
+
+Important:
+Do not expose or hardcode the secret Clerk key. Only use the publishable key that starts with pk_test_ or pk_live_.
