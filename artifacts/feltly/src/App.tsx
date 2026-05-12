@@ -49,13 +49,20 @@ function SeriesFinishedPromptRunner() {
 
 // ── Clerk-hosted sign-in / sign-up pages ──────────────────────────────────────
 
+function DebugBanner() {
+  return (
+    <div style={{ background: "#ff0", color: "#000", fontWeight: "bold", fontSize: 14, padding: "8px 16px", textAlign: "center", width: "100%", letterSpacing: 0.5 }}>
+      AUTH BUILD CONFIRMATION: NO EMAIL CODE TEST
+    </div>
+  );
+}
+
 function SignInPage() {
   return (
-    <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <div className="flex flex-col items-center gap-6 w-full">
+    <div className="min-h-screen flex flex-col items-center mood-surface">
+      <DebugBanner />
+      <div className="flex flex-col items-center gap-6 w-full px-6 py-12">
         <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
-        <p className="text-xs text-muted-foreground opacity-50">Auth build: NO EMAIL CODE TEST</p>
-        <p className="text-xs text-muted-foreground opacity-50">Email/password only. No code verification.</p>
       </div>
     </div>
   );
@@ -63,11 +70,10 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
-      <div className="flex flex-col items-center gap-6 w-full">
+    <div className="min-h-screen flex flex-col items-center mood-surface">
+      <DebugBanner />
+      <div className="flex flex-col items-center gap-6 w-full px-6 py-12">
         <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
-        <p className="text-xs text-muted-foreground opacity-50">Auth build: NO EMAIL CODE TEST</p>
-        <p className="text-xs text-muted-foreground opacity-50">Email/password only. No code verification.</p>
       </div>
     </div>
   );
@@ -110,6 +116,9 @@ function AppGate() {
       <LibrarySyncRunner />
       <CompanionFinishedToastRunner />
       <SeriesFinishedPromptRunner />
+      <div style={{ background: "#ff0", color: "#000", fontWeight: "bold", fontSize: 13, padding: "6px 16px", textAlign: "center", width: "100%" }}>
+        AUTH BUILD CONFIRMATION: NO EMAIL CODE TEST
+      </div>
       <Routes>
         <Route path="/"            element={<Index />} />
         <Route path="/discover"    element={<Discover />} />
