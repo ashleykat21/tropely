@@ -15,11 +15,12 @@ if (!PUBLISHABLE_KEY) {
 
 initOfflineQueue();
 
-if (Capacitor.isNativePlatform()) {
-  import("@capgo/capacitor-updater").then(({ CapacitorUpdater }) => {
-    CapacitorUpdater.notifyAppReady();
-  });
-}
+// TEMPORARILY DISABLED — prevents old Capgo bundles from replacing this build.
+// if (Capacitor.isNativePlatform()) {
+//   import("@capgo/capacitor-updater").then(({ CapacitorUpdater }) => {
+//     CapacitorUpdater.notifyAppReady();
+//   });
+// }
 
 createRoot(document.getElementById("root")!).render(
   <ClerkProvider
@@ -31,9 +32,9 @@ createRoot(document.getElementById("root")!).render(
   </ClerkProvider>
 );
 
-// Service workers are not supported in native Capacitor apps.
-if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
-}
+// TEMPORARILY DISABLED — service worker registration disabled for auth debugging.
+// if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator) {
+//   window.addEventListener("load", () => {
+//     navigator.serviceWorker.register("/sw.js").catch(() => {});
+//   });
+// }

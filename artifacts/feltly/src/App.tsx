@@ -54,7 +54,8 @@ function SignInPage() {
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
       <div className="flex flex-col items-center gap-6 w-full">
         <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
-        <p className="text-xs text-muted-foreground opacity-50">Auth build: Clerk built-in components</p>
+        <p className="text-xs text-muted-foreground opacity-50">Auth build: NO EMAIL CODE TEST</p>
+        <p className="text-xs text-muted-foreground opacity-50">Email/password only. No code verification.</p>
       </div>
     </div>
   );
@@ -65,7 +66,8 @@ function SignUpPage() {
     <div className="min-h-screen grid place-items-center px-6 py-12 mood-surface">
       <div className="flex flex-col items-center gap-6 w-full">
         <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
-        <p className="text-xs text-muted-foreground opacity-50">Auth build: Clerk built-in components</p>
+        <p className="text-xs text-muted-foreground opacity-50">Auth build: NO EMAIL CODE TEST</p>
+        <p className="text-xs text-muted-foreground opacity-50">Email/password only. No code verification.</p>
       </div>
     </div>
   );
