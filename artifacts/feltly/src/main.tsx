@@ -1,40 +1,29 @@
-import { createRoot } from "react-dom/client";
-import { ClerkProvider } from "@clerk/react";
-import App from "./App.tsx";
+// src/main.tsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
+import App from "./App";
 import "./index.css";
-import { initOfflineQueue } from "./lib/offlineQueue";
-import { Capacitor } from "@capacitor/core";
+
+// ── Disable service worker completely ──────────────────────────────────────
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    registrations.forEach((reg) => reg.unregister());
+  });
+}
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-console.log("Clerk key present:", Boolean(PUBLISHABLE_KEY));
-
 if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in artifacts/feltly/.env");
+  throw new Error(
+    "Missing VITE_CLERK_PUBLISHABLE_KEY — add it to your .env file"
+  );
 }
 
-initOfflineQueue();
-
-// TEMPORARILY DISABLED — prevents old Capgo bundles from replacing this build.
-// if (Capacitor.isNativePlatform()) {
-//   import("@capgo/capacitor-updater").then(({ CapacitorUpdater }) => {
-//     CapacitorUpdater.notifyAppReady();
-//   });
-// }
-
-createRoot(document.getElementById("root")!).render(
-  <ClerkProvider
-    publishableKey={PUBLISHABLE_KEY}
-    afterSignInUrl="/"
-    afterSignUpUrl="/"
-  >
-    <App />
-  </ClerkProvider>
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+      <App />
+    </ClerkProvider>
+  </React.StrictMode>
 );
-
-// TEMPORARILY DISABLED — service worker registration disabled for auth debugging.
-// if (!Capacitor.isNativePlatform() && "serviceWorker" in navigator) {
-//   window.addEventListener("load", () => {
-//     navigator.serviceWorker.register("/sw.js").catch(() => {});
-//   });
-// }

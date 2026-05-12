@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SignIn, SignUp } from "@clerk/react";
+import { useState } from "react";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Discover from "./pages/Discover.tsx";
@@ -24,6 +25,9 @@ import { useLibrarySync } from "@/lib/useLibrarySync";
 import { useCompanionFinishedToast } from "@/lib/useCompanionFinishedToast";
 import { useSeriesFinishedPrompt } from "@/lib/useSeriesFinishedPrompt";
 import { BookHeart } from "lucide-react";
+
+// ── BUILD MARKER — must appear in dist grep ────────────────────────────────
+const BUILD_MARKER = "FINAL AUTH BUILD - PASSWORD ONLY - NO EMAIL CODE";
 
 const queryClient = new QueryClient();
 
@@ -47,33 +51,71 @@ function SeriesFinishedPromptRunner() {
   return null;
 }
 
-// ── Clerk-hosted sign-in / sign-up pages ──────────────────────────────────────
+// ── Debug banner — bright, visible in both auth and app screens ───────────────
 
 function DebugBanner() {
   return (
-    <div style={{ background: "#ff0", color: "#000", fontWeight: "bold", fontSize: 14, padding: "8px 16px", textAlign: "center", width: "100%", letterSpacing: 0.5 }}>
-      AUTH BUILD CONFIRMATION: NO EMAIL CODE TEST
+    <div style={{
+      background: "#ef4444",
+      color: "#fff",
+      fontWeight: 700,
+      fontSize: 13,
+      padding: "6px 16px",
+      textAlign: "center",
+      width: "100%",
+      letterSpacing: "0.03em",
+    }}>
+      {BUILD_MARKER}
     </div>
   );
 }
 
-function SignInPage() {
-  return (
-    <div className="min-h-screen flex flex-col items-center mood-surface">
-      <DebugBanner />
-      <div className="flex flex-col items-center gap-6 w-full px-6 py-12">
-        <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" />
-      </div>
-    </div>
-  );
-}
+// ── Unauthenticated auth screen ───────────────────────────────────────────────
+// Uses routing="hash" so Clerk internal navigation works in Capacitor WebView
+// without a real server (no path-based redirects needed).
 
-function SignUpPage() {
+function AuthScreen() {
+  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+
   return (
     <div className="min-h-screen flex flex-col items-center mood-surface">
       <DebugBanner />
       <div className="flex flex-col items-center gap-6 w-full px-6 py-12">
-        <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" />
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          <button
+            onClick={() => setMode("sign-in")}
+            style={{
+              padding: "8px 20px",
+              background: mode === "sign-in" ? "#6366f1" : "#1e293b",
+              color: mode === "sign-in" ? "#fff" : "#94a3b8",
+              border: "1px solid #334155",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => setMode("sign-up")}
+            style={{
+              padding: "8px 20px",
+              background: mode === "sign-up" ? "#6366f1" : "#1e293b",
+              color: mode === "sign-up" ? "#fff" : "#94a3b8",
+              border: "1px solid #334155",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 14,
+            }}
+          >
+            Sign Up
+          </button>
+        </div>
+        {mode === "sign-in" ? (
+          <SignIn routing="hash" afterSignInUrl="/" />
+        ) : (
+          <SignUp routing="hash" afterSignUpUrl="/" />
+        )}
       </div>
     </div>
   );
@@ -102,13 +144,7 @@ function AppGate() {
   if (loading) return <Splash />;
 
   if (!user) {
-    return (
-      <Routes>
-        <Route path="/sign-in/*" element={<SignInPage />} />
-        <Route path="/sign-up/*" element={<SignUpPage />} />
-        <Route path="*"          element={<Navigate to="/sign-in" replace />} />
-      </Routes>
-    );
+    return <AuthScreen />;
   }
 
   return (
@@ -116,9 +152,7 @@ function AppGate() {
       <LibrarySyncRunner />
       <CompanionFinishedToastRunner />
       <SeriesFinishedPromptRunner />
-      <div style={{ background: "#ff0", color: "#000", fontWeight: "bold", fontSize: 13, padding: "6px 16px", textAlign: "center", width: "100%" }}>
-        AUTH BUILD CONFIRMATION: NO EMAIL CODE TEST
-      </div>
+      <DebugBanner />
       <Routes>
         <Route path="/"            element={<Index />} />
         <Route path="/discover"    element={<Discover />} />
@@ -135,8 +169,6 @@ function AppGate() {
         <Route path="/premium"     element={<Premium />} />
         <Route path="/tropes"      element={<Tropes />} />
         <Route path="/u/:username" element={<PublicProfile />} />
-        <Route path="/sign-in/*"   element={<SignInPage />} />
-        <Route path="/sign-up/*"   element={<SignUpPage />} />
         <Route path="*"            element={<NotFound />} />
       </Routes>
     </>
@@ -144,8 +176,7 @@ function AppGate() {
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
-// ClerkProvider lives in main.tsx (wraps this component), so this file only
-// owns routing and app-level providers.
+// ClerkProvider lives in main.tsx (wraps this component).
 
 const App = () => (
   <BrowserRouter basename={basePath}>

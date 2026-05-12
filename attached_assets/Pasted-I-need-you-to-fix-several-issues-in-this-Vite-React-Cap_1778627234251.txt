@@ -1,0 +1,104 @@
+I need you to fix several issues in this Vite React + Capacitor project (Tropely). The main.tsx and App.tsx have already been updated. Please do the following:
+
+---
+
+**1. DELETE any custom email-code auth files**
+
+Search for and delete (or fully gut) any files containing these patterns:
+- `prepareEmailAddressVerification`
+- `attemptEmailAddressVerification`
+- `sendEmailCode`
+- `verifyEmailCode`
+- `useSignUp`
+- `signUp.create`
+- Custom "Check your inbox" or "Verify your email" screens
+- Custom resend-code UI
+
+Common locations: `src/components/`, `src/pages/`, `src/hooks/`
+After deleting, make sure no other file imports from those deleted files.
+
+---
+
+**2. DISABLE Capgo / Capawesome live updater**
+
+Search the entire `src/` directory for:
+- `@capgo/capacitor-updater`
+- `CapacitorUpdater`
+- `notifyAppReady`
+- `setChannel`
+- `CapacitorUpdater.download`
+- `CapacitorUpdater.reset`
+
+Remove all imports and calls to these. Do NOT leave `notifyAppReady()` anywhere — without it Capgo will rollback to an old bundle.
+
+---
+
+**3. CLEAN capacitor.config.ts**
+
+Open `capacitor.config.ts` and remove or comment out any `plugins.CapacitorUpdater` block and any `server.liveUpdateKey` or `server` entries pointing to a Capgo/Capawesome URL. The file should only have `appId`, `appName`, `webDir: "dist"`, and a plain `server: { androidScheme: "https" }`.
+
+---
+
+**4. DELETE the service worker**
+
+Delete these files if they exist:
+- `public/sw.js`
+- `public/sw.ts`
+- `src/sw.ts`
+- `src/sw.js`
+
+Also search `src/` for any remaining `navigator.serviceWorker.register` calls (other than the unregister block already in main.tsx) and remove them.
+
+---
+
+**5. BUMP the version in package.json**
+
+Increment the `version` field (e.g. to `"0.2.0"` or whatever is one higher than current). This forces Capacitor/iOS to treat it as a new build.
+
+If `ios/App/App/Info.plist` exists, also bump `CFBundleShortVersionString` and `CFBundleVersion` to match.
+
+---
+
+**6. CONFIRM .env is gitignored**
+
+Check `.gitignore` — make sure it contains `.env` and `.env.local`. Add them if missing. Do NOT commit any `.env` file.
+
+---
+
+**7. RUN a clean build and verify**
+
+Run these commands in order:
+```
+rm -rf dist node_modules/.vite
+npm run build
+grep -r "FINAL AUTH BUILD" dist
+```
+
+The grep MUST return a result. If it does not, something went wrong — do not proceed until the marker appears in dist.
+
+Also confirm:
+```
+ls dist/sw.js 2>/dev/null && echo "SW STILL IN DIST" || echo "No SW in dist"
+```
+
+---
+
+**8. IMPORTANT RULES — do not break these**
+
+- Do NOT use `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` anywhere. The only correct env var is `VITE_CLERK_PUBLISHABLE_KEY`.
+- Do NOT re-enable Google OAuth.
+- Do NOT commit `.env`, `node_modules`, or `dist`.
+- Do NOT add a second `ClerkProvider` — it already exists once in main.tsx.
+- Do NOT add any custom sign-up flow, email verification screen, or `useSignUp` hook.
+- The only Clerk auth UI should be the built-in `<SignIn routing="hash" />` and `<SignUp routing="hash" />` components already in App.tsx.
+
+---
+
+After all changes, run `git status` and confirm `.env` is not staged, then commit with:
+```
+git add .
+git commit -m "Force fresh password-only Clerk auth build - FINAL AUTH BUILD marker"
+git push origin main
+```
+
+Report back: the final commit hash, that `grep -r "FINAL AUTH BUILD" dist` succeeded, and that no `.env` was committed.
