@@ -6,7 +6,6 @@ import { StreakStrip } from "@/components/reader/StreakStrip";
 import { useLibrary } from "@/lib/store";
 import { useVisibleBooks } from "@/lib/useVisibleBooks";
 import { EmptyHome } from "@/components/reader/EmptyHome";
-import { FamilyProgressCard } from "@/components/family/FamilyProgressCard";
 import { HomeSmartCards } from "@/components/home/HomeSmartCards";
 import { DailyReadout } from "@/components/reader/DailyReadout";
 import { MoodTbrPicker } from "@/components/reader/MoodTbrPicker";
@@ -140,7 +139,6 @@ const Index = () => {
                 </div>
               </Link>
             </div>
-            <FamilyProgressCard />
             <StreakStrip />
             <MoodTbrPicker />
             <Shelves />

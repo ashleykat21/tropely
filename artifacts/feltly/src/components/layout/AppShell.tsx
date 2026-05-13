@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus } from "lucide-react";
+import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus, Library } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useLibrary } from "@/lib/store";
 import { applyMood } from "@/lib/moods";
@@ -26,14 +26,17 @@ import { toast } from "sonner";
 
 const NAV = [
   { to: "/", key: "nav.home", icon: Home },
+  { to: "/library", key: "nav.library", icon: Library },
   { to: "/discover", key: "nav.discover", icon: Compass },
   { to: "/journal", key: "nav.journal", icon: NotebookPen },
   { to: "/profile", key: "nav.you", icon: User },
 ];
 
-// Mobile bottom nav: 4 primary destinations + a "More" sheet for the rest.
+// Mobile bottom nav — 5 native tabs, no overflow menu.
 const MOBILE_PRIMARY = [
   { to: "/", key: "nav.home", icon: Home },
+  { to: "/library", key: "nav.library", icon: Library },
+  { to: "/journal", key: "nav.journal", icon: NotebookPen },
   { to: "/discover", key: "nav.discover", icon: Compass },
   { to: "/profile", key: "nav.you", icon: User },
 ];
@@ -181,32 +184,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [search]);
 
-  useEffect(() => {
-    if (!user || unseenChangelog === 0 || changelogNotifyFiredRef.current) return;
-    changelogNotifyFiredRef.current = true;
-
-    const latest = CHANGELOG[0];
-    if (!latest) return;
-
-    const delay = setTimeout(() => {
-      toast(`New in Tropely: ${latest.title}`, {
-        duration: 10000,
-        action: {
-          label: "See what's new",
-          onClick: () => setChangelogOpen(true),
-        },
-      });
-    }, 1500);
-
-    fetch("/api/changelog/notify", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ latestEntryId: latest.id, latestEntryTitle: latest.title }),
-    }).catch(() => {});
-
-    return () => clearTimeout(delay);
-  }, [user, unseenChangelog]);
+  // Changelog auto-toast disabled — users can tap "What's new" from the More sheet.
 
   return (
     <main className="min-h-screen pb-24 sm:pb-10">
@@ -263,15 +241,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-2">
             <OfflineIndicator />
-            {pendingCount > 0 && (
-              <span
-                title={`${pendingCount} action${pendingCount === 1 ? "" : "s"} queued — will sync when back online`}
-                className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[11px] font-medium text-amber-700"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                {pendingCount} queued
-              </span>
-            )}
             {streak.current > 0 && (
               <NavLink
                 to="/"
@@ -370,9 +339,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <span>Log</span>
       </button>
 
+      {/* ── Native mobile bottom tab bar ── */}
       <nav
         aria-label="Primary"
-        className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/85 backdrop-blur"
+        className="sm:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/90 backdrop-blur-md"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="grid grid-cols-5">
@@ -384,17 +354,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <NavLink
                   to={n.to}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px]",
+                    "flex flex-col items-center justify-center gap-1 py-3 text-[11px] font-medium w-full min-h-[60px] transition-colors",
                     active ? "text-foreground" : "text-muted-foreground"
                   )}
                 >
                   <span className="relative inline-flex">
                     <n.icon
-                      className={cn("h-5 w-5 transition", active && "scale-110")}
+                      className={cn("h-6 w-6 transition-transform", active && "scale-110")}
                       style={active ? { color: "var(--mood-strong)" } : undefined}
                     />
                     {n.to === "/" && streak.current > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 inline-flex items-center gap-0.5 rounded-full bg-foreground text-background text-[8px] font-bold leading-none px-1 py-0.5">
+                      <span className="absolute -top-1.5 -right-3 inline-flex items-center gap-0.5 rounded-full bg-foreground text-background text-[8px] font-bold leading-none px-1 py-0.5">
                         <Flame className="h-2 w-2" />
                         {streak.current}
                       </span>
@@ -416,80 +386,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               </li>
             );
           })}
-          <li>
-            <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t("nav.more")}
-                  className={cn(
-                    "w-full flex flex-col items-center justify-center gap-0.5 py-2.5 text-[10px]",
-                    MOBILE_MORE.some((m) => m.to === pathname)
-                      ? "text-foreground"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  <MoreHorizontal className="h-5 w-5" />
-                  {t("nav.more")}
-                </button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-2xl">
-                <SheetHeader>
-                  <SheetTitle>{t("nav.more")}</SheetTitle>
-                </SheetHeader>
-                <ul className="grid grid-cols-3 gap-2 pt-3">
-                  {MOBILE_MORE.map((n) => {
-                    const active = pathname === n.to;
-                    return (
-                      <li key={n.to}>
-                        <SheetClose asChild>
-                          <NavLink
-                            to={n.to}
-                            className={cn(
-                              "flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card",
-                              active && "bg-foreground text-background border-foreground"
-                            )}
-                          >
-                            <n.icon className="h-5 w-5" />
-                            {t(n.key)}
-                          </NavLink>
-                        </SheetClose>
-                      </li>
-                    );
-                  })}
-                  <li>
-                    <SheetClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => setChangelogOpen(true)}
-                        className="relative w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card"
-                      >
-                        <span className="relative inline-flex">
-                          <Newspaper className="h-5 w-5" />
-                          {unseenChangelog > 0 && (
-                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--mood-strong)] ring-2 ring-background" />
-                          )}
-                        </span>
-                        What's new
-                      </button>
-                    </SheetClose>
-                  </li>
-                  <li>
-                    <SheetClose asChild>
-                      <button
-                        type="button"
-                        onClick={() => setFeedbackOpen(true)}
-                        className="w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card"
-                      >
-                        <MessageSquarePlus className="h-5 w-5" />
-                        Feedback
-                      </button>
-                    </SheetClose>
-                  </li>
-                </ul>
-              </SheetContent>
-            </Sheet>
-          </li>
         </ul>
       </nav>
 
