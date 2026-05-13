@@ -32,21 +32,21 @@ const NAV = [
   { to: "/profile", key: "nav.you", icon: User },
 ];
 
-// Mobile bottom nav — 5 native tabs, no overflow menu.
+// Mobile bottom nav — 4 primary tabs + More sheet.
 const MOBILE_PRIMARY = [
   { to: "/", key: "nav.home", icon: Home },
-  { to: "/library", key: "nav.library", icon: Library },
-  { to: "/journal", key: "nav.journal", icon: NotebookPen },
   { to: "/discover", key: "nav.discover", icon: Compass },
+  { to: "/library", key: "nav.library", icon: Library },
   { to: "/profile", key: "nav.you", icon: User },
 ];
 
 const MOBILE_MORE: { to: string; key: string; icon: typeof Home }[] = [
+  { to: "/journal", key: "nav.journal", icon: NotebookPen },
+  { to: "/insights", key: "nav.insights", icon: BarChart3 },
+  { to: "/companion", key: "nav.ai", icon: Sparkles },
   { to: "/buddy-reads", key: "nav.buddy", icon: Users },
   { to: "/twins", key: "nav.twins", icon: Heart },
   { to: "/social", key: "nav.social", icon: Users },
-  { to: "/companion", key: "nav.ai", icon: Sparkles },
-  { to: "/insights", key: "nav.insights", icon: BarChart3 },
   { to: "/tropes", key: "nav.tropes", icon: Layers },
   { to: "/wrap", key: "nav.wrap", icon: Calendar },
   { to: "/premium", key: "nav.premium", icon: Crown },
@@ -386,6 +386,80 @@ export function AppShell({ children }: { children: ReactNode }) {
               </li>
             );
           })}
+          <li>
+            <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("nav.more")}
+                  className={cn(
+                    "w-full flex flex-col items-center justify-center gap-1 py-3 text-[11px] font-medium min-h-[60px] transition-colors",
+                    MOBILE_MORE.some((m) => m.to === pathname)
+                      ? "text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <MoreHorizontal className="h-6 w-6" />
+                  {t("nav.more")}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl">
+                <SheetHeader>
+                  <SheetTitle>{t("nav.more")}</SheetTitle>
+                </SheetHeader>
+                <ul className="grid grid-cols-3 gap-2 pt-3">
+                  {MOBILE_MORE.map((n) => {
+                    const active = pathname === n.to;
+                    return (
+                      <li key={n.to}>
+                        <SheetClose asChild>
+                          <NavLink
+                            to={n.to}
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card",
+                              active && "bg-foreground text-background border-foreground"
+                            )}
+                          >
+                            <n.icon className="h-5 w-5" />
+                            {t(n.key)}
+                          </NavLink>
+                        </SheetClose>
+                      </li>
+                    );
+                  })}
+                  <li>
+                    <SheetClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => setChangelogOpen(true)}
+                        className="relative w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card"
+                      >
+                        <span className="relative inline-flex">
+                          <Newspaper className="h-5 w-5" />
+                          {unseenChangelog > 0 && (
+                            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--mood-strong)] ring-2 ring-background" />
+                          )}
+                        </span>
+                        What's new
+                      </button>
+                    </SheetClose>
+                  </li>
+                  <li>
+                    <SheetClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => setFeedbackOpen(true)}
+                        className="w-full flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border/50 bg-card/60 p-3 text-xs transition hover:bg-card"
+                      >
+                        <MessageSquarePlus className="h-5 w-5" />
+                        Feedback
+                      </button>
+                    </SheetClose>
+                  </li>
+                </ul>
+              </SheetContent>
+            </Sheet>
+          </li>
         </ul>
       </nav>
 

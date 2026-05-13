@@ -838,30 +838,6 @@ export default function Profile() {
               className="w-24"
               placeholder="Your age"
             />
-            <div className="flex flex-wrap gap-1.5">
-              {[8, 10, 13, 16, 18, 25].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setAge(n)}
-                  className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs transition",
-                    age === n
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-white/60 border-border hover:bg-white"
-                  )}
-                >
-                  {n}
-                </button>
-              ))}
-              {age !== null && (
-                <button
-                  onClick={() => setAge(null)}
-                  className="rounded-full border px-2.5 py-1 text-xs transition bg-white/60 border-border hover:bg-white text-muted-foreground"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
           </div>
           {age !== null && age <= 13 && (
             <div className="rounded-xl border border-blue-200 bg-blue-50/70 px-4 py-3 space-y-1">
