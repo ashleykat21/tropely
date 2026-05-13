@@ -502,27 +502,10 @@ const Insights = () => {
         <ReadingSpeedCalculator />
         <ReadingPersonality />
 
-        <LockedFeature description="Unlock deeper analytics: Reading DNA, weekly mood splits, taste fingerprint, monthly mood reports, and advanced pattern deep-dives.">
-          <div className="rounded-2xl border border-border/40 bg-card/60 p-6 space-y-4">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Premium</p>
-              <h2 className="font-display text-2xl">Deeper analytics</h2>
-              <p className="text-sm text-muted-foreground">Five more insight layers, unlocked together.</p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {[
-                { label: "Reading DNA", desc: "Mood profile · session patterns · format split" },
-                { label: "Weekly mood split", desc: "8-week mood shift by read vs. listened" },
-                { label: "Taste fingerprint", desc: "Every genre and theme weighted across your library" },
-                { label: "Monthly reports", desc: "How your reading shifted month by month" },
-                { label: "Deep-dive analytics", desc: "Slumps, peak hours and mood-vs-genre patterns" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl border border-border/40 bg-background/40 p-3 space-y-1">
-                  <div className="text-xs font-medium">{item.label}</div>
-                  <div className="text-[11px] text-muted-foreground leading-snug">{item.desc}</div>
-                </div>
-              ))}
-            </div>
+        <LockedFeature description="Unlock deeper analytics: Reading DNA, weekly mood splits, slump detection, peak reading hours, and mood-vs-genre patterns.">
+          <div className="space-y-6">
+            <ReadingDNA />
+            <PremiumDeepInsights />
           </div>
         </LockedFeature>
       </div>

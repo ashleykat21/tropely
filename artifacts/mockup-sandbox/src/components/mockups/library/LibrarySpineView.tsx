@@ -470,12 +470,28 @@ function AddBookModal({
   genreNames: GenreNames;
 }) {
   const [query, setQuery] = useState("");
-  const results = query.length > 1
+
+  const customKeywords = Object.fromEntries(
+    Object.entries(genreNames).map(([gk, name]) => [
+      gk,
+      (name ?? "").toLowerCase().split(/\s+/).filter((w) => w.length > 2),
+    ])
+  );
+  const scoreBook = (b: Book) => {
+    const kws = customKeywords[b.genre] ?? [];
+    if (!kws.length) return 0;
+    const text = `${b.title} ${b.author}`.toLowerCase();
+    return kws.filter((kw) => text.includes(kw)).length;
+  };
+
+  const baseResults = query.length > 1
     ? SEARCH_POOL.filter((b) =>
         b.title.toLowerCase().includes(query.toLowerCase()) ||
         b.author.toLowerCase().includes(query.toLowerCase())
       )
     : SEARCH_POOL.slice(0, 6);
+
+  const results = [...baseResults].sort((a, b) => scoreBook(b) - scoreBook(a));
 
   return (
     <div style={{

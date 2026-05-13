@@ -10,6 +10,7 @@ import { FamilyProgressCard } from "@/components/family/FamilyProgressCard";
 import { HomeSmartCards } from "@/components/home/HomeSmartCards";
 import { DailyReadout } from "@/components/reader/DailyReadout";
 import { MoodTbrPicker } from "@/components/reader/MoodTbrPicker";
+import { MoodReadSchedule } from "@/components/home/MoodReadSchedule";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { NotebookPen, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ const Index = () => {
               <CurrentBookCard />
             </div>
             <HomeSmartCards />
+            <MoodReadSchedule />
             <DailyReadout />
             <div className="mx-auto grid w-full max-w-3xl gap-3">
               <Link

@@ -8,8 +8,9 @@ import { TROPE_CATEGORIES, tropeCategory } from "@/lib/tropes";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePremium } from "@/lib/usePremium";
-import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Sliders, Globe, Eye, EyeOff } from "lucide-react";
+import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Sliders, Globe, Eye, EyeOff, Image } from "lucide-react";
 import { ShareCardModal } from "./ShareCardModal";
+import { LibraryPortrait } from "./LibraryPortrait";
 import { TbrMoodIntentBadge, TbrIntentStrip } from "./TbrMoodIntent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ export function Shelves() {
   const setBookcaseMode = useLibrary((s) => s.setBookcaseMode);
   const bookcaseStyle = useLibrary((s) => s.bookcaseStyle);
   const [showCustomizer, setShowCustomizer] = useState(false);
+  const [showPortrait, setShowPortrait] = useState(false);
   const [active, setActive] = useState<TabKey>("reading");
   const [newCollName, setNewCollName] = useState("");
   const [isSeries, setIsSeries] = useState(false);
@@ -186,6 +188,13 @@ export function Shelves() {
           <h3 className="font-display text-2xl" style={dark ? { color: "white" } : undefined}>
             Your library
           </h3>
+          <button
+            onClick={() => setShowPortrait(true)}
+            title="Library portrait"
+            className="inline-grid h-7 w-7 place-items-center rounded-full border border-border/60 bg-card/80 backdrop-blur text-muted-foreground hover:text-foreground transition"
+          >
+            <Image className="h-3.5 w-3.5" />
+          </button>
           {/* View toggle */}
           <div className="flex gap-0.5 rounded-full border border-border/60 bg-card/80 backdrop-blur p-0.5">
             <button
@@ -328,7 +337,21 @@ export function Shelves() {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!newShelfName.trim()) return;
-                createCollection(newShelfName.trim(), false);
+                const newId = createCollection(newShelfName.trim(), false);
+                const kws = newShelfName.trim().toLowerCase().split(/\s+/).filter((w) => w.length > 2);
+                if (kws.length > 0) {
+                  const matches = books.filter((b) => {
+                    const text = `${b.title} ${b.author} ${(b.tags ?? []).join(" ")}`.toLowerCase();
+                    return kws.some((kw) => text.includes(kw));
+                  });
+                  if (matches.length > 0) {
+                    toast(`${matches.length} book${matches.length === 1 ? "" : "s"} match "${newShelfName.trim()}"`, {
+                      description: "Add them to this shelf automatically?",
+                      action: { label: "Add all", onClick: () => matches.forEach((b) => addToCollection(newId, b.id)) },
+                      duration: 8000,
+                    });
+                  }
+                }
                 setNewShelfName("");
                 setShowNewShelf(false);
                 toast.success("Shelf created.");
@@ -1056,6 +1079,7 @@ export function Shelves() {
       </div>
       </LockedFeature>
 
+      <LibraryPortrait open={showPortrait} onClose={() => setShowPortrait(false)} />
     </section>
   );
 }
