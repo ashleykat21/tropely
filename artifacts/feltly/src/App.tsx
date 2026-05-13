@@ -71,7 +71,7 @@ function DebugBanner() {
 }
 
 // ── Unauthenticated auth screen ───────────────────────────────────────────────
-// Uses routing="hash" so Clerk internal navigation works in Capacitor WebView
+// Uses routing="virtual" so Clerk internal navigation works in Capacitor WebView
 // without a real server (no path-based redirects needed).
 
 function AuthScreen() {
@@ -112,9 +112,9 @@ function AuthScreen() {
           </button>
         </div>
         {mode === "sign-in" ? (
-          <SignIn routing="hash" afterSignInUrl="/" />
+          <SignIn routing="virtual" afterSignInUrl="/" />
         ) : (
-          <SignUp routing="hash" afterSignUpUrl="/" />
+          <SignUp routing="virtual" afterSignUpUrl="/" />
         )}
       </div>
     </div>
