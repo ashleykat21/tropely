@@ -25,7 +25,8 @@ interface Book {
   title: string;
   author: string;
   genre: GenreKey;
-  pillar?: PillKey;        // which pill it belongs to (set when user "adds" it)
+  pillar?: PillKey;        // reading | tbr | finished
+  rating?: number;         // 1–5 stars (independent of pillar)
   spine: SpineDef;
 }
 
@@ -44,7 +45,7 @@ const CATALOGUE: Book[] = [
   // ── Iron Flame (Entangled, 2023) ──────────────────────────────────────────
   // Near-black navy; silver-lavender title; violet accent bar
   {
-    id: "if", title: "Iron Flame", author: "Rebecca Yarros", genre: "romantasy", pillar: "5star",
+    id: "if", title: "Iron Flame", author: "Rebecca Yarros", genre: "romantasy", pillar: "finished", rating: 5,
     spine: { bg: "#0e0e1c", bgEnd: "#1a1a2e", midGlow: "#1e1e36", textColor: "#c8b8e8",
              accentBar: "#6040a0", topBand: "#080810", bottomBand: "#080810",
              publisher: "E", publisherColor: "#c8b8e888",
@@ -53,7 +54,7 @@ const CATALOGUE: Book[] = [
   // ── Onyx Storm (Entangled, 2025) ──────────────────────────────────────────
   // Deepest navy; icy blue text; blue-grey accent
   {
-    id: "os", title: "Onyx Storm", author: "Rebecca Yarros", genre: "romantasy", pillar: "5star",
+    id: "os", title: "Onyx Storm", author: "Rebecca Yarros", genre: "romantasy", pillar: "finished", rating: 5,
     spine: { bg: "#08101c", bgEnd: "#101e30", textColor: "#a8c8e0",
              accentBar: "#1e4870", topBand: "#060c14", bottomBand: "#060c14",
              publisher: "E", publisherColor: "#a8c8e088",
@@ -62,7 +63,7 @@ const CATALOGUE: Book[] = [
   // ── ACOTAR (Bloomsbury, 2015) ─────────────────────────────────────────────
   // Midnight blue-slate; pale gold title; thin teal accent
   {
-    id: "acotar", title: "A Court of Thorns and Roses", author: "Sarah J. Maas", genre: "romantasy", pillar: "5star",
+    id: "acotar", title: "A Court of Thorns and Roses", author: "Sarah J. Maas", genre: "romantasy", pillar: "finished", rating: 5,
     spine: { bg: "#10202e", bgEnd: "#182e3e", textColor: "#e0cca0",
              accentBar: "#2e6878", accentBarPos: "right",
              publisher: "B", publisherColor: "#e0cca099",
@@ -71,7 +72,7 @@ const CATALOGUE: Book[] = [
   // ── ACOMAF (Bloomsbury, 2016) ─────────────────────────────────────────────
   // Darker blue-black; silver text; same teal edge
   {
-    id: "acomaf", title: "A Court of Mist and Fury", author: "Sarah J. Maas", genre: "romantasy", pillar: "4star",
+    id: "acomaf", title: "A Court of Mist and Fury", author: "Sarah J. Maas", genre: "romantasy", pillar: "finished", rating: 4,
     spine: { bg: "#0a1520", bgEnd: "#122030", textColor: "#d0c8e8",
              accentBar: "#284868",
              publisher: "B", publisherColor: "#d0c8e899",
@@ -80,7 +81,7 @@ const CATALOGUE: Book[] = [
   // ── The Cruel Prince (Little Brown, 2018) ────────────────────────────────
   // Very dark forest green; cream/gold title; lighter green spine highlight
   {
-    id: "tcp", title: "The Cruel Prince", author: "Holly Black", genre: "fantasy", pillar: "4star",
+    id: "tcp", title: "The Cruel Prince", author: "Holly Black", genre: "fantasy", pillar: "finished", rating: 4,
     spine: { bg: "#0c1a0e", bgEnd: "#162814", midGlow: "#1a301a", textColor: "#e8ddb0",
              accentBar: "#2a4a28",
              publisher: "LB", publisherColor: "#e8ddb099",
@@ -89,7 +90,7 @@ const CATALOGUE: Book[] = [
   // ── Kingdom of the Wicked (Hodder, 2020) ─────────────────────────────────
   // Deep plum-black; rose-gold text; crimson accent
   {
-    id: "kotw", title: "Kingdom of the Wicked", author: "Kerri Maniscalco", genre: "dark-romance", pillar: "3star",
+    id: "kotw", title: "Kingdom of the Wicked", author: "Kerri Maniscalco", genre: "dark-romance", pillar: "finished", rating: 3,
     spine: { bg: "#180820", bgEnd: "#220e2e", textColor: "#f0c8c0",
              accentBar: "#782038",
              publisher: "H", publisherColor: "#f0c8c099",
@@ -98,7 +99,7 @@ const CATALOGUE: Book[] = [
   // ── From Blood and Ash (Blue Tulip, 2020) ────────────────────────────────
   // Rich burgundy; warm cream title; gold bar on right
   {
-    id: "fbaa", title: "From Blood and Ash", author: "Jennifer L. Armentrout", genre: "dark-romance", pillar: "4star",
+    id: "fbaa", title: "From Blood and Ash", author: "Jennifer L. Armentrout", genre: "dark-romance", pillar: "finished", rating: 4,
     spine: { bg: "#320810", bgEnd: "#481018", textColor: "#f5e0c8",
              accentBar: "#a84020", accentBarPos: "both",
              publisher: "BT", publisherColor: "#f5e0c899",
@@ -107,7 +108,7 @@ const CATALOGUE: Book[] = [
   // ── House of Salt & Sorrows (Delacorte, 2019) ────────────────────────────
   // Dark seafoam-teal; white text; pale coral accent
   {
-    id: "hosnr", title: "House of Salt and Sorrows", author: "Erin A. Craig", genre: "fantasy", pillar: "3star",
+    id: "hosnr", title: "House of Salt and Sorrows", author: "Erin A. Craig", genre: "fantasy", pillar: "finished", rating: 3,
     spine: { bg: "#0a2824", bgEnd: "#103830", textColor: "#e0f0ee",
              accentBar: "#207060",
              publisher: "D", publisherColor: "#e0f0ee99",
@@ -116,7 +117,7 @@ const CATALOGUE: Book[] = [
   // ── The Name of the Wind (DAW, 2007) ─────────────────────────────────────
   // Walnut brown; warm gold title; tan linen texture; thick spine
   {
-    id: "notw", title: "The Name of the Wind", author: "Patrick Rothfuss", genre: "fantasy", pillar: "5star",
+    id: "notw", title: "The Name of the Wind", author: "Patrick Rothfuss", genre: "fantasy", pillar: "finished", rating: 5,
     spine: { bg: "#2e1808", bgEnd: "#3e2410", textColor: "#f0d898",
              accentBar: "#7a5030",
              publisher: "DAW", publisherColor: "#f0d89899",
@@ -125,7 +126,7 @@ const CATALOGUE: Book[] = [
   // ── Mistborn (Tor, 2006) ──────────────────────────────────────────────────
   // Charcoal-slate; clean white title; steel-blue accent; very thick
   {
-    id: "mistborn", title: "Mistborn", author: "Brandon Sanderson", genre: "fantasy", pillar: "5star",
+    id: "mistborn", title: "Mistborn", author: "Brandon Sanderson", genre: "fantasy", pillar: "finished", rating: 5,
     spine: { bg: "#182030", bgEnd: "#20283a", textColor: "#e8ecf0",
              accentBar: "#304a68",
              publisher: "TOR", publisherColor: "#e8ecf099",
@@ -161,7 +162,7 @@ const CATALOGUE: Book[] = [
   // ── Den of Malice (Rina Kent, 2022) ──────────────────────────────────────
   // Almost pure black; orchid text
   {
-    id: "dom", title: "Den of Malice", author: "Rina Kent", genre: "dark-romance", pillar: "2star",
+    id: "dom", title: "Den of Malice", author: "Rina Kent", genre: "dark-romance", pillar: "finished", rating: 2,
     spine: { bg: "#0c080e", bgEnd: "#160e1c", textColor: "#c8a0d0",
              accentBar: "#503060",
              publisher: "RK", publisherColor: "#c8a0d099",
@@ -170,7 +171,7 @@ const CATALOGUE: Book[] = [
   // ── Smoke and Ash (Silver Griffyn, 2022) ─────────────────────────────────
   // Dark charcoal-brown; warm amber text; ember accent
   {
-    id: "sas", title: "Smoke and Ash", author: "Elise Kova", genre: "romantasy", pillar: "3star",
+    id: "sas", title: "Smoke and Ash", author: "Elise Kova", genre: "romantasy", pillar: "finished", rating: 3,
     spine: { bg: "#1a1008", bgEnd: "#241810", textColor: "#f0c890",
              accentBar: "#904020",
              publisher: "SG", publisherColor: "#f0c89099",
@@ -512,7 +513,7 @@ function AddBookModal({
               Add a book
             </div>
             <div style={{ fontSize: 10, color: "rgba(240,236,228,0.4)", marginTop: 2 }}>
-              Genre auto-detected · added to {PILLS.find(p => p.key === activePill)?.label}
+              Genre auto-detected · {isStarPill ? `rated ${activePillDef?.label}` : `added to ${activePillDef?.label}`}
             </div>
           </div>
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.1)", border: "none",
@@ -587,7 +588,12 @@ export function LibrarySpineView() {
   const [genreNames, setGenreNames] = useState<GenreNames>({});
   const [showAdd, setShowAdd] = useState(false);
 
-  const pillBooks = books.filter((b) => b.pillar === activePill);
+  const activePillDef = PILLS.find((p) => p.key === activePill);
+  const isStarPill = activePillDef?.stars !== undefined;
+
+  const pillBooks = isStarPill
+    ? books.filter((b) => b.rating === activePillDef!.stars)
+    : books.filter((b) => b.pillar === activePill);
 
   // Group by genre, only genres that have books
   const genreGroups = Object.keys(GENRES).reduce<Partial<Record<GenreKey, Book[]>>>((acc, gk) => {
@@ -600,13 +606,30 @@ export function LibrarySpineView() {
   const addBook = (book: Book) => {
     setBooks((prev) => {
       const exists = prev.find((b) => b.id === book.id);
-      if (exists) return prev.map((b) => b.id === book.id ? { ...b, pillar: book.pillar } : b);
-      return [...prev, book];
+      if (exists) {
+        return prev.map((b) => {
+          if (b.id !== book.id) return b;
+          return isStarPill
+            ? { ...b, pillar: "finished" as const, rating: activePillDef!.stars }
+            : { ...b, pillar: book.pillar };
+        });
+      }
+      return [
+        ...prev,
+        isStarPill
+          ? { ...book, pillar: "finished" as const, rating: activePillDef!.stars }
+          : book,
+      ];
     });
     setShowAdd(false);
   };
 
-  const pillCount = (key: PillKey) => books.filter((b) => b.pillar === key).length;
+  const pillCount = (key: PillKey) => {
+    const def = PILLS.find((p) => p.key === key);
+    return def?.stars !== undefined
+      ? books.filter((b) => b.rating === def.stars).length
+      : books.filter((b) => b.pillar === key).length;
+  };
 
   const totalBooks = [...new Set(books.map((b) => b.id))].length;
 
