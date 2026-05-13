@@ -160,15 +160,21 @@ export function Shelves() {
   };
   const FREE_TEXTURES: string[] = ["linen"];
   const themed = (isPremium || FREE_TEXTURES.includes(shelfTheme.texture)) && shelfTheme.texture !== "none";
-  const themeStyle = themed
-    ? {
-        background: shelfTheme.background,
-        boxShadow: `inset 0 0 0 1px ${shelfTheme.accent}33`,
-      }
-    : undefined;
   const dark =
     themed &&
     (shelfTheme.background.startsWith("hsl(2") || shelfTheme.background.startsWith("hsl(28"));
+  // Make themed background semi-transparent so the body mood gradient shows through
+  const makeTranslucent = (bg: string, alpha: number) =>
+    bg.replace(/^hsl\(([^)]+)\)$/, `hsl($1 / ${alpha})`);
+  const bgAlpha = dark ? 0.88 : 0.72;
+  const themeStyle = themed
+    ? {
+        background: makeTranslucent(shelfTheme.background, bgAlpha),
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        boxShadow: `inset 0 0 0 1px ${shelfTheme.accent}33`,
+      }
+    : undefined;
 
   return (
     <section
