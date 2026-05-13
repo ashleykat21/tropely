@@ -27,7 +27,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 
-type TabKey = Shelf | "series";
+type StarTabKey = "1star" | "2star" | "3star" | "4star" | "5star";
+type TabKey = Shelf | "series" | StarTabKey;
+const STAR_TABS: { key: StarTabKey; stars: number; label: string }[] = [
+  { key: "1star", stars: 1, label: "★" },
+  { key: "2star", stars: 2, label: "★★" },
+  { key: "3star", stars: 3, label: "★★★" },
+  { key: "4star", stars: 4, label: "★★★★" },
+  { key: "5star", stars: 5, label: "★★★★★" },
+];
+const STAR_TAB_KEYS = new Set<string>(STAR_TABS.map((s) => s.key));
 const TABS: { key: TabKey; label: string }[] = [
   { key: "reading", label: "Reading" },
   { key: "want", label: "Want to read" },
@@ -93,11 +102,15 @@ export function Shelves() {
     return m;
   }, [reflections]);
 
+  const activeStarDef = STAR_TABS.find((s) => s.key === active);
+
   const filtered = useMemo(() => {
     const list = books.filter((b) => {
-      if (b.shelf !== active) return false;
       if (b.ageRating && userAge != null && b.ageRating > userAge) return false;
-      return true;
+      if (activeStarDef) {
+        return b.shelf === "finished" && ratingMap.get(b.id) === activeStarDef.stars;
+      }
+      return b.shelf === active;
     });
     if (active === "want") {
       return [...list].sort((a, b) => {
@@ -108,7 +121,7 @@ export function Shelves() {
       });
     }
     return list;
-  }, [books, active, userAge]);
+  }, [books, active, activeStarDef, ratingMap, userAge]);
 
   // Compute which trope categories are present in the current shelf
   const availableCategories = useMemo(() => {
@@ -263,7 +276,7 @@ export function Shelves() {
           )}
         </div>
         {/* Tab bar — hidden in spine mode */}
-        <div className={cn("flex gap-1 rounded-full border border-border/60 bg-card/80 backdrop-blur p-1", spineMode && "hidden")}>
+        <div className={cn("flex gap-1 overflow-x-auto scrollbar-none rounded-full border border-border/60 bg-card/80 backdrop-blur p-1", spineMode && "hidden")}>
           {TABS.map((t) => {
             const label = (t.key !== "series" ? customShelfNames[t.key as Shelf] : undefined) || t.label;
             const isEditing = isPremium && editingShelf === t.key;
@@ -316,6 +329,37 @@ export function Shelves() {
               </button>
             );
           })}
+          {/* Star rating tabs */}
+          <div className="mx-1 w-px self-stretch bg-border/50" />
+          {STAR_TABS.map((s) => {
+            const count = books.filter(
+              (b) => b.shelf === "finished" && ratingMap.get(b.id) === s.stars
+            ).length;
+            return (
+              <button
+                key={s.key}
+                onClick={() => { setActive(s.key); setActiveCollTab(null); setCategoryFilter(null); }}
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition whitespace-nowrap",
+                  active === s.key && !activeCollTab
+                    ? "bg-amber-500/20 text-amber-400 ring-1 ring-amber-500/40"
+                    : "text-muted-foreground hover:text-amber-400"
+                )}
+                title={`${s.stars}-star reads`}
+              >
+                <span className="tracking-tighter text-amber-400/80">{s.label}</span>
+                {count > 0 && (
+                  <span className={cn(
+                    "text-[9px] font-bold px-1 rounded-full",
+                    active === s.key && !activeCollTab
+                      ? "bg-amber-500/30 text-amber-300"
+                      : "bg-border/60 text-muted-foreground"
+                  )}>{count}</span>
+                )}
+              </button>
+            );
+          })}
+          <div className="mx-1 w-px self-stretch bg-border/50" />
           {/* User-created shelf pills (non-series collections) */}
           {collections.filter((c) => !c.isSeries).map((c) => (
             <button
