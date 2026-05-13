@@ -2,14 +2,17 @@
   "expo": {
     "extra": {
       "eas": {
-        "projectId": "8fc30fba-1acd-40a5-8974-9fcdd55bd1b4"
+        "projectId": "c1cf53d3-29fc-4d08-9d0a-b6ad79f1fadd"
       }
     },
     "ios": {
-      "bundleIdentifier": "com.ashleykat21.workspace",
+      "bundleIdentifier": "com.nevora.tropely",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
+    },
+    "android": {
+      "package": "com.nevora.tropely"
     }
   }
 }

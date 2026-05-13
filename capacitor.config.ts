@@ -8,15 +8,12 @@ const config: CapacitorConfig = {
     url: "https://usenevora.com",
     androidScheme: "https",
     iosScheme: "https",
-    cleartext: false
+    cleartext: false,
   },
   ios: {
     contentInset: "automatic",
   },
   plugins: {
-    CapacitorUpdater: {
-      autoUpdate: true,
-    },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
     },
