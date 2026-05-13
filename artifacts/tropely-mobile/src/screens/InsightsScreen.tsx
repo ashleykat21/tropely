@@ -1,12 +1,20 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
+  TouchableOpacity,
   StyleSheet,
+  Modal,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -33,8 +41,26 @@ const MOOD_COLORS: Record<string, string> = {
   reflective: "#f0fdf4", adventurous: "#fff7ed", cozy: "#fef3c7", intense: "#fee2e2",
 };
 
+const MOOD_DARK: Record<string, string> = {
+  hopeful: "#059669", tense: "#dc2626", melancholy: "#6366f1",
+  joyful: "#ca8a04", romantic: "#ec4899", eerie: "#9333ea",
+  reflective: "#16a34a", adventurous: "#ea580c", cozy: "#d97706", intense: "#dc2626",
+};
+
+type TropeMonthData = {
+  key: string;
+  label: string;
+  tropeCount: number;
+  topTrope: string;
+  moodColor: string;
+  accentColor: string;
+  books: { id: string; title: string; cover?: string; tropes?: string[] }[];
+};
+
 export default function InsightsScreen() {
+  const nav = useNavigation<Nav>();
   const { books, sessions, journal, reflections } = useStore();
+  const [selectedTropeMonth, setSelectedTropeMonth] = useState<TropeMonthData | null>(null);
 
   const totalBooks = books.length;
   const finishedBooks = books.filter((b) => b.shelf === "finished").length;
@@ -46,7 +72,7 @@ export default function InsightsScreen() {
     return (rated.reduce((s, r) => s + (r.rating ?? 0), 0) / rated.length).toFixed(1);
   }, [reflections]);
 
-  // Reading sessions by month (last 6)
+  // Pages per month (last 6)
   const sessionsByMonth = useMemo(() => {
     const now = new Date();
     const months: { label: string; pages: number }[] = [];
@@ -74,6 +100,51 @@ export default function InsightsScreen() {
   }, [books]);
 
   const maxMoodCount = Math.max(...moodCounts.map(([, c]) => c), 1);
+
+  // Trope-over-time data (last 6 months)
+  const tropesByMonth = useMemo((): TropeMonthData[] => {
+    const now = new Date();
+    const months: TropeMonthData[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleString("default", { month: "short" });
+
+      const bookIds = new Set(
+        sessions.filter((s) => s.date.startsWith(key)).map((s) => s.bookId),
+      );
+      const monthBooks = books.filter((b) => bookIds.has(b.id));
+
+      const tropeCounts: Record<string, number> = {};
+      for (const b of monthBooks) {
+        for (const t of b.tropes ?? []) {
+          tropeCounts[t] = (tropeCounts[t] ?? 0) + 1;
+        }
+      }
+
+      const moodCount: Record<string, number> = {};
+      for (const b of monthBooks) {
+        if (b.mood) moodCount[b.mood] = (moodCount[b.mood] ?? 0) + 1;
+      }
+
+      const topTrope = Object.entries(tropeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+      const dominantMood = Object.entries(moodCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "";
+      const tropeCount = Object.values(tropeCounts).reduce((s, c) => s + c, 0);
+
+      months.push({
+        key,
+        label,
+        tropeCount,
+        topTrope,
+        moodColor: dominantMood ? (MOOD_COLORS[dominantMood] ?? "#e5e7eb") : "#e5e7eb",
+        accentColor: dominantMood ? (MOOD_DARK[dominantMood] ?? "#6b7280") : "#6b7280",
+        books: monthBooks.map((b) => ({ id: b.id, title: b.title, cover: b.cover, tropes: b.tropes })),
+      });
+    }
+    return months;
+  }, [sessions, books]);
+
+  const maxTropeCount = Math.max(...tropesByMonth.map((m) => m.tropeCount), 1);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -111,6 +182,78 @@ export default function InsightsScreen() {
           </View>
         </View>
 
+        {/* Trope over time chart */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tropes over time</Text>
+          <Text style={styles.cardSub}>Coloured by the dominant mood of each month. Tap a bar to see the books.</Text>
+          {tropesByMonth.every((m) => m.tropeCount === 0) ? (
+            <View style={styles.chartEmpty}>
+              <Text style={styles.chartEmptyText}>Tag tropes on your books to see this chart fill up.</Text>
+            </View>
+          ) : (
+            <View style={styles.chart}>
+              {tropesByMonth.map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={styles.chartCol}
+                  onPress={() => setSelectedTropeMonth(selectedTropeMonth?.key === m.key ? null : m)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.chartValue}>{m.tropeCount > 0 ? m.tropeCount : ""}</Text>
+                  <View style={styles.chartBarTrack}>
+                    <View
+                      style={[
+                        styles.chartBar,
+                        {
+                          height: `${(m.tropeCount / maxTropeCount) * 100}%`,
+                          backgroundColor: m.accentColor,
+                          borderTopLeftRadius: 4,
+                          borderTopRightRadius: 4,
+                          minHeight: m.tropeCount > 0 ? 4 : 0,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.chartLabel}>{m.label}</Text>
+                  {m.topTrope !== "" && (
+                    <Text style={styles.tropeTick} numberOfLines={1}>{m.topTrope.split("-").join("​-​")}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Expanded book list for selected month */}
+          {selectedTropeMonth && selectedTropeMonth.books.length > 0 && (
+            <View style={[styles.tropeDetail, { backgroundColor: selectedTropeMonth.moodColor }]}>
+              <Text style={[styles.tropeDetailTitle, { color: selectedTropeMonth.accentColor }]}>
+                {selectedTropeMonth.label} — {selectedTropeMonth.topTrope || "mixed tropes"}
+              </Text>
+              {selectedTropeMonth.books.map((b) => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={styles.tropeDetailBook}
+                  onPress={() => nav.navigate("BookDetail", { bookId: b.id })}
+                >
+                  {b.cover ? (
+                    <Image source={{ uri: b.cover }} style={styles.tropeDetailCover} />
+                  ) : (
+                    <View style={[styles.tropeDetailCover, { backgroundColor: "rgba(0,0,0,0.1)" }]} />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tropeDetailBookTitle} numberOfLines={1}>{b.title}</Text>
+                    {(b.tropes ?? []).length > 0 && (
+                      <Text style={styles.tropeDetailTropes} numberOfLines={1}>
+                        {(b.tropes ?? []).slice(0, 2).join(" · ")}
+                      </Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
         {/* Mood breakdown */}
         {moodCounts.length > 0 && (
           <View style={styles.card}>
@@ -127,7 +270,7 @@ export default function InsightsScreen() {
           </View>
         )}
 
-        {/* Reading streak */}
+        {/* Sessions */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sessions over time</Text>
           <Text style={styles.sessionTotal}>{sessions.length} total sessions logged</Text>
@@ -149,12 +292,22 @@ const styles = StyleSheet.create({
   statSub: { fontSize: 11, color: "#9ca3af" },
   card: { backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#f0f0f0", gap: 12 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#1a1a1a" },
+  cardSub: { fontSize: 12, color: "#9ca3af", marginTop: -6 },
   chart: { flexDirection: "row", alignItems: "flex-end", height: 120, gap: 8 },
   chartCol: { flex: 1, alignItems: "center", height: "100%", justifyContent: "flex-end", gap: 4 },
   chartValue: { fontSize: 9, color: "#9ca3af" },
   chartBarTrack: { width: "100%", flex: 1, justifyContent: "flex-end" },
   chartBar: { width: "100%", backgroundColor: "#1a1a1a", borderTopLeftRadius: 3, borderTopRightRadius: 3, minHeight: 2 },
   chartLabel: { fontSize: 10, color: "#9ca3af" },
+  tropeTick: { fontSize: 8, color: "#9ca3af", textAlign: "center", maxWidth: 48 },
+  chartEmpty: { paddingVertical: 24, alignItems: "center" },
+  chartEmptyText: { fontSize: 13, color: "#9ca3af", textAlign: "center" },
+  tropeDetail: { borderRadius: 12, padding: 12, gap: 8, marginTop: 4 },
+  tropeDetailTitle: { fontSize: 13, fontWeight: "700" },
+  tropeDetailBook: { flexDirection: "row", alignItems: "center", gap: 8 },
+  tropeDetailCover: { width: 32, height: 46, borderRadius: 4 },
+  tropeDetailBookTitle: { fontSize: 13, fontWeight: "600", color: "#1a1a1a" },
+  tropeDetailTropes: { fontSize: 11, color: "#6b7280", marginTop: 1 },
   moodList: { gap: 8 },
   moodRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   moodLabel: { fontSize: 12, color: "#6b7280", width: 80, textTransform: "capitalize" },

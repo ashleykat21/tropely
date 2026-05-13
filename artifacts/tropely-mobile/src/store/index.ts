@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ── Types (mirrors web app store) ────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export type Shelf = "reading" | "want" | "finished" | "dnf" | "paused";
 
@@ -61,6 +61,16 @@ export type Reflection = {
   date: string;
 };
 
+export type Highlight = {
+  id: string;
+  bookId: string;
+  text: string;
+  trope?: string;
+  mood?: Mood;
+  page?: number;
+  date: string;
+};
+
 // ── Store shape ──────────────────────────────────────────────────────────────
 
 type LibraryState = {
@@ -69,10 +79,16 @@ type LibraryState = {
   sessions: SessionLog[];
   journal: JournalEntry[];
   reflections: Reflection[];
+  highlights: Highlight[];
   age: number | null;
   dailyGoalPages: number;
   dailyGoalMinutes: number;
   isPremium: boolean;
+  annualGoal: number;
+  hasOnboarded: boolean;
+  reminderEnabled: boolean;
+  reminderTime: string;
+  preferredTropes: string[];
 
   // actions
   addBook: (b: Omit<Book, "id" | "addedAt">) => string;
@@ -89,6 +105,13 @@ type LibraryState = {
   setDailyGoalPages: (n: number) => void;
   setDailyGoalMinutes: (n: number) => void;
   setPremium: (v: boolean) => void;
+  setAnnualGoal: (n: number) => void;
+  setHasOnboarded: (v: boolean) => void;
+  setReminderEnabled: (v: boolean) => void;
+  setReminderTime: (t: string) => void;
+  setPreferredTropes: (tropes: string[]) => void;
+  addHighlight: (h: Omit<Highlight, "id">) => void;
+  deleteHighlight: (id: string) => void;
 };
 
 function uid() {
@@ -103,10 +126,16 @@ export const useStore = create<LibraryState>()(
       sessions: [],
       journal: [],
       reflections: [],
+      highlights: [],
       age: null,
       dailyGoalPages: 20,
       dailyGoalMinutes: 30,
       isPremium: false,
+      annualGoal: 24,
+      hasOnboarded: false,
+      reminderEnabled: false,
+      reminderTime: "20:00",
+      preferredTropes: [],
 
       addBook: (b) => {
         const id = uid();
@@ -178,6 +207,21 @@ export const useStore = create<LibraryState>()(
       setDailyGoalPages: (n) => set({ dailyGoalPages: n }),
       setDailyGoalMinutes: (n) => set({ dailyGoalMinutes: n }),
       setPremium: (v) => set({ isPremium: v }),
+      setAnnualGoal: (n) => set({ annualGoal: n }),
+      setHasOnboarded: (v) => set({ hasOnboarded: v }),
+      setReminderEnabled: (v) => set({ reminderEnabled: v }),
+      setReminderTime: (t) => set({ reminderTime: t }),
+      setPreferredTropes: (tropes) => set({ preferredTropes: tropes }),
+
+      addHighlight: (h) =>
+        set((s) => ({
+          highlights: [{ ...h, id: uid() }, ...s.highlights],
+        })),
+
+      deleteHighlight: (id) =>
+        set((s) => ({
+          highlights: s.highlights.filter((h) => h.id !== id),
+        })),
     }),
     {
       name: "tropely-library",
@@ -185,3 +229,24 @@ export const useStore = create<LibraryState>()(
     },
   ),
 );
+
+// ── Streak utility ────────────────────────────────────────────────────────────
+
+export function computeStreak(sessions: SessionLog[]): number {
+  if (sessions.length === 0) return 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  const dates = new Set(sessions.map((s) => s.date.slice(0, 10)));
+  if (!dates.has(today) && !dates.has(yesterday)) return 0;
+  let streak = 0;
+  let cursor = new Date(today);
+  for (let i = 0; i < 1000; i++) {
+    if (dates.has(cursor.toISOString().slice(0, 10))) {
+      streak++;
+      cursor = new Date(cursor.getTime() - 86_400_000);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}

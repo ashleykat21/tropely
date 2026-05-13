@@ -13,14 +13,19 @@ import ProfileScreen from "@/screens/ProfileScreen";
 import BookDetailScreen from "@/screens/BookDetailScreen";
 import CompanionScreen from "@/screens/CompanionScreen";
 import BuddyReadsScreen from "@/screens/BuddyReadsScreen";
+import OnboardingScreen from "@/screens/OnboardingScreen";
+import TropeMatchScreen from "@/screens/TropeMatchScreen";
+import { useStore } from "@/store";
 
 // ── Param lists ──────────────────────────────────────────────────────────────
 
 export type RootStackParamList = {
+  Onboarding: undefined;
   Tabs: undefined;
   BookDetail: { bookId: string };
   Companion: { bookId?: string };
   BuddyReads: undefined;
+  TropeMatch: undefined;
 };
 
 export type TabParamList = {
@@ -84,8 +89,13 @@ function TabNavigator() {
 }
 
 export function RootNavigator() {
+  const hasOnboarded = useStore((s) => s.hasOnboarded);
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={hasOnboarded ? "Tabs" : "Onboarding"}
+    >
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="Tabs" component={TabNavigator} />
       <Stack.Screen
         name="BookDetail"
@@ -101,6 +111,11 @@ export function RootNavigator() {
         name="BuddyReads"
         component={BuddyReadsScreen}
         options={{ headerShown: true, title: "Buddy Reads" }}
+      />
+      <Stack.Screen
+        name="TropeMatch"
+        component={TropeMatchScreen}
+        options={{ presentation: "modal", headerShown: false }}
       />
     </Stack.Navigator>
   );

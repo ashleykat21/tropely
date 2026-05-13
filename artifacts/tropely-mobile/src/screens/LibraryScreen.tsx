@@ -24,6 +24,37 @@ const TABS: { key: Shelf; label: string }[] = [
   { key: "dnf", label: "DNF" },
 ];
 
+const EMPTY_STATES: Record<Shelf, { emoji: string; title: string; hint: string; action?: string }> = {
+  reading: {
+    emoji: "📖",
+    title: "Nothing open right now",
+    hint: "Search for a book and add it to start tracking your reading.",
+    action: "Find a book",
+  },
+  want: {
+    emoji: "🎭",
+    title: "No tropes queued up yet",
+    hint: "No tropes queued up yet — find your next obsession.",
+    action: "Discover books",
+  },
+  finished: {
+    emoji: "🏁",
+    title: "No finished reads yet",
+    hint: "Your finished reads will show tropes you keep coming back to.",
+    action: "Browse your shelves",
+  },
+  paused: {
+    emoji: "⏸️",
+    title: "Nothing on pause",
+    hint: "Books you pause mid-read will land here.",
+  },
+  dnf: {
+    emoji: "📕",
+    title: "No DNFs yet",
+    hint: "Life's too short for bad books — it's okay to stop.",
+  },
+};
+
 type SortKey = "recent" | "az" | "pages" | "rating";
 
 export default function LibraryScreen() {
@@ -50,6 +81,8 @@ export default function LibraryScreen() {
     return reflections.find((r) => r.bookId === bookId)?.rating ?? 0;
   };
 
+  const empty = EMPTY_STATES[activeShelf];
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
@@ -59,17 +92,13 @@ export default function LibraryScreen() {
             style={[styles.viewBtn, viewMode === "spine" && styles.viewBtnActive]}
             onPress={() => setViewMode("spine")}
           >
-            <Text style={[styles.viewBtnText, viewMode === "spine" && styles.viewBtnTextActive]}>
-              ☰
-            </Text>
+            <Text style={[styles.viewBtnText, viewMode === "spine" && styles.viewBtnTextActive]}>☰</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.viewBtn, viewMode === "grid" && styles.viewBtnActive]}
             onPress={() => setViewMode("grid")}
           >
-            <Text style={[styles.viewBtnText, viewMode === "grid" && styles.viewBtnTextActive]}>
-              ⊞
-            </Text>
+            <Text style={[styles.viewBtnText, viewMode === "grid" && styles.viewBtnTextActive]}>⊞</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -94,7 +123,7 @@ export default function LibraryScreen() {
         ))}
       </ScrollView>
 
-      {/* Sort bar (not on want shelf) */}
+      {/* Sort bar */}
       {activeShelf !== "want" && (
         <ScrollView
           horizontal
@@ -120,7 +149,21 @@ export default function LibraryScreen() {
 
       {sorted.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No books here yet.</Text>
+          <Text style={styles.emptyEmoji}>{empty.emoji}</Text>
+          <Text style={styles.emptyTitle}>{empty.title}</Text>
+          <Text style={styles.emptyHint}>{empty.hint}</Text>
+          {empty.action && (
+            <TouchableOpacity
+              style={styles.emptyBtn}
+              onPress={() => {
+                if (activeShelf === "reading" || activeShelf === "want") {
+                  (nav as any).navigate("Discover");
+                }
+              }}
+            >
+              <Text style={styles.emptyBtnText}>{empty.action}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : viewMode === "grid" ? (
         <FlatList
@@ -148,7 +191,6 @@ export default function LibraryScreen() {
           )}
         />
       ) : (
-        // Spine view (horizontal rows per shelf)
         <ScrollView style={styles.spineScroll} contentContainerStyle={styles.spineContent}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {sorted.map((b) => (
@@ -165,6 +207,9 @@ export default function LibraryScreen() {
                   </View>
                 )}
                 <Text style={styles.spineTitle} numberOfLines={2}>{b.title}</Text>
+                {(b.tropes ?? []).length > 0 && (
+                  <Text style={styles.spineTrope} numberOfLines={1}>{b.tropes![0]}</Text>
+                )}
                 {activeShelf === "finished" && getStars(b.id) > 0 && (
                   <Text style={styles.stars}>{"★".repeat(getStars(b.id))}</Text>
                 )}
@@ -198,8 +243,12 @@ const styles = StyleSheet.create({
   sortChipActive: { borderColor: "#1a1a1a", backgroundColor: "#1a1a1a" },
   sortChipText: { fontSize: 12, color: "#6b7280" },
   sortChipTextActive: { color: "#fff" },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyText: { fontSize: 14, color: "#9ca3af" },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 8 },
+  emptyEmoji: { fontSize: 40, marginBottom: 4 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1a1a1a", textAlign: "center" },
+  emptyHint: { fontSize: 13, color: "#9ca3af", textAlign: "center", lineHeight: 20 },
+  emptyBtn: { backgroundColor: "#1a1a1a", borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
+  emptyBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
   gridContent: { padding: 12, gap: 4 },
   gridItem: { flex: 1, margin: 4, alignItems: "center", gap: 4 },
   gridCover: { width: "100%", aspectRatio: 2 / 3, borderRadius: 6 },
@@ -209,8 +258,9 @@ const styles = StyleSheet.create({
   stars: { fontSize: 10, color: "#f59e0b" },
   spineScroll: { flex: 1 },
   spineContent: { padding: 16 },
-  spineItem: { width: 90, marginRight: 12, alignItems: "center", gap: 6 },
+  spineItem: { width: 90, marginRight: 12, alignItems: "center", gap: 4 },
   spineCover: { width: 72, height: 108, borderRadius: 6 },
   spineInitial: { fontSize: 24, fontWeight: "700", color: "#9ca3af" },
   spineTitle: { fontSize: 10, color: "#1a1a1a", textAlign: "center" },
+  spineTrope: { fontSize: 9, color: "#9ca3af", textAlign: "center", fontStyle: "italic" },
 });

@@ -118,6 +118,17 @@ export async function postBuddyReadMessage(
   });
 }
 
+// ── Follows ──────────────────────────────────────────────────────────────────
+
+export async function fetchFollows(getToken: () => Promise<string | null>) {
+  const token = await getToken();
+  const res = await fetch(`${API_BASE_URL}/api/follows`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Follows error: ${res.status}`);
+  return res.json();
+}
+
 // ── Mood tag books ───────────────────────────────────────────────────────────
 
 export async function moodTagBooks(

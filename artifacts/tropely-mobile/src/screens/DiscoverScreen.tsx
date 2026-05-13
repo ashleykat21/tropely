@@ -188,7 +188,11 @@ export default function DiscoverScreen() {
           ListEmptyComponent={
             results.length === 0 && !loading ? (
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>Search for a book to get started.</Text>
+                <Text style={styles.emptyEmoji}>🔍</Text>
+                <Text style={styles.emptyTitle}>Find your next trope-filled read</Text>
+                <Text style={styles.emptyText}>
+                  Search by title or author — when you add a book we'll auto-tag its tropes.
+                </Text>
               </View>
             ) : null
           }
@@ -226,6 +230,8 @@ const styles = StyleSheet.create({
   addBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center" },
   addBtnDisabled: { backgroundColor: "#d1fae5" },
   addBtnText: { color: "#fff", fontSize: 18, lineHeight: 20 },
-  empty: { paddingTop: 60, alignItems: "center" },
-  emptyText: { fontSize: 14, color: "#9ca3af" },
+  empty: { paddingTop: 60, alignItems: "center", gap: 10, paddingHorizontal: 32 },
+  emptyEmoji: { fontSize: 36 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1a1a1a", textAlign: "center" },
+  emptyText: { fontSize: 14, color: "#9ca3af", textAlign: "center", lineHeight: 20 },
 });
