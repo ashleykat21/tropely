@@ -483,7 +483,8 @@ function AddBookModal({
       zIndex: 100, display: "flex", alignItems: "flex-end",
     }} onClick={onClose}>
       <div style={{
-        width: "100%", background: "#18140e",
+        width: "100%",
+        background: "linear-gradient(160deg, rgba(45,27,78,0.97) 0%, rgba(26,42,74,0.97) 50%, rgba(42,24,64,0.97) 100%)",
         borderRadius: "16px 16px 0 0",
         padding: "20px 16px 36px",
         boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
@@ -560,7 +561,7 @@ function AddBookModal({
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-const BG = "linear-gradient(175deg, #12100c 0%, #18140e 50%, #100e0a 100%)";
+const BG = "linear-gradient(160deg, #2d1b4e 0%, #1a2a4a 25%, #1e3a2a 55%, #3a1a2e 80%, #2a1840 100%)";
 
 type GenreNames = Partial<Record<GenreKey, string>>;
 
@@ -661,7 +662,7 @@ export function LibrarySpineView() {
       <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "0 16px 16px" }} />
 
       {/* Genre shelves */}
-      <div style={{ padding: "0 12px 32px" }}>
+      <div style={{ padding: "0 12px 32px", backdropFilter: "none" }}>
         {Object.entries(genreGroups).map(([gk, gbooks]) => (
           <GenreShelf
             key={gk}
