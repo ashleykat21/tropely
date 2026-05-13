@@ -1,0 +1,47 @@
+I need you to migrate the Tropely mobile app from Expo managed workflow to bare React Native so it can be compiled with EAS Build and submitted to the Apple App Store and Google Play Store. Do not touch the backend, database, or web app at all.
+What to migrate:
+The mobile app lives in artifacts/tropely-mobile. Migrate every screen and feature exactly as-is:
+
+Home (daily readout, mood TBR picker, current reads)
+Library (premium bookshelf with spine view + theme picker — migrate from app/(tabs)/library.tsx and flag any issues instead of skipping)
+Discover (search + add books + trope tagging flow)
+Journal (reading journal entries)
+Insights (stats and charts)
+Profile (photo upload, achievement badges, goals, daily reading goal minutes)
+Book Detail modal
+Companion Chat (trope-aware AI prompts)
+Buddy Reads (5-second polling, room chat, page progress)
+
+Features that must survive the migration:
+
+Clerk auth — fix it to use native deep links and secure storage properly so it stops breaking. Use @clerk/clerk-react-native with expo-secure-store token cache
+Zustand store with AsyncStorage persistence from lib/store.ts
+All API calls in lib/api.ts pointing to usenevora.com
+@workspace/api-client-react wired in _layout.tsx
+Trope tagging banner after adding a book
+Mood-based TBR picker
+Daily readout with pages + minutes progress bars
+Star ratings on Finished shelf cards
+Shelf sorting (Recent / A→Z / Pages / Rating)
+Reading positions sync across devices
+Push notifications
+
+What to change:
+
+Replace expo-router with react-navigation (bottom tabs + native stack)
+Replace any Expo-managed components (expo-image, expo-linear-gradient, etc.) with bare RN equivalents
+Keep expo-secure-store — it works in bare workflow
+Keep eas.json, bundle ID com.nevora.tropely, and EAS project ID c1cf53d3-29fc-4d08-9d0a-b6ad79f1fadd exactly as they are
+Update app.json for bare workflow
+Keep EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY reading from the .env file
+
+Do not touch any of these:
+
+artifacts/api-server
+artifacts/feltly
+lib/db
+railway-api
+schema.sql
+railway.toml, render.yaml, Dockerfile, capacitor.config.ts
+
+Start by auditing artifacts/tropely-mobile/package.json and listing every dependency that needs replacing before writing any code. Then migrate screen by screen and confirm each one is complete before moving to the next. Flag anything uncertain rather than guessing
