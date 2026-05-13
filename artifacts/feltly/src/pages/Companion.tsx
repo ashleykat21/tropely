@@ -21,6 +21,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 type Msg = { role: "user" | "assistant"; content: string };
 type Mode = "reflect" | "character";
 
+// ── Recent characters per book (localStorage) ──────────────────────────────
+const RECENT_CHARS_KEY = (bk: string) => `feltly-companion-chars:${bk}`;
+const getRecentChars = (bk: string): string[] => {
+  try { return JSON.parse(localStorage.getItem(RECENT_CHARS_KEY(bk)) ?? "[]"); }
+  catch { return []; }
+};
+const saveRecentChar = (bk: string, name: string) => {
+  const prev = getRecentChars(bk).filter((c) => c.toLowerCase() !== name.toLowerCase());
+  localStorage.setItem(RECENT_CHARS_KEY(bk), JSON.stringify([name, ...prev].slice(0, 8)));
+};
+
 const COMPANION_FREE_LIMIT = 5;
 const todayKey = () => `feltly-companion-daily:${new Date().toISOString().slice(0, 10)}`;
 const getDailyCount = () => parseInt(localStorage.getItem(todayKey()) ?? "0", 10);
@@ -31,7 +42,12 @@ export default function Companion() {
   const nav = useNavigate();
   const isPremium = usePremium((s) => s.isPremium);
   const { books, currentId, sessions, reflections, journal, spoilerStrictness } = useLibrary();
-  const book = books.find((b) => b.id === currentId) ?? books.find((b) => b.shelf === "reading");
+  const readingBooks = books.filter((b) => b.shelf === "reading");
+  const [selectedBookId, setSelectedBookId] = useState<string | undefined>(() => {
+    const cur = books.find((b) => b.id === currentId);
+    return cur?.shelf === "reading" ? cur.id : readingBooks[0]?.id;
+  });
+  const book = books.find((b) => b.id === selectedBookId) ?? readingBooks[0];
   const bookSessions = book ? sessions.filter((s) => s.bookId === book.id).slice(0, 5) : [];
   const bookReflection = book ? reflections.find((r) => r.bookId === book.id) : null;
   const bookJournal = book ? journal.filter((j) => j.bookId === book.id).slice(0, 8) : [];
@@ -271,10 +287,12 @@ export default function Companion() {
     }
   };
 
-  const confirmCharacter = () => {
-    const name = characterInput.trim();
+  const confirmCharacter = (nameOverride?: string) => {
+    const name = (nameOverride ?? characterInput).trim();
     if (!name) return;
     setActiveCharacter(name);
+    setCharacterInput(name);
+    if (bKeyBase) saveRecentChar(bKeyBase, name);
   };
 
   const reflectSuggestions = book
@@ -562,6 +580,47 @@ export default function Companion() {
           )}
         </header>
 
+        {/* Book picker — only shown when reading more than one book */}
+        {readingBooks.length > 1 && (
+          <div className="space-y-2 animate-fade-up">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Talking about</p>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {readingBooks.map((b) => {
+                const isSelected = b.id === book?.id;
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => {
+                      setSelectedBookId(b.id);
+                      setMode("reflect");
+                      setActiveCharacter("");
+                      setCharacterInput("");
+                    }}
+                    className={cn(
+                      "shrink-0 flex items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition",
+                      isSelected
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border/60 bg-card/60 hover:bg-card text-foreground"
+                    )}
+                  >
+                    {b.cover ? (
+                      <img src={b.cover} alt={b.title} className="h-9 w-6 rounded object-cover shrink-0 shadow-sm" />
+                    ) : (
+                      <div className="h-9 w-6 rounded bg-muted shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium truncate max-w-[130px]">{b.title}</div>
+                      <div className={cn("text-[10px] truncate max-w-[130px]", isSelected ? "opacity-70" : "text-muted-foreground")}>
+                        {b.author}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* What I know panel */}
         {book && (
           <WhatIKnowPanel
@@ -629,56 +688,89 @@ export default function Companion() {
         )}
 
         {/* Character picker */}
-        {book && mode === "character" && !activeCharacter && (
-          <div className="rounded-2xl border border-border/40 bg-card/60 p-6 space-y-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Drama className="h-4 w-4" style={{ color: "var(--mood-strong)" }} />
-                <span className="font-medium text-sm">Who do you want to speak with?</span>
+        {book && mode === "character" && !activeCharacter && (() => {
+          const recentChars = getRecentChars(bKeyBase);
+          return (
+            <div className="rounded-2xl border border-border/40 bg-card/60 p-6 space-y-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Drama className="h-4 w-4" style={{ color: "var(--mood-strong)" }} />
+                  <span className="font-medium text-sm">Who do you want to speak with?</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter any character from <span className="italic">{book.title}</span>. The AI will
+                  speak in their voice — only knowing what they know up to page {book.progress}.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Enter any character from <span className="italic">{book.title}</span>. The AI will
-                speak as them — only knowing what they know up to page {book.progress}.
-              </p>
+
+              {/* Recent characters */}
+              {recentChars.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Resume a conversation</p>
+                  <div className="flex flex-wrap gap-2">
+                    {recentChars.map((name) => (
+                      <button
+                        key={name}
+                        onClick={() => confirmCharacter(name)}
+                        className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium hover:bg-background transition"
+                      >
+                        <span
+                          className="grid h-4 w-4 place-items-center rounded-full text-[9px] font-bold text-background shrink-0"
+                          style={{ background: "var(--mood-strong)" }}
+                        >
+                          {name[0]?.toUpperCase()}
+                        </span>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Type a new character */}
+              <div className="space-y-2">
+                {recentChars.length > 0 && (
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Or start a new chat</p>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    ref={charInputRef}
+                    value={characterInput}
+                    onChange={(e) => setCharacterInput(e.target.value)}
+                    placeholder="Character name…"
+                    className="rounded-full bg-background/70"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") confirmCharacter();
+                    }}
+                  />
+                  <Button
+                    onClick={() => confirmCharacter()}
+                    disabled={!characterInput.trim()}
+                    className="rounded-full shrink-0"
+                  >
+                    Begin
+                  </Button>
+                </div>
+              </div>
+
+              {/* Generic role suggestions */}
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Not sure? Try one of these</p>
+                <div className="flex flex-wrap gap-2">
+                  {["the protagonist", "the narrator", "the antagonist", "a side character"].map((label) => (
+                    <button
+                      key={label}
+                      onClick={() => setCharacterInput(label)}
+                      className="rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Input
-                ref={charInputRef}
-                value={characterInput}
-                onChange={(e) => setCharacterInput(e.target.value)}
-                placeholder="Character name…"
-                className="rounded-full bg-background/70"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") confirmCharacter();
-                }}
-              />
-              <Button
-                onClick={confirmCharacter}
-                disabled={!characterInput.trim()}
-                className="rounded-full shrink-0"
-              >
-                Begin
-              </Button>
-            </div>
-            {/* Example prompts */}
-            <div className="flex flex-wrap gap-2">
-              {[
-                "the protagonist",
-                "the narrator",
-                "the antagonist",
-                "a minor character",
-              ].map((label) => (
-                <button
-                  key={label}
-                  onClick={() => setCharacterInput(label)}
-                  className="rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-background transition"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Chat area */}
         <section className="rounded-2xl mood-surface border border-border/40 p-4 sm:p-6 min-h-[320px] sm:min-h-[420px] flex flex-col">
