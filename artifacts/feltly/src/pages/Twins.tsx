@@ -7,14 +7,64 @@ import { Button } from "@/components/ui/button";
 import { Heart, UserPlus, UserCheck, Users, Sparkles, Lock, BookHeart, Globe, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { MOODS, type MoodKey } from "@/lib/moods";
-import { scoreTwins, type TasteProfile, type TwinMatch } from "@/lib/twinScore";
 import { usePremium } from "@/lib/usePremium";
 import { useTasteSync } from "@/lib/useTasteSync";
 import { Link } from "react-router-dom";
 
-type ProfileRow = { userId: string; displayName: string | null; bio: string | null; moodSignature: string | null };
+type Proximity = "city" | "country" | "worldwide";
+
+type TwinResult = {
+  userId: string;
+  displayName: string | null;
+  city: string | null;
+  country: string | null;
+  score: number;
+  sharedMoods: string[];
+  sharedGenres: string[];
+  proximity: Proximity;
+};
+
+type TasteProfile = {
+  user_id: string;
+  top_emojis: string[];
+  favorite_books: { title: string; author: string; mood?: string; cover?: string | null }[];
+  mood_signature?: string | null;
+  bio?: string | null;
+};
+
+type ProfileRow = {
+  userId: string;
+  displayName: string | null;
+  bio: string | null;
+  moodSignature: string | null;
+};
 
 const FREE_MATCH_CAP = 1;
+
+function ProximityBadge({ proximity, city, country }: { proximity: Proximity; city: string | null; country: string | null }) {
+  if (proximity === "city") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] rounded-full border border-border/40 px-2 py-0.5" style={{ color: "var(--mood-strong)" }}>
+        <MapPin className="h-2.5 w-2.5" />
+        {city ? `${city}` : "Your city"}
+      </span>
+    );
+  }
+  if (proximity === "country") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground rounded-full border border-border/40 px-2 py-0.5">
+        <MapPin className="h-2.5 w-2.5" />
+        {country ? `${country}` : "Same country"}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground rounded-full border border-border/40 px-2 py-0.5">
+      <Globe className="h-2.5 w-2.5" />
+      Global
+    </span>
+  );
+}
 
 export function TwinsPanel() {
   const { user, loading } = useAuth();
@@ -23,10 +73,12 @@ export function TwinsPanel() {
   const books = useLibrary((s) => s.books);
   useTasteSync();
 
-  const [profiles, setProfiles] = useState<TasteProfile[]>([]);
-  const [users, setUsers] = useState<Record<string, ProfileRow>>({});
+  const [matches, setMatches] = useState<TwinResult[]>([]);
+  const [tasteMap, setTasteMap] = useState<Record<string, TasteProfile>>({});
+  const [profileMap, setProfileMap] = useState<Record<string, ProfileRow>>({});
   const [follows, setFollows] = useState<Set<string>>(new Set());
   const [loadingData, setLoadingData] = useState(true);
+  const [noProfile, setNoProfile] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav("/auth");
@@ -38,40 +90,55 @@ export function TwinsPanel() {
     (async () => {
       setLoadingData(true);
       try {
-        const [tpRes, fRes] = await Promise.all([
-          fetch("/api/taste-profiles", { credentials: "include" }),
+        const [twinsRes, followsRes] = await Promise.all([
+          fetch("/api/reading-twins", { credentials: "include" }),
           fetch("/api/follows", { credentials: "include" }),
         ]);
         if (cancelled) return;
-        const tps: TasteProfile[] = tpRes.ok ? await tpRes.json() : [];
-        const followData = fRes.ok ? await fRes.json() : { following: [] };
-        setProfiles(tps);
+
+        if (twinsRes.status === 204 || twinsRes.status === 404) {
+          setNoProfile(true);
+          return;
+        }
+
+        const twins: TwinResult[] = twinsRes.ok ? await twinsRes.json() : [];
+        const followData = followsRes.ok ? await followsRes.json() : { following: [] };
+
+        if (twins.length === 0 && twinsRes.ok) {
+          // API returned empty — could mean no taste profile yet
+          const body = await twinsRes.clone().json().catch(() => []);
+          if (!Array.isArray(body) || body.length === 0) setNoProfile(false);
+        }
+
+        setMatches(twins);
         setFollows(new Set(followData.following ?? []));
 
-        const ids = tps.map((t) => t.user_id).filter(Boolean);
+        // Fetch taste profiles for emoji + favorite books display
+        const ids = twins.map((t) => t.userId).filter(Boolean);
         if (ids.length) {
-          const pRes = await fetch(`/api/profiles?ids=${ids.join(",")}`, { credentials: "include" });
-          if (!cancelled && pRes.ok) {
+          const [tpRes, pRes] = await Promise.all([
+            fetch("/api/taste-profiles", { credentials: "include" }),
+            fetch(`/api/profiles?ids=${ids.join(",")}`, { credentials: "include" }),
+          ]);
+          if (cancelled) return;
+
+          if (tpRes.ok) {
+            const tps: TasteProfile[] = await tpRes.json();
+            setTasteMap(Object.fromEntries(tps.map((tp) => [tp.user_id, tp])));
+          }
+          if (pRes.ok) {
             const ps: ProfileRow[] = await pRes.json();
-            setUsers(Object.fromEntries(ps.map((p) => [p.userId, p])));
+            setProfileMap(Object.fromEntries(ps.map((p) => [p.userId, p])));
           }
         }
+      } catch {
+        // network error — leave loading state as false, empty matches
       } finally {
         if (!cancelled) setLoadingData(false);
       }
     })();
     return () => { cancelled = true; };
   }, [user?.id]);
-
-  const me = useMemo(() => profiles.find((p) => p.user_id === user?.id), [profiles, user]);
-
-  const matches = useMemo<TwinMatch[]>(() => {
-    if (!me) return [];
-    return profiles
-      .filter((p) => p.user_id !== me.user_id)
-      .map((p) => scoreTwins(me, p))
-      .sort((a, b) => b.score - a.score);
-  }, [me, profiles]);
 
   const visibleMatches = isPremium ? matches : matches.slice(0, FREE_MATCH_CAP);
 
@@ -90,7 +157,7 @@ export function TwinsPanel() {
     } catch { toast.error("Network error."); }
   };
 
-  const startBuddyRead = async (m: TwinMatch) => {
+  const startBuddyRead = async (m: TwinResult) => {
     const current = books.find((b) => b.shelf === "reading");
     if (!current) {
       toast.error("Set a current book in your library to start a buddy read.");
@@ -130,18 +197,18 @@ export function TwinsPanel() {
           .
         </h1>
         <p className="text-muted-foreground max-w-md">
-          We match by mood, emoji reactions, genres and reading habits — never by stars.
+          Matched by mood, reactions, genres and reading habits — sorted by how close they are to you.
         </p>
       </header>
 
-      {!me && !loadingData && (
+      {noProfile && !loadingData && (
         <div className="rounded-2xl border border-dashed border-border/60 p-10 text-center space-y-3">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-foreground/5">
             <Sparkles className="h-5 w-5" style={{ color: "var(--mood-strong)" }} />
           </div>
           <div className="font-display text-xl">Your taste fingerprint is still forming.</div>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Add a few books, react to a few chapters and finish your mood quiz. We'll start
+            Add a few books, react to some chapters and finish your mood quiz. We'll start
             matching you to readers who feel the same way.
           </p>
         </div>
@@ -153,28 +220,30 @@ export function TwinsPanel() {
         </div>
       )}
 
-      {me && !loadingData && matches.length === 0 && (
+      {!noProfile && !loadingData && matches.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border/60 p-10 text-center text-muted-foreground">
-          No other readers yet. Check back soon as more readers join.
+          No matches yet. Check back as more readers join.
         </div>
       )}
 
       <div className="space-y-4">
         {visibleMatches.map((m, i) => {
-          const profile = users[m.user_id];
-          const taste = profiles.find((p) => p.user_id === m.user_id);
+          const taste = tasteMap[m.userId];
+          const profile = profileMap[m.userId];
           const isTop = i === 0;
-          const followed = follows.has(m.user_id);
+          const followed = follows.has(m.userId);
+          const sharedEmojis = taste?.top_emojis ?? [];
+
           return (
             <article
-              key={m.user_id}
+              key={m.userId}
               className="rounded-2xl bg-card/70 backdrop-blur border border-border/50 p-5 sm:p-6 space-y-4"
             >
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="font-display text-xl">
-                      {profile?.displayName ?? "Reader"}
+                      {m.displayName ?? profile?.displayName ?? "Reader"}
                     </div>
                     {isTop && (
                       <span
@@ -184,19 +253,11 @@ export function TwinsPanel() {
                         Closest twin
                       </span>
                     )}
-                    {(() => {
-                      const myTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                      const myRegion = myTz.split("/")[0] ?? "UTC";
-                      const regions = ["America", "Europe", "Asia", "Africa", "Australia", "Pacific"];
-                      const matchRegion = regions[m.user_id.charCodeAt(0) % regions.length];
-                      const isNearby = matchRegion === myRegion;
-                      return (
-                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground rounded-full border border-border/40 px-2 py-0.5">
-                          {isNearby ? <MapPin className="h-2.5 w-2.5" /> : <Globe className="h-2.5 w-2.5" />}
-                          {isNearby ? "Nearby" : "Global"}
-                        </span>
-                      );
-                    })()}
+                    <ProximityBadge
+                      proximity={m.proximity}
+                      city={m.city}
+                      country={m.country}
+                    />
                   </div>
                   {profile?.moodSignature && (
                     <div className="text-xs text-muted-foreground italic">
@@ -237,7 +298,7 @@ export function TwinsPanel() {
                   })}
                 </Stat>
                 <Stat label="Shared reactions" empty="No emoji overlap yet">
-                  {m.sharedEmojis.map((e) => (
+                  {sharedEmojis.slice(0, 6).map((e) => (
                     <span
                       key={e}
                       className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-base leading-none"
@@ -257,24 +318,21 @@ export function TwinsPanel() {
                       </span>
                     ))}
                   </Stat>
-                  <Stat label="Both finished" empty="No shared finished books yet">
-                    {m.sharedBooks.slice(0, 5).map((b) => (
-                      <span key={b} className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-xs capitalize">
-                        {b}
-                      </span>
-                    ))}
-                  </Stat>
-                  {(m.paceMatch || m.ageMatch) && (
-                    <div className="sm:col-span-2 text-xs text-muted-foreground flex items-center gap-3">
-                      {m.paceMatch && <span>· Same reading pace</span>}
-                      {m.ageMatch && <span>· Similar age band</span>}
+                  {m.city && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="h-3 w-3 shrink-0" style={{ color: "var(--mood-strong)" }} />
+                      {m.proximity === "city"
+                        ? `Both in ${m.city}`
+                        : m.proximity === "country"
+                        ? `Both in ${m.country}`
+                        : "Different regions"}
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-border/60 p-3 text-xs text-muted-foreground flex items-center gap-2">
                   <Lock className="h-3.5 w-3.5" />
-                  Upgrade to see shared genres, both-finished books and pace/age compatibility.
+                  Upgrade to see shared genres, deeper compatibility, and exact location match.
                 </div>
               )}
 
@@ -311,7 +369,7 @@ export function TwinsPanel() {
                   size="sm"
                   variant={followed ? "secondary" : "outline"}
                   className="rounded-full gap-1.5"
-                  onClick={() => toggleFollow(m.user_id)}
+                  onClick={() => toggleFollow(m.userId)}
                 >
                   {followed ? (
                     <><UserCheck className="h-3.5 w-3.5" /> Following</>
@@ -343,7 +401,7 @@ export function TwinsPanel() {
             </div>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
               Free readers see their closest twin. Premium unlocks every match plus deeper
-              compatibility insights.
+              compatibility insights including location proximity.
             </p>
           </div>
           <Link
@@ -376,7 +434,7 @@ function Stat({
   empty: string;
   children: React.ReactNode;
 }) {
-  const arr = (Array.isArray(children) ? children : [children]).filter(Boolean) as any[];
+  const arr = (Array.isArray(children) ? children : [children]).filter(Boolean) as React.ReactNode[];
   return (
     <div className="space-y-1.5">
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
