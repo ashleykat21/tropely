@@ -462,11 +462,12 @@ function GenreShelf({
 // ─── Add Book modal ───────────────────────────────────────────────────────────
 
 function AddBookModal({
-  activePill, onAdd, onClose,
+  activePill, onAdd, onClose, genreNames,
 }: {
   activePill: PillKey;
   onAdd: (book: Book) => void;
   onClose: () => void;
+  genreNames: GenreNames;
 }) {
   const [query, setQuery] = useState("");
   const results = query.length > 1
@@ -534,13 +535,21 @@ function AddBookModal({
                   fontFamily: "Georgia, serif", lineHeight: 1.3 }}>{b.title}</div>
                 <div style={{ fontSize: 10, color: "rgba(240,236,228,0.5)", marginTop: 1 }}>{b.author}</div>
               </div>
-              <span style={{
-                fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 10,
-                background: "rgba(255,255,255,0.08)", color: "rgba(240,236,228,0.5)",
-                textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>
-                {GENRES[b.genre]?.emoji} {GENRES[b.genre]?.name}
-              </span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 10,
+                  background: "rgba(255,255,255,0.08)", color: "rgba(240,236,228,0.5)",
+                  textTransform: "uppercase", letterSpacing: "0.05em",
+                }}>
+                  {GENRES[b.genre]?.emoji} {genreNames[b.genre] ?? GENRES[b.genre]?.name}
+                </span>
+                <span style={{
+                  fontSize: 8, color: "rgba(200,160,48,0.6)",
+                  fontWeight: 500, letterSpacing: "0.02em",
+                }}>
+                  → {genreNames[b.genre] ?? GENRES[b.genre]?.name}
+                </span>
+              </div>
             </button>
           ))}
         </div>
@@ -675,6 +684,7 @@ export function LibrarySpineView() {
           activePill={activePill}
           onAdd={addBook}
           onClose={() => setShowAdd(false)}
+          genreNames={genreNames}
         />
       )}
     </div>
