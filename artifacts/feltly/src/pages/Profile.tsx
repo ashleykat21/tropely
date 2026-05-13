@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { useUser } from "@clerk/react";
+import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { useAuth } from "@/lib/auth";

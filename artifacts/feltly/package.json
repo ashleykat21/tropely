@@ -80,7 +80,6 @@
   "dependencies": {
     "@capgo/capacitor-updater": "^8.45.10",
     "@clerk/clerk-react": "^5.61.6",
-    "@clerk/react": "^6.5.0",
     "@clerk/themes": "^2.4.57",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.6",
     "@types/node": "^25.3.3",

@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useEffect, useState } from "react";
-import { useUser, useClerk } from "@clerk/react";
+import { useUser, useClerk } from "@clerk/clerk-react";
 
 type AuthUser = { id: string; email?: string; displayName?: string };
 
