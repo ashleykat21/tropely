@@ -1,6 +1,6 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus, Library } from "lucide-react";
+import { Home, Compass, Users, BarChart3, User, Sparkles, NotebookPen, Flame, MessageSquare, PenLine, Snowflake, BookPlus, MoreHorizontal, Layers, Heart, Crown, Calendar, Newspaper, MessageSquarePlus } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useLibrary } from "@/lib/store";
 import { applyMood } from "@/lib/moods";
@@ -26,7 +26,6 @@ import { toast } from "sonner";
 
 const NAV = [
   { to: "/", key: "nav.home", icon: Home },
-  { to: "/library", key: "nav.library", icon: Library },
   { to: "/discover", key: "nav.discover", icon: Compass },
   { to: "/journal", key: "nav.journal", icon: NotebookPen },
   { to: "/profile", key: "nav.you", icon: User },
@@ -35,7 +34,6 @@ const NAV = [
 // Mobile bottom nav: 4 primary destinations + a "More" sheet for the rest.
 const MOBILE_PRIMARY = [
   { to: "/", key: "nav.home", icon: Home },
-  { to: "/library", key: "nav.library", icon: Library },
   { to: "/discover", key: "nav.discover", icon: Compass },
   { to: "/profile", key: "nav.you", icon: User },
 ];
