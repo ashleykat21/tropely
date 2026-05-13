@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SignIn, SignUp } from "@clerk/clerk-react";
+import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -49,8 +50,8 @@ function SeriesFinishedPromptRunner() {
 }
 
 // ── Unauthenticated auth screen ───────────────────────────────────────────────
-// Uses routing="virtual" so Clerk internal navigation works in Capacitor WebView
-// without a real server (no path-based redirects needed).
+// Uses virtual routing on Capacitor (native WebView) and hash routing on web.
+const routing = Capacitor.isNativePlatform() ? "virtual" : "hash";
 
 function AuthScreen() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
@@ -89,9 +90,9 @@ function AuthScreen() {
           </button>
         </div>
         {mode === "sign-in" ? (
-          <SignIn routing="virtual" afterSignInUrl="/" />
+          <SignIn routing={routing} afterSignInUrl="/" />
         ) : (
-          <SignUp routing="virtual" afterSignUpUrl="/" />
+          <SignUp routing={routing} afterSignUpUrl="/" />
         )}
       </div>
     </div>
