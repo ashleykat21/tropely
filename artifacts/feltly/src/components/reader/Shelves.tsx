@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shelf, useLibrary } from "@/lib/store";
 import { BookCover } from "./BookCover";
@@ -8,15 +8,13 @@ import { TROPE_CATEGORIES, tropeCategory } from "@/lib/tropes";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePremium } from "@/lib/usePremium";
-import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Sliders, Globe, Eye, EyeOff, Image } from "lucide-react";
+import { ChevronUp, ChevronDown, Headphones, BookOpen, FolderPlus, Library, X, Plus, Heart, Lock, Pencil, Check, Star, ArrowUpDown, Search, Bookmark, LayoutGrid, BookMarked, Globe, Eye, EyeOff, Image } from "lucide-react";
 import { ShareCardModal } from "./ShareCardModal";
 import { LibraryPortrait } from "./LibraryPortrait";
 import { TbrMoodIntentBadge, TbrIntentStrip } from "./TbrMoodIntent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LockedFeature } from "@/components/premium/LockedFeature";
-import { BookshelfView } from "./BookshelfView";
-import { BookshelfCustomizer } from "./BookshelfCustomizer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,8 +69,8 @@ export function Shelves() {
   const isPremium = usePremium((s) => s.isPremium);
   const bookcaseMode = useLibrary((s) => s.bookcaseMode);
   const setBookcaseMode = useLibrary((s) => s.setBookcaseMode);
-  const bookcaseStyle = useLibrary((s) => s.bookcaseStyle);
-  const [showCustomizer, setShowCustomizer] = useState(false);
+  // Reset any persisted bookcaseMode state (button removed from UI)
+  useEffect(() => { if (bookcaseMode) setBookcaseMode(false); }, []);
   const [showPortrait, setShowPortrait] = useState(false);
   const [active, setActive] = useState<TabKey>("reading");
   const [newCollName, setNewCollName] = useState("");
@@ -234,46 +232,7 @@ export function Shelves() {
             >
               <LayoutGrid className="h-3.5 w-3.5" />
             </button>
-            <button
-              onClick={() => {
-                if (!isPremium) {
-                  toast("Immersive bookshelf is a premium feature", {
-                    description: "Upgrade to unlock the cozy bookshelf experience.",
-                    action: { label: "Upgrade", onClick: () => nav("/premium") },
-                  });
-                  return;
-                }
-                setSpineMode(false);
-                setBookcaseMode(true);
-              }}
-              title={isPremium ? "Immersive bookshelf" : "Premium — immersive bookshelf"}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs transition",
-                bookcaseMode
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Sliders className="h-3.5 w-3.5" />
-              {!isPremium && <Lock className="h-2.5 w-2.5 opacity-50" />}
-            </button>
           </div>
-          {/* Customize button — bookshelf mode only */}
-          {bookcaseMode && isPremium && (
-            <button
-              onClick={() => setShowCustomizer((v) => !v)}
-              title="Customize shelf"
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition",
-                showCustomizer
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border/60 bg-card/80 text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Sliders className="h-3 w-3" />
-              Customize
-            </button>
-          )}
         </div>
         {/* Tab bar — hidden in spine mode */}
         <div className={cn("flex gap-1 overflow-x-auto scrollbar-none rounded-full border border-border/60 bg-card/80 backdrop-blur p-1", spineMode && "hidden")}>
@@ -501,7 +460,7 @@ export function Shelves() {
       )}
 
       {/* ── Spine view — all shelves as horizontal scrollable rows ─────────── */}
-      {spineMode && !bookcaseMode && (
+      {spineMode && (
         <div className="space-y-6">
           {TABS.filter((t) => t.key !== "series" && t.key !== "reading").map((t) => {
             const shelfKey = t.key as Shelf;
@@ -717,11 +676,6 @@ export function Shelves() {
         </div>
       )}
 
-      {/* Bookshelf view — premium immersive mode */}
-      {bookcaseMode && active !== "series" && (
-        <BookshelfView books={sortedDisplayFiltered} style={bookcaseStyle} />
-      )}
-
       <AnimatePresence mode="wait">
         <motion.div
           key={active}
@@ -730,7 +684,7 @@ export function Shelves() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3 }}
           className={
-            (bookcaseMode || spineMode) && active !== "series" && !activeCollTab
+            spineMode && active !== "series" && !activeCollTab
               ? "hidden"
               : active === "series" && !activeCollTab
               ? "space-y-3"
@@ -954,20 +908,6 @@ export function Shelves() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Bookshelf customizer panel */}
-      <AnimatePresence>
-        {bookcaseMode && showCustomizer && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <BookshelfCustomizer />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {active === "want" && <TbrIntentStrip />}
 

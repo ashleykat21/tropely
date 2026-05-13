@@ -48,6 +48,14 @@ export default function Companion() {
     return cur?.shelf === "reading" ? cur.id : readingBooks[0]?.id;
   });
   const book = books.find((b) => b.id === selectedBookId) ?? readingBooks[0];
+
+  // Keep selectedBookId valid if the selected book is removed/finished
+  useEffect(() => {
+    if (!readingBooks.find((b) => b.id === selectedBookId)) {
+      setSelectedBookId(readingBooks[0]?.id);
+    }
+  }, [books.length, currentId]);
+
   const bookSessions = book ? sessions.filter((s) => s.bookId === book.id).slice(0, 5) : [];
   const bookReflection = book ? reflections.find((r) => r.bookId === book.id) : null;
   const bookJournal = book ? journal.filter((j) => j.bookId === book.id).slice(0, 8) : [];
@@ -278,6 +286,13 @@ export default function Companion() {
   }, [user?.id, bKeyBase, book?.id, book?.progress]);
 
   const switchMode = (next: Mode) => {
+    if (next === "character" && !isPremium) {
+      toast("Character chat is a premium feature", {
+        description: "Upgrade to speak with characters from your books.",
+        action: { label: "Upgrade", onClick: () => nav("/premium") },
+      });
+      return;
+    }
     setMode(next);
     setInput("");
     if (next === "character") {
@@ -508,6 +523,7 @@ export default function Companion() {
               >
                 <Drama className="h-3 w-3" />
                 In Character
+                {!isPremium && <Lock className="h-2.5 w-2.5 opacity-40 ml-0.5" />}
               </button>
             </div>
           </div>
