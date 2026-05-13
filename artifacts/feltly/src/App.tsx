@@ -26,9 +26,6 @@ import { useCompanionFinishedToast } from "@/lib/useCompanionFinishedToast";
 import { useSeriesFinishedPrompt } from "@/lib/useSeriesFinishedPrompt";
 import { BookHeart } from "lucide-react";
 
-// ── BUILD MARKER — must appear in dist grep ────────────────────────────────
-const BUILD_MARKER = "FINAL AUTH BUILD - PASSWORD ONLY - NO EMAIL CODE";
-
 const queryClient = new QueryClient();
 
 // BASE_URL is "/" on native Capacitor builds; strip trailing slash for BrowserRouter basename.
@@ -51,25 +48,6 @@ function SeriesFinishedPromptRunner() {
   return null;
 }
 
-// ── Debug banner — bright, visible in both auth and app screens ───────────────
-
-function DebugBanner() {
-  return (
-    <div style={{
-      background: "#ef4444",
-      color: "#fff",
-      fontWeight: 700,
-      fontSize: 13,
-      padding: "6px 16px",
-      textAlign: "center",
-      width: "100%",
-      letterSpacing: "0.03em",
-    }}>
-      {BUILD_MARKER}
-    </div>
-  );
-}
-
 // ── Unauthenticated auth screen ───────────────────────────────────────────────
 // Uses routing="virtual" so Clerk internal navigation works in Capacitor WebView
 // without a real server (no path-based redirects needed).
@@ -79,8 +57,7 @@ function AuthScreen() {
 
   return (
     <div className="min-h-screen flex flex-col items-center mood-surface">
-      <DebugBanner />
-      <div className="flex flex-col items-center gap-6 w-full px-6 py-12">
+      <div className="flex flex-col items-center gap-6 w-full px-6 py-12 max-w-md mx-auto">
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <button
             onClick={() => setMode("sign-in")}
@@ -152,7 +129,6 @@ function AppGate() {
       <LibrarySyncRunner />
       <CompanionFinishedToastRunner />
       <SeriesFinishedPromptRunner />
-      <DebugBanner />
       <Routes>
         <Route path="/"            element={<Index />} />
         <Route path="/discover"    element={<Discover />} />
