@@ -7,6 +7,10 @@ Tropely.xcodeproj
 attached_assets
 workflow-files
 
+# Stale root-level Expo/EAS configs — real config lives in artifacts/tropely-mobile/
+/app.json
+/eas.json
+
 # Build artifacts (also gitignored but be explicit for EAS)
 **/node_modules
 **/.expo
