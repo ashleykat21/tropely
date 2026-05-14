@@ -1,0 +1,3 @@
+# Exclude stale root-level Expo configs so EAS reads only this project's files
+/app.json
+/eas.json
