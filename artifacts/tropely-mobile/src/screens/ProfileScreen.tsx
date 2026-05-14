@@ -15,13 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useUser, useAuth } from "@clerk/clerk-expo";
 import { useStore } from "@/store";
 
-// expo-notifications — gracefully handle if not available in current native build
-let Notifications: any = null;
-try {
-  Notifications = require("expo-notifications");
-} catch {
-  // not bundled yet — reminders will be disabled silently
-}
+import * as Notifications from "expo-notifications";
 
 const GOAL_PAGE_PRESETS = [10, 20, 30, 50];
 const GOAL_MIN_PRESETS = [15, 30, 60];
@@ -45,7 +39,6 @@ const BADGES = [
 ];
 
 async function scheduleReminder(time: string) {
-  if (!Notifications) return;
   try {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== "granted") {
@@ -60,7 +53,11 @@ async function scheduleReminder(time: string) {
     const msg = REMINDER_MESSAGES[new Date().getDay() % REMINDER_MESSAGES.length];
     await Notifications.scheduleNotificationAsync({
       content: { title: "Time to read 📚", body: msg },
-      trigger: { hour, minute, repeats: true },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
     });
     return true;
   } catch {
@@ -69,7 +66,6 @@ async function scheduleReminder(time: string) {
 }
 
 async function cancelReminder() {
-  if (!Notifications) return;
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch {
