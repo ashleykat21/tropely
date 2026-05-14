@@ -7,7 +7,9 @@
     "build": "npm install --prefix artifacts/feltly --legacy-peer-deps --ignore-scripts && npm run build --prefix artifacts/feltly",
     "prepare": "node -e \"process.exit(0)\"",
     "typecheck:libs": "tsc --build",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "private": true,
   "devDependencies": {
@@ -20,6 +22,9 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",
-    "@capacitor/ios": "^8.3.3"
+    "@capacitor/ios": "^8.3.3",
+    "expo": "~53.0.27",
+    "react": "19.0.0",
+    "react-native": "0.79.6"
   }
 }
