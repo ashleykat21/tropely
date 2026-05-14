@@ -1,0 +1,16 @@
+# Large directories not needed for the mobile build
+# (workspace source packages stay so pnpm install succeeds)
+android
+ios
+Tropely
+Tropely.xcodeproj
+attached_assets
+workflow-files
+
+# Build artifacts (also gitignored but be explicit for EAS)
+**/node_modules
+**/.expo
+**/dist
+**/web-build
+**/build
+**/.cache
