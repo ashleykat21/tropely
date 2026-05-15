@@ -25,16 +25,7 @@ workflows:
         script: pnpm exec expo prebuild --platform ios --non-interactive
       - name: Patch Podfile for c++17
         script: |
-          cat >> ios/Podfile << 'PODEOF'
-
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
-              end
-            end
-          end
-          PODEOF
+          sed -i '' 's/post_install do |installer|/post_install do |installer|\n  installer.pods_project.targets.each do |target|\n    target.build_configurations.each do |config|\n      config.build_settings["CLANG_CXX_LANGUAGE_STANDARD"] = "c++17"\n    end\n  end/' ios/Podfile
       - name: Install CocoaPods
         script: cd ios && pod install
       - name: Set up keychain
