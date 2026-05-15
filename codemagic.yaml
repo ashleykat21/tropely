@@ -7,7 +7,7 @@ workflows:
     environment:
       groups:
         - tropely
-      xcode: 16.3
+      xcode: 26.0
       vars:
         BUNDLE_ID: com.nevora.tropely
         NODE: 20.17.0
@@ -24,7 +24,7 @@ workflows:
           echo "EXPO_PUBLIC_MIXPANEL_TOKEN=$EXPO_PUBLIC_MIXPANEL_TOKEN" >> .env
       - name: Expo prebuild
         script: pnpm exec expo prebuild --platform ios --non-interactive
-      - name: Patch Podfile for c++17
+      - name: Patch Podfile for c++17 and fmt fix
         script: |
           python3 << 'PYEOF'
           with open('ios/Podfile', 'r') as f:
@@ -34,6 +34,11 @@ workflows:
               target.build_configurations.each do |config|
                 config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
                 config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+                if target.name == 'fmt'
+                  config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+                  config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '-std=c++17'
+                end
               end
             end
           """
@@ -42,6 +47,9 @@ workflows:
               f.write(content)
           print("Podfile patched successfully")
           PYEOF
+      - name: Increment build number
+        script: |
+          cd ios && agvtool next-version -all
       - name: Install CocoaPods
         script: cd ios && pod install
       - name: Set up keychain
