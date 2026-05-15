@@ -40,6 +40,8 @@ workflows:
               f.write(content)
           print("Podfile patched successfully")
           PYEOF
+      - name: Print Podfile for debug
+        script: cat ios/Podfile
       - name: Install CocoaPods
         script: cd ios && pod install
       - name: Set up keychain
