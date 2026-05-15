@@ -7,7 +7,7 @@ workflows:
     environment:
       groups:
         - tropely
-      xcode: latest
+      xcode: 16.3
       vars:
         BUNDLE_ID: com.nevora.tropely
         NODE: 20.17.0
@@ -58,21 +58,12 @@ workflows:
         script: xcode-project use-profiles
       - name: Build iOS
         script: |
-          set -o pipefail
-          xcodebuild archive \
-            -workspace ios/Tropely.xcworkspace \
-            -scheme Tropely \
-            -configuration Release \
-            -archivePath /tmp/Tropely.xcarchive \
-            -destination "generic/platform=iOS" \
-            CODE_SIGN_STYLE=Manual \
-            2>&1 | tee /tmp/xcode_full.log
-      - name: Show errors
-        script: grep -E "error:|fatal error:" /tmp/xcode_full.log | head -30
+          xcode-project build-ipa \
+            --workspace ios/Tropely.xcworkspace \
+            --scheme Tropely
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - /tmp/xcode_full.log
     publishing:
       app_store_connect:
         auth: integration
