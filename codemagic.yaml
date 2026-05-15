@@ -10,6 +10,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.nevora.tropely
+        provisioning_profile_type: app_store
+        team_id: 4Q39WTW9RN
       vars:
         EXPO_PUBLIC_SUPABASE_URL: $EXPO_PUBLIC_SUPABASE_URL
         EXPO_PUBLIC_SUPABASE_ANON_KEY: $EXPO_PUBLIC_SUPABASE_ANON_KEY
