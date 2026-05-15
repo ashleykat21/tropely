@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,19 +8,49 @@ import {
   TextInput,
   Modal,
   Alert,
+  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
+import { usePremium } from "@/hooks/usePremium";
+import { trackEvent } from "@/lib/analytics";
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+type KindFilter = "all" | "note" | "quote";
 
 export default function JournalScreen() {
+  const nav = useNavigation<Nav>();
   const { books, journal, addJournalEntry, deleteJournalEntry } = useStore();
+  const { isPremium } = usePremium();
+
   const [showAdd, setShowAdd] = useState(false);
   const [kind, setKind] = useState<"quote" | "note">("note");
   const [text, setText] = useState("");
   const [page, setPage] = useState("");
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
 
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+  const [bookFilter, setBookFilter] = useState<string | null>(null);
+
   const readingBooks = books.filter((b) => b.shelf === "reading");
+  const allBooks = books;
+
+  const filtered = useMemo(() => {
+    return journal.filter((e) => {
+      if (kindFilter !== "all" && e.kind !== kindFilter) return false;
+      if (bookFilter && e.bookId !== bookFilter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!e.text.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+  }, [journal, kindFilter, bookFilter, search]);
 
   const save = () => {
     if (!text.trim()) return;
@@ -36,35 +66,125 @@ export default function JournalScreen() {
       page: page ? parseInt(page, 10) : undefined,
       date: new Date().toISOString(),
     });
+    trackEvent("Journal Entry Added", { kind, hasPage: !!page });
     setText("");
     setPage("");
     setShowAdd(false);
   };
 
+  const exportJournal = async () => {
+    if (!isPremium) {
+      Alert.alert("Premium feature", "Upgrade to Premium to export your journal.");
+      return;
+    }
+    const lines: string[] = ["# My Reading Journal", ""];
+    for (const e of journal) {
+      const book = books.find((b) => b.id === e.bookId);
+      lines.push(`## ${e.kind === "quote" ? "Highlight" : "Note"} — ${book?.title ?? "Unknown"}`);
+      if (e.page) lines.push(`Page ${e.page}`);
+      lines.push(e.text);
+      lines.push(`*${new Date(e.date).toLocaleDateString()}*`);
+      lines.push("");
+    }
+    try {
+      await Share.share({ message: lines.join("\n") });
+      trackEvent("Journal Exported", { entryCount: journal.length });
+    } catch {}
+  };
+
+  const booksWithEntries = useMemo(() => {
+    const ids = new Set(journal.map((e) => e.bookId));
+    return allBooks.filter((b) => ids.has(b.id));
+  }, [journal, allBooks]);
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Journal</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)}>
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={[styles.exportBtn, !isPremium && styles.exportBtnLocked]}
+            onPress={exportJournal}
+          >
+            <Text style={styles.exportBtnText}>{isPremium ? "Export" : "✨ Export"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAdd(true)}>
+            <Text style={styles.addBtnText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Search */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search entries…"
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+        />
+      </View>
+
+      {/* Filters */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterRow}
+      >
+        {(["all", "note", "quote"] as KindFilter[]).map((k) => (
+          <TouchableOpacity
+            key={k}
+            style={[styles.filterChip, kindFilter === k && styles.filterChipActive]}
+            onPress={() => setKindFilter(k)}
+          >
+            <Text style={[styles.filterChipText, kindFilter === k && styles.filterChipTextActive]}>
+              {k === "all" ? "All" : k === "note" ? "📝 Notes" : "💬 Highlights"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        {booksWithEntries.map((b) => (
+          <TouchableOpacity
+            key={b.id}
+            style={[styles.filterChip, bookFilter === b.id && styles.filterChipActive]}
+            onPress={() => setBookFilter(bookFilter === b.id ? null : b.id)}
+          >
+            <Text
+              style={[styles.filterChipText, bookFilter === b.id && styles.filterChipTextActive]}
+              numberOfLines={1}
+            >
+              {b.title}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {journal.length === 0 ? (
           <View style={styles.empty}>
+            <Text style={styles.emptyEmoji}>📖</Text>
             <Text style={styles.emptyTitle}>No entries yet</Text>
             <Text style={styles.emptyHint}>
               Add highlights and notes from your reading sessions.
             </Text>
+            <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowAdd(true)}>
+              <Text style={styles.emptyBtnText}>Add first entry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={styles.emptyTitle}>No matches</Text>
+            <Text style={styles.emptyHint}>Try a different search or filter.</Text>
           </View>
         ) : (
-          journal.map((entry) => {
+          filtered.map((entry) => {
             const book = books.find((b) => b.id === entry.bookId);
             return (
               <View key={entry.id} style={styles.entryCard}>
                 <View style={styles.entryHeader}>
-                  <View style={styles.kindBadge}>
+                  <View style={[styles.kindBadge, entry.kind === "quote" && styles.kindBadgeQuote]}>
                     <Text style={styles.kindBadgeText}>
                       {entry.kind === "quote" ? "💬 Highlight" : "📝 Note"}
                     </Text>
@@ -76,11 +196,7 @@ export default function JournalScreen() {
                     onPress={() =>
                       Alert.alert("Delete entry?", "", [
                         { text: "Cancel", style: "cancel" },
-                        {
-                          text: "Delete",
-                          style: "destructive",
-                          onPress: () => deleteJournalEntry(entry.id),
-                        },
+                        { text: "Delete", style: "destructive", onPress: () => deleteJournalEntry(entry.id) },
                       ])
                     }
                     style={styles.deleteBtn}
@@ -88,19 +204,32 @@ export default function JournalScreen() {
                     <Text style={styles.deleteBtnText}>✕</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.entryText}>{entry.text}</Text>
-                {book && (
-                  <Text style={styles.entryBook}>{book.title}</Text>
-                )}
-                <Text style={styles.entryDate}>
-                  {new Date(entry.date).toLocaleDateString()}
+                <Text style={[styles.entryText, entry.kind === "quote" && styles.entryTextQuote]}>
+                  {entry.kind === "quote" ? `"${entry.text}"` : entry.text}
                 </Text>
+                {book && (
+                  <TouchableOpacity onPress={() => nav.navigate("BookDetail", { bookId: book.id })}>
+                    <Text style={[styles.entryBook, styles.entryBookLink]}>{book.title}</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.entryDate}>{new Date(entry.date).toLocaleDateString()}</Text>
               </View>
             );
           })
         )}
       </ScrollView>
 
+      {/* Stats footer when journal has entries */}
+      {journal.length > 0 && (
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            {filtered.length} entr{filtered.length !== 1 ? "ies" : "y"}
+            {filtered.length !== journal.length ? ` (of ${journal.length})` : ""}
+          </Text>
+        </View>
+      )}
+
+      {/* Add entry modal */}
       <Modal visible={showAdd} animationType="slide" presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalSafe}>
           <View style={styles.modalHeader}>
@@ -130,7 +259,7 @@ export default function JournalScreen() {
             </View>
 
             {/* Book selector */}
-            {readingBooks.length > 1 && (
+            {readingBooks.length > 0 && (
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>BOOK</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -175,6 +304,7 @@ export default function JournalScreen() {
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
+                autoFocus
               />
             </View>
           </ScrollView>
@@ -186,25 +316,45 @@ export default function JournalScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fafaf9" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
+  headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
+  exportBtn: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  exportBtnLocked: { borderColor: "#fde68a", backgroundColor: "#fffbeb" },
+  exportBtnText: { fontSize: 12, fontWeight: "600", color: "#6b7280" },
   addBtn: { backgroundColor: "#1a1a1a", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
   addBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  searchRow: { paddingHorizontal: 16, paddingBottom: 8 },
+  searchInput: { backgroundColor: "#f3f4f6", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9, fontSize: 14, color: "#1a1a1a" },
+  filterScroll: { flexGrow: 0 },
+  filterRow: { paddingHorizontal: 16, gap: 6, paddingBottom: 10 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f3f4f6", maxWidth: 160 },
+  filterChipActive: { backgroundColor: "#1a1a1a" },
+  filterChipText: { fontSize: 12, fontWeight: "500", color: "#6b7280" },
+  filterChipTextActive: { color: "#fff" },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 12, paddingBottom: 32 },
-  empty: { flex: 1, alignItems: "center", paddingTop: 60, gap: 8 },
+  empty: { alignItems: "center", paddingTop: 60, gap: 8 },
+  emptyEmoji: { fontSize: 36 },
   emptyTitle: { fontSize: 17, fontWeight: "600", color: "#1a1a1a" },
-  emptyHint: { fontSize: 14, color: "#9ca3af", textAlign: "center", paddingHorizontal: 32 },
+  emptyHint: { fontSize: 14, color: "#9ca3af", textAlign: "center", paddingHorizontal: 32, lineHeight: 20 },
+  emptyBtn: { backgroundColor: "#1a1a1a", borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
+  emptyBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
   entryCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, gap: 8, borderWidth: 1, borderColor: "#f0f0f0" },
   entryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   kindBadge: { backgroundColor: "#f3f4f6", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  kindBadgeQuote: { backgroundColor: "#fef3c7" },
   kindBadgeText: { fontSize: 11, fontWeight: "600", color: "#6b7280" },
   pageLabel: { fontSize: 11, color: "#9ca3af" },
   deleteBtn: { marginLeft: "auto", padding: 4 },
   deleteBtnText: { fontSize: 12, color: "#d1d5db" },
   entryText: { fontSize: 14, color: "#1a1a1a", lineHeight: 20 },
+  entryTextQuote: { fontStyle: "italic", color: "#374151" },
   entryBook: { fontSize: 11, color: "#6b7280", fontStyle: "italic" },
+  entryBookLink: { textDecorationLine: "underline" },
   entryDate: { fontSize: 10, color: "#d1d5db" },
+  footer: { borderTopWidth: 1, borderTopColor: "#f0f0f0", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff" },
+  footerText: { fontSize: 12, color: "#9ca3af", textAlign: "center" },
   // Modal
   modalSafe: { flex: 1, backgroundColor: "#fafaf9" },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },

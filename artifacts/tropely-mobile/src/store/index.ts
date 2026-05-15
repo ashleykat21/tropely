@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create, StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -71,15 +71,33 @@ export type Highlight = {
   date: string;
 };
 
-// ── Store shape ──────────────────────────────────────────────────────────────
+// ── Slice types ───────────────────────────────────────────────────────────────
 
-type LibraryState = {
+type LibrarySlice = {
   books: Book[];
   currentId: string | null;
   sessions: SessionLog[];
-  journal: JournalEntry[];
   reflections: Reflection[];
   highlights: Highlight[];
+  addBook: (b: Omit<Book, "id" | "addedAt">) => string;
+  updateBook: (id: string, patch: Partial<Book>) => void;
+  removeBook: (id: string) => void;
+  setCurrent: (id: string) => void;
+  moveToShelf: (id: string, shelf: Shelf) => void;
+  addSession: (s: Omit<SessionLog, "id">) => void;
+  setReflection: (bookId: string, text: string, rating?: number) => void;
+  addHighlight: (h: Omit<Highlight, "id">) => void;
+  deleteHighlight: (id: string) => void;
+};
+
+type JournalSlice = {
+  journal: JournalEntry[];
+  addJournalEntry: (e: Omit<JournalEntry, "id">) => void;
+  updateJournalEntry: (id: string, patch: Partial<JournalEntry>) => void;
+  deleteJournalEntry: (id: string) => void;
+};
+
+type SettingsSlice = {
   age: number | null;
   dailyGoalPages: number;
   dailyGoalMinutes: number;
@@ -89,18 +107,13 @@ type LibraryState = {
   reminderEnabled: boolean;
   reminderTime: string;
   preferredTropes: string[];
-
-  // actions
-  addBook: (b: Omit<Book, "id" | "addedAt">) => string;
-  updateBook: (id: string, patch: Partial<Book>) => void;
-  removeBook: (id: string) => void;
-  setCurrent: (id: string) => void;
-  moveToShelf: (id: string, shelf: Shelf) => void;
-  addSession: (s: Omit<SessionLog, "id">) => void;
-  addJournalEntry: (e: Omit<JournalEntry, "id">) => void;
-  updateJournalEntry: (id: string, patch: Partial<JournalEntry>) => void;
-  deleteJournalEntry: (id: string) => void;
-  setReflection: (bookId: string, text: string, rating?: number) => void;
+  spoilerLock: boolean;
+  equippedBadgeId: string | null;
+  monthlyProgress: Record<string, { month: string; completed: boolean; progress: number }>;
+  yearlyBadges: { year: number; badges: string[] }[];
+  referralCode: string | null;
+  referralCount: number;
+  freeMonthsEarned: number;
   setAge: (age: number) => void;
   setDailyGoalPages: (n: number) => void;
   setDailyGoalMinutes: (n: number) => void;
@@ -110,118 +123,141 @@ type LibraryState = {
   setReminderEnabled: (v: boolean) => void;
   setReminderTime: (t: string) => void;
   setPreferredTropes: (tropes: string[]) => void;
-  addHighlight: (h: Omit<Highlight, "id">) => void;
-  deleteHighlight: (id: string) => void;
+  setSpoilerLock: (v: boolean) => void;
+  setEquippedBadge: (id: string | null) => void;
+  setReferralCode: (code: string) => void;
+  incrementReferralCount: () => void;
 };
+
+type AllSlices = LibrarySlice & JournalSlice & SettingsSlice;
+
+// ── Helper ───────────────────────────────────────────────────────────────────
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export const useStore = create<LibraryState>()(
+// ── Slice creators ────────────────────────────────────────────────────────────
+
+const createLibrarySlice: StateCreator<AllSlices, [], [], LibrarySlice> = (set) => ({
+  books: [],
+  currentId: null,
+  sessions: [],
+  reflections: [],
+  highlights: [],
+
+  addBook: (b) => {
+    const id = uid();
+    set((s) => ({
+      books: [...s.books, { ...b, id, addedAt: new Date().toISOString() }],
+      currentId: b.shelf === "reading" ? id : s.currentId,
+    }));
+    return id;
+  },
+
+  updateBook: (id, patch) =>
+    set((s) => ({ books: s.books.map((b) => (b.id === id ? { ...b, ...patch } : b)) })),
+
+  removeBook: (id) =>
+    set((s) => ({
+      books: s.books.filter((b) => b.id !== id),
+      currentId: s.currentId === id ? null : s.currentId,
+    })),
+
+  setCurrent: (id) => set({ currentId: id }),
+
+  moveToShelf: (id, shelf) =>
+    set((s) => ({ books: s.books.map((b) => (b.id === id ? { ...b, shelf } : b)) })),
+
+  addSession: (s) =>
+    set((st) => ({ sessions: [{ ...s, id: uid() }, ...st.sessions] })),
+
+  setReflection: (bookId, text, rating) =>
+    set((s) => {
+      const existing = s.reflections.find((r) => r.bookId === bookId);
+      if (existing) {
+        return {
+          reflections: s.reflections.map((r) =>
+            r.bookId === bookId ? { ...r, text, rating, date: new Date().toISOString() } : r,
+          ),
+        };
+      }
+      return {
+        reflections: [
+          ...s.reflections,
+          { id: uid(), bookId, text, rating, date: new Date().toISOString() },
+        ],
+      };
+    }),
+
+  addHighlight: (h) =>
+    set((s) => ({ highlights: [{ ...h, id: uid() }, ...s.highlights] })),
+
+  deleteHighlight: (id) =>
+    set((s) => ({ highlights: s.highlights.filter((h) => h.id !== id) })),
+});
+
+const createJournalSlice: StateCreator<AllSlices, [], [], JournalSlice> = (set) => ({
+  journal: [],
+
+  addJournalEntry: (e) =>
+    set((s) => ({ journal: [{ ...e, id: uid() }, ...s.journal] })),
+
+  updateJournalEntry: (id, patch) =>
+    set((s) => ({ journal: s.journal.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
+
+  deleteJournalEntry: (id) =>
+    set((s) => ({ journal: s.journal.filter((e) => e.id !== id) })),
+});
+
+const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set) => ({
+  age: null,
+  dailyGoalPages: 20,
+  dailyGoalMinutes: 30,
+  isPremium: false,
+  annualGoal: 24,
+  hasOnboarded: false,
+  reminderEnabled: false,
+  reminderTime: "20:00",
+  preferredTropes: [],
+  spoilerLock: true,
+  equippedBadgeId: null,
+  monthlyProgress: {},
+  yearlyBadges: [],
+  referralCode: null,
+  referralCount: 0,
+  freeMonthsEarned: 0,
+
+  setAge: (age) => set({ age }),
+  setDailyGoalPages: (n) => set({ dailyGoalPages: n }),
+  setDailyGoalMinutes: (n) => set({ dailyGoalMinutes: n }),
+  setPremium: (v) => set({ isPremium: v }),
+  setAnnualGoal: (n) => set({ annualGoal: n }),
+  setHasOnboarded: (v) => set({ hasOnboarded: v }),
+  setReminderEnabled: (v) => set({ reminderEnabled: v }),
+  setReminderTime: (t) => set({ reminderTime: t }),
+  setPreferredTropes: (tropes) => set({ preferredTropes: tropes }),
+  setSpoilerLock: (v) => set({ spoilerLock: v }),
+  setEquippedBadge: (id) => set({ equippedBadgeId: id }),
+  setReferralCode: (code) => set({ referralCode: code }),
+  incrementReferralCount: () =>
+    set((s) => {
+      const next = s.referralCount + 1;
+      return {
+        referralCount: next,
+        freeMonthsEarned: s.freeMonthsEarned + (next % 3 === 0 ? 1 : 0),
+      };
+    }),
+});
+
+// ── Store ─────────────────────────────────────────────────────────────────────
+
+export const useStore = create<AllSlices>()(
   persist(
-    (set, get) => ({
-      books: [],
-      currentId: null,
-      sessions: [],
-      journal: [],
-      reflections: [],
-      highlights: [],
-      age: null,
-      dailyGoalPages: 20,
-      dailyGoalMinutes: 30,
-      isPremium: false,
-      annualGoal: 24,
-      hasOnboarded: false,
-      reminderEnabled: false,
-      reminderTime: "20:00",
-      preferredTropes: [],
-
-      addBook: (b) => {
-        const id = uid();
-        set((s) => ({
-          books: [
-            ...s.books,
-            { ...b, id, addedAt: new Date().toISOString() },
-          ],
-          currentId: b.shelf === "reading" ? id : s.currentId,
-        }));
-        return id;
-      },
-
-      updateBook: (id, patch) =>
-        set((s) => ({
-          books: s.books.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-        })),
-
-      removeBook: (id) =>
-        set((s) => ({
-          books: s.books.filter((b) => b.id !== id),
-          currentId: s.currentId === id ? null : s.currentId,
-        })),
-
-      setCurrent: (id) => set({ currentId: id }),
-
-      moveToShelf: (id, shelf) =>
-        set((s) => ({
-          books: s.books.map((b) => (b.id === id ? { ...b, shelf } : b)),
-        })),
-
-      addSession: (s) =>
-        set((st) => ({
-          sessions: [{ ...s, id: uid() }, ...st.sessions],
-        })),
-
-      addJournalEntry: (e) =>
-        set((s) => ({
-          journal: [{ ...e, id: uid() }, ...s.journal],
-        })),
-
-      updateJournalEntry: (id, patch) =>
-        set((s) => ({
-          journal: s.journal.map((e) => (e.id === id ? { ...e, ...patch } : e)),
-        })),
-
-      deleteJournalEntry: (id) =>
-        set((s) => ({ journal: s.journal.filter((e) => e.id !== id) })),
-
-      setReflection: (bookId, text, rating) =>
-        set((s) => {
-          const existing = s.reflections.find((r) => r.bookId === bookId);
-          if (existing) {
-            return {
-              reflections: s.reflections.map((r) =>
-                r.bookId === bookId ? { ...r, text, rating, date: new Date().toISOString() } : r,
-              ),
-            };
-          }
-          return {
-            reflections: [
-              ...s.reflections,
-              { id: uid(), bookId, text, rating, date: new Date().toISOString() },
-            ],
-          };
-        }),
-
-      setAge: (age) => set({ age }),
-      setDailyGoalPages: (n) => set({ dailyGoalPages: n }),
-      setDailyGoalMinutes: (n) => set({ dailyGoalMinutes: n }),
-      setPremium: (v) => set({ isPremium: v }),
-      setAnnualGoal: (n) => set({ annualGoal: n }),
-      setHasOnboarded: (v) => set({ hasOnboarded: v }),
-      setReminderEnabled: (v) => set({ reminderEnabled: v }),
-      setReminderTime: (t) => set({ reminderTime: t }),
-      setPreferredTropes: (tropes) => set({ preferredTropes: tropes }),
-
-      addHighlight: (h) =>
-        set((s) => ({
-          highlights: [{ ...h, id: uid() }, ...s.highlights],
-        })),
-
-      deleteHighlight: (id) =>
-        set((s) => ({
-          highlights: s.highlights.filter((h) => h.id !== id),
-        })),
+    (...a) => ({
+      ...createLibrarySlice(...a),
+      ...createJournalSlice(...a),
+      ...createSettingsSlice(...a),
     }),
     {
       name: "tropely-library",
@@ -229,6 +265,21 @@ export const useStore = create<LibraryState>()(
     },
   ),
 );
+
+// ── Convenience selectors ─────────────────────────────────────────────────────
+
+export function useBooks() { return useStore((s) => s.books); }
+export function useSessions() { return useStore((s) => s.sessions); }
+export function useJournal() { return useStore((s) => s.journal); }
+export function useSpoilerLock() { return useStore((s) => s.spoilerLock); }
+export function useCurrentBook() {
+  return useStore(
+    (s) =>
+      s.books.find((b) => b.id === s.currentId && b.shelf === "reading") ??
+      s.books.find((b) => b.shelf === "reading") ??
+      null,
+  );
+}
 
 // ── Streak utility ────────────────────────────────────────────────────────────
 

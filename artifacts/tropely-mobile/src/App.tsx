@@ -1,16 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ClerkProvider, useAuth, SignedIn, SignedOut } from "@clerk/clerk-expo";
-import { tokenCache } from "@/lib/tokenCache";
-import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import * as Linking from "expo-linking";
+import { StatusBar } from "expo-status-bar";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { RootNavigator } from "@/navigation";
 import { AuthScreen } from "@/screens/AuthScreen";
-import { StatusBar } from "expo-status-bar";
-
-// Point the shared API client at the production server
-setBaseUrl(process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://usenevora.com");
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { supabase } from "@/lib/supabase";
+import { trackEvent, identifyUser } from "@/lib/analytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,37 +21,61 @@ const queryClient = new QueryClient({
   },
 });
 
-const PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+function AppNavigator() {
+  const { session, loading } = useAuth();
 
-// Wire the Clerk session token into the API client so every
-// request includes Authorization: Bearer <token>
-function ClerkTokenBridge({ children }: { children: React.ReactNode }) {
-  const { getToken } = useAuth();
-  React.useEffect(() => {
-    setAuthTokenGetter(() => getToken());
-    return () => setAuthTokenGetter(null);
-  }, [getToken]);
-  return <>{children}</>;
+  useEffect(() => {
+    if (session?.user) {
+      identifyUser(session.user.id, { email: session.user.email });
+    }
+  }, [session?.user?.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fafaf9" }}>
+        <ActivityIndicator size="large" color="#1a1a1a" />
+      </View>
+    );
+  }
+
+  return session ? <RootNavigator /> : <AuthScreen />;
 }
 
 export default function App() {
+  useEffect(() => {
+    trackEvent("App Opened");
+
+    const handleUrl = async ({ url }: { url: string }) => {
+      if (url.includes("access_token") || url.includes("refresh_token")) {
+        const fragment = url.split("#")[1] ?? url.split("?")[1] ?? "";
+        const params = new URLSearchParams(fragment);
+        const access_token = params.get("access_token");
+        const refresh_token = params.get("refresh_token");
+        if (access_token && refresh_token) {
+          await supabase.auth.setSession({ access_token, refresh_token });
+        }
+      }
+    };
+
+    const sub = Linking.addEventListener("url", handleUrl);
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl({ url });
+    });
+    return () => sub.remove();
+  }, []);
+
   return (
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} tokenCache={tokenCache}>
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <StatusBar style="auto" />
-          <NavigationContainer>
-            <SignedIn>
-              <ClerkTokenBridge>
-                <RootNavigator />
-              </ClerkTokenBridge>
-            </SignedIn>
-            <SignedOut>
-              <AuthScreen />
-            </SignedOut>
-          </NavigationContainer>
-        </SafeAreaProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <StatusBar style="auto" />
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

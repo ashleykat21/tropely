@@ -9,8 +9,10 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.nevora.tropely
       vars:
-        EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_live_Y2xlcmsudXNlbmV2b3JhLmNvbSQ
-      node: 20.17.0
+        EXPO_PUBLIC_SUPABASE_URL: $EXPO_PUBLIC_SUPABASE_URL
+        EXPO_PUBLIC_SUPABASE_ANON_KEY: $EXPO_PUBLIC_SUPABASE_ANON_KEY
+        EXPO_PUBLIC_MIXPANEL_TOKEN: $EXPO_PUBLIC_MIXPANEL_TOKEN
+        NODE: 20.17.0
     working_directory: artifacts/tropely-mobile
     scripts:
       - name: Install pnpm
@@ -18,7 +20,10 @@ workflows:
       - name: Install dependencies
         script: cd ../.. && pnpm install --no-frozen-lockfile
       - name: Set up .env
-        script: echo "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=$EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY" > .env
+        script: |
+          echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
+          echo "EXPO_PUBLIC_MIXPANEL_TOKEN=$EXPO_PUBLIC_MIXPANEL_TOKEN" >> .env
       - name: Expo prebuild
         script: pnpm exec expo prebuild --platform ios --non-interactive
       - name: Install CocoaPods

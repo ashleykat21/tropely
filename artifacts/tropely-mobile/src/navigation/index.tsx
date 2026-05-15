@@ -15,6 +15,7 @@ import CompanionScreen from "@/screens/CompanionScreen";
 import BuddyReadsScreen from "@/screens/BuddyReadsScreen";
 import OnboardingScreen from "@/screens/OnboardingScreen";
 import TropeMatchScreen from "@/screens/TropeMatchScreen";
+import ReferralScreen from "@/screens/ReferralScreen";
 import { useStore } from "@/store";
 
 // ── Param lists ──────────────────────────────────────────────────────────────
@@ -26,11 +27,12 @@ export type RootStackParamList = {
   Companion: { bookId?: string };
   BuddyReads: undefined;
   TropeMatch: undefined;
+  Referral: undefined;
 };
 
 export type TabParamList = {
-  Home: undefined;
-  Library: undefined;
+  Reading: undefined;
+  Shelf: undefined;
   Discover: undefined;
   Journal: undefined;
   Insights: undefined;
@@ -41,8 +43,8 @@ export type TabParamList = {
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
-    Home: "🏠",
-    Library: "📚",
+    Reading: "📖",
+    Shelf: "📚",
     Discover: "🔍",
     Journal: "📝",
     Insights: "📊",
@@ -78,8 +80,8 @@ function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Library" component={LibraryScreen} />
+      <Tab.Screen name="Reading" component={HomeScreen} />
+      <Tab.Screen name="Shelf" component={LibraryScreen} />
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Journal" component={JournalScreen} />
       <Tab.Screen name="Insights" component={InsightsScreen} />
@@ -116,6 +118,11 @@ export function RootNavigator() {
         name="TropeMatch"
         component={TropeMatchScreen}
         options={{ presentation: "modal", headerShown: false }}
+      />
+      <Stack.Screen
+        name="Referral"
+        component={ReferralScreen}
+        options={{ presentation: "modal", headerShown: true, title: "Invite Friends" }}
       />
     </Stack.Navigator>
   );

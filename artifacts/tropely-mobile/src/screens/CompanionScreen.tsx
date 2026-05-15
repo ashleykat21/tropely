@@ -8,35 +8,72 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Alert,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute, type RouteProp } from "@react-navigation/native";
-import { useAuth } from "@clerk/clerk-expo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import { sendCompanionMessage, type CompanionMessage } from "@/lib/api";
+import { usePremium } from "@/hooks/usePremium";
+import { trackEvent } from "@/lib/analytics";
 
 type Route = RouteProp<RootStackParamList, "Companion">;
 type Mode = "reflect" | "character";
 
-const RECENT_CHARS_KEY = (bk: string) => `tropely-companion-chars:${bk}`;
-const getRecentChars = (bk: string): string[] => {
-  // AsyncStorage is async; for simplicity we use a module-level cache here.
-  return [];
-};
+function historyKey(bookId: string, mode: Mode, characterName: string) {
+  return `tropely-companion:${bookId}:${mode}:${characterName}`;
+}
+
+function TypingIndicator() {
+  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+
+  useEffect(() => {
+    const anims = dots.map((dot, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 180),
+          Animated.timing(dot, { toValue: 1, duration: 260, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 260, useNativeDriver: true }),
+          Animated.delay(540 - i * 180),
+        ]),
+      ),
+    );
+    anims.forEach((a) => a.start());
+    return () => anims.forEach((a) => a.stop());
+  }, []);
+
+  return (
+    <View style={styles.typingWrap}>
+      {dots.map((dot, i) => (
+        <Animated.View
+          key={i}
+          style={[
+            styles.typingDot,
+            {
+              opacity: dot,
+              transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
 
 export default function CompanionScreen() {
   const route = useRoute<Route>();
-  const { getToken } = useAuth();
-  const { books, sessions, journal } = useStore();
+  const { books, age } = useStore();
+  const { isPremium } = usePremium();
+
+  const isUnder13 = age !== null && age < 13;
 
   const bookId = route.params?.bookId;
-  const readingBooks = books.filter((b) => b.shelf === "reading");
-  const [selectedBookId, setSelectedBookId] = useState(
-    bookId ?? readingBooks[0]?.id,
-  );
+  const allReadingBooks = books.filter((b) => b.shelf === "reading");
+  const readingBooks = isPremium ? allReadingBooks : allReadingBooks.slice(0, 1);
+  const [selectedBookId, setSelectedBookId] = useState(bookId ?? readingBooks[0]?.id);
   const book = books.find((b) => b.id === selectedBookId) ?? readingBooks[0];
 
   const [mode, setMode] = useState<Mode>("reflect");
@@ -47,22 +84,48 @@ export default function CompanionScreen() {
   const [busy, setBusy] = useState(false);
   const listRef = useRef<FlatList>(null);
 
-  const isPremium = useStore((s) => s.isPremium);
+  useEffect(() => {
+    trackEvent("Companion Opened", { mode, bookId: selectedBookId ?? null });
+  }, []);
 
+  // Load persisted history when book/mode/character changes
   useEffect(() => {
     if (!book) return;
-    const greeting: CompanionMessage = {
-      role: "assistant",
-      content:
-        mode === "reflect"
-          ? `Hi! I'm your reading companion for "${book.title}". I know you're on page ${book.progress}. What's resonating with you right now?`
-          : activeCharacter
-          ? `*clears throat* … You wanted to speak with me? I'm ${activeCharacter}.`
-          : "",
-    };
-    if (greeting.content) setMessages([greeting]);
-    else setMessages([]);
-  }, [book?.id, mode, activeCharacter]);
+    const key = historyKey(selectedBookId ?? book.id, mode, activeCharacter);
+    AsyncStorage.getItem(key).then((stored) => {
+      if (stored) {
+        try {
+          setMessages(JSON.parse(stored));
+          return;
+        } catch {}
+      }
+      // No history — show greeting
+      const greeting: CompanionMessage = {
+        role: "assistant",
+        content:
+          mode === "reflect"
+            ? `Hi! I'm your reading companion for "${book.title}". I know you're on page ${book.progress}. What's resonating with you right now?`
+            : activeCharacter
+            ? `*clears throat* … You wanted to speak with me? I'm ${activeCharacter}.`
+            : "",
+      };
+      setMessages(greeting.content ? [greeting] : []);
+    });
+  }, [selectedBookId, book?.id, mode, activeCharacter]);
+
+  // Save history whenever messages change
+  useEffect(() => {
+    if (!book || messages.length === 0) return;
+    const key = historyKey(selectedBookId ?? book.id, mode, activeCharacter);
+    AsyncStorage.setItem(key, JSON.stringify(messages));
+  }, [messages]);
+
+  const switchBook = (id: string) => {
+    // Current history already saved via the effect above
+    setSelectedBookId(id);
+    setMode("reflect");
+    setActiveCharacter("");
+  };
 
   const send = async (overrideText?: string) => {
     const text = (overrideText ?? input).trim();
@@ -82,15 +145,17 @@ export default function CompanionScreen() {
       const reply = await sendCompanionMessage(
         book.openLibraryKey ?? book.id,
         nextMessages,
-        getToken,
         mode === "character" && activeCharacter
           ? { characterName: activeCharacter, tropes: book.tropes }
           : { tropes: book.tropes },
       );
-      setMessages([...nextMessages, { role: "assistant", content: reply }]);
+      const finalMessages: CompanionMessage[] = [...nextMessages, { role: "assistant", content: reply }];
+      setMessages(finalMessages);
+      trackEvent("Companion Message Sent", { mode, isCharacter: mode === "character" });
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
-    } catch (err: any) {
-      Alert.alert("Error", err.message ?? "Failed to reach the companion.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to reach the companion.";
+      Alert.alert("Error", msg);
       setMessages(messages);
     } finally {
       setBusy(false);
@@ -133,7 +198,7 @@ export default function CompanionScreen() {
         keyboardVerticalOffset={90}
       >
         {/* Book selector */}
-        {readingBooks.length > 1 && (
+        {allReadingBooks.length > 1 && (
           <View style={styles.bookSelector}>
             <FlatList
               horizontal
@@ -143,11 +208,7 @@ export default function CompanionScreen() {
               renderItem={({ item: b }) => (
                 <TouchableOpacity
                   style={[styles.bookChip, b.id === selectedBookId && styles.bookChipActive]}
-                  onPress={() => {
-                    setSelectedBookId(b.id);
-                    setMode("reflect");
-                    setActiveCharacter("");
-                  }}
+                  onPress={() => switchBook(b.id)}
                 >
                   <Text style={[styles.bookChipText, b.id === selectedBookId && styles.bookChipTextActive]} numberOfLines={1}>
                     {b.title}
@@ -155,6 +216,9 @@ export default function CompanionScreen() {
                 </TouchableOpacity>
               )}
             />
+            {!isPremium && (
+              <Text style={styles.companionPremiumNote}>✨ Premium — unlock companion for all your books</Text>
+            )}
           </View>
         )}
 
@@ -168,21 +232,23 @@ export default function CompanionScreen() {
               📖 Reflect
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeBtn, mode === "character" && styles.modeBtnActive]}
-            onPress={() => {
-              if (!isPremium) {
-                Alert.alert("Premium feature", "Character chat requires a premium subscription.");
-                return;
-              }
-              setMode("character");
-              setActiveCharacter("");
-            }}
-          >
-            <Text style={[styles.modeBtnText, mode === "character" && styles.modeBtnTextActive]}>
-              🎭 In Character {!isPremium ? "🔒" : ""}
-            </Text>
-          </TouchableOpacity>
+          {!isUnder13 && (
+            <TouchableOpacity
+              style={[styles.modeBtn, mode === "character" && styles.modeBtnActive]}
+              onPress={() => {
+                if (!isPremium) {
+                  Alert.alert("Premium feature", "Character chat requires a premium subscription.");
+                  return;
+                }
+                setMode("character");
+                setActiveCharacter("");
+              }}
+            >
+              <Text style={[styles.modeBtnText, mode === "character" && styles.modeBtnTextActive]}>
+                🎭 In Character {!isPremium ? "✨" : ""}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Character picker */}
@@ -237,14 +303,7 @@ export default function CompanionScreen() {
               </Text>
             </View>
           )}
-          ListFooterComponent={
-            busy ? (
-              <View style={styles.typingIndicator}>
-                <ActivityIndicator size="small" color="#9ca3af" />
-                <Text style={styles.typingText}>Thinking…</Text>
-              </View>
-            ) : null
-          }
+          ListFooterComponent={busy ? <TypingIndicator /> : null}
         />
 
         {/* Suggestions */}
@@ -279,6 +338,7 @@ export default function CompanionScreen() {
               }
               multiline
               maxLength={500}
+              editable={!busy}
             />
             <TouchableOpacity
               style={[styles.sendBtn, (!input.trim() || busy) && styles.sendBtnDisabled]}
@@ -298,7 +358,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fafaf9" },
   empty: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32 },
   emptyText: { fontSize: 15, color: "#9ca3af", textAlign: "center" },
-  bookSelector: { paddingVertical: 8, paddingLeft: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  bookSelector: { paddingVertical: 8, paddingLeft: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0", gap: 6 },
+  companionPremiumNote: { fontSize: 11, color: "#9ca3af", paddingHorizontal: 4, paddingBottom: 4 },
   bookChip: { marginRight: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#fff", maxWidth: 180 },
   bookChipActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
   bookChipText: { fontSize: 12, color: "#6b7280" },
@@ -326,8 +387,8 @@ const styles = StyleSheet.create({
   characterLabel: { fontSize: 10, fontWeight: "700", color: "#9ca3af", textTransform: "uppercase", letterSpacing: 0.5 },
   bubbleText: { fontSize: 14, color: "#1a1a1a", lineHeight: 20 },
   bubbleTextUser: { color: "#fff" },
-  typingIndicator: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 8 },
-  typingText: { fontSize: 13, color: "#9ca3af" },
+  typingWrap: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 16, paddingVertical: 12, alignSelf: "flex-start", backgroundColor: "#fff", borderRadius: 18, marginLeft: 12, marginBottom: 8, borderWidth: 1, borderColor: "#f0f0f0" },
+  typingDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#9ca3af" },
   suggestionsRow: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: "#f0f0f0" },
   suggChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb" },
   suggChipText: { fontSize: 12, color: "#6b7280" },

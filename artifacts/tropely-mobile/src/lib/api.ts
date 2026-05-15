@@ -1,4 +1,10 @@
-// Central API base URL — reads from env, falls back to production.
+import { supabase } from "./supabase";
+
+async function getAuthToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://usenevora.com";
 
@@ -33,10 +39,9 @@ export type CompanionMessage = { role: "user" | "assistant"; content: string };
 export async function sendCompanionMessage(
   bookKey: string,
   messages: CompanionMessage[],
-  getToken: () => Promise<string | null>,
   opts?: { characterName?: string; tropes?: string[] },
 ): Promise<string> {
-  const token = await getToken();
+  const token = await getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/companion/${encodeURIComponent(bookKey)}/chat`, {
     method: "POST",
     headers: {
@@ -52,8 +57,8 @@ export async function sendCompanionMessage(
 
 // ── Activity feed ────────────────────────────────────────────────────────────
 
-export async function fetchActivity(getToken: () => Promise<string | null>) {
-  const token = await getToken();
+export async function fetchActivity() {
+  const token = await getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/activity`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -63,12 +68,8 @@ export async function fetchActivity(getToken: () => Promise<string | null>) {
 
 // ── Reading positions ────────────────────────────────────────────────────────
 
-export async function syncReadingPosition(
-  bookId: string,
-  page: number,
-  getToken: () => Promise<string | null>,
-) {
-  const token = await getToken();
+export async function syncReadingPosition(bookId: string, page: number) {
+  const token = await getAuthToken();
   await fetch(`${API_BASE_URL}/api/reading-positions`, {
     method: "PUT",
     headers: {
@@ -81,8 +82,8 @@ export async function syncReadingPosition(
 
 // ── Buddy reads ──────────────────────────────────────────────────────────────
 
-export async function fetchBuddyReads(getToken: () => Promise<string | null>) {
-  const token = await getToken();
+export async function fetchBuddyReads() {
+  const token = await getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/buddy-reads`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -90,11 +91,8 @@ export async function fetchBuddyReads(getToken: () => Promise<string | null>) {
   return res.json();
 }
 
-export async function fetchBuddyReadMessages(
-  roomId: string,
-  getToken: () => Promise<string | null>,
-) {
-  const token = await getToken();
+export async function fetchBuddyReadMessages(roomId: string) {
+  const token = await getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/buddy-reads/${roomId}/messages`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -102,12 +100,8 @@ export async function fetchBuddyReadMessages(
   return res.json();
 }
 
-export async function postBuddyReadMessage(
-  roomId: string,
-  content: string,
-  getToken: () => Promise<string | null>,
-) {
-  const token = await getToken();
+export async function postBuddyReadMessage(roomId: string, content: string) {
+  const token = await getAuthToken();
   await fetch(`${API_BASE_URL}/api/buddy-reads/${roomId}/messages`, {
     method: "POST",
     headers: {
@@ -120,8 +114,8 @@ export async function postBuddyReadMessage(
 
 // ── Follows ──────────────────────────────────────────────────────────────────
 
-export async function fetchFollows(getToken: () => Promise<string | null>) {
-  const token = await getToken();
+export async function fetchFollows() {
+  const token = await getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/follows`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -133,9 +127,8 @@ export async function fetchFollows(getToken: () => Promise<string | null>) {
 
 export async function moodTagBooks(
   books: { key: string; title: string; description?: string }[],
-  getToken: () => Promise<string | null>,
 ): Promise<Record<string, string[]>> {
-  const token = await getToken();
+  const token = await getAuthToken();
   const res = await fetch(`${API_BASE_URL}/api/mood-tag-books`, {
     method: "POST",
     headers: {

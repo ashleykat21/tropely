@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,12 +11,12 @@ import {
   FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAuth } from "@clerk/clerk-expo";
-import {
-  fetchBuddyReads,
-  fetchBuddyReadMessages,
-  postBuddyReadMessage,
-} from "@/lib/api";
+import { useUser } from "@/context/AuthContext";
+import { useStore } from "@/store";
+import { useBuddyRooms, useBuddyMessages, useSendBuddyMessage } from "@/hooks/useBuddyReads";
+import { usePremium } from "@/hooks/usePremium";
+import { trackEvent } from "@/lib/analytics";
+import { FREE_LIMITS } from "@/constants/premiumFeatures";
 
 type Room = {
   id: string;
@@ -32,131 +32,216 @@ type ChatMessage = {
   createdAt: string;
 };
 
-const POLL_INTERVAL_MS = 5_000;
+const CHAPTER_SIZE = 30;
+
+function deriveChapters(totalPages: number) {
+  const count = Math.max(1, Math.ceil(totalPages / CHAPTER_SIZE));
+  return Array.from({ length: count }, (_, i) => ({
+    number: i + 1,
+    startPage: i * CHAPTER_SIZE,
+  }));
+}
 
 export default function BuddyReadsScreen() {
-  const { getToken, userId } = useAuth();
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [loadingRooms, setLoadingRooms] = useState(true);
+  const user = useUser();
+  const userId = user?.id ?? null;
+  const { isPremium } = usePremium();
+  const age = useStore((s) => s.age);
+  const spoilerLock = useStore((s) => s.spoilerLock);
+  const books = useStore((s) => s.books);
+  const equippedBadgeId = useStore((s) => s.equippedBadgeId);
+
+  const BADGE_EMOJIS: Record<string, string> = {
+    first_book: "📖", consistent_reader: "🔥", bookmarker: "🔖", finisher: "🏁",
+    mood_reader: "🎭", night_owl: "🌙", bibliophile: "📚", speed_reader: "🏃",
+    annotator: "💬", trope_hunter: "🎯", social_reader: "👯", dnf_queen: "💔",
+    re_reader: "🔁", mood_traveller: "🌈", epic_reader: "🕯️", streak_master: "🏆",
+    journaller: "✍️", critic: "🌟", trope_obsessed: "👑", reading_twin: "🤝",
+  };
+  const equippedEmoji = equippedBadgeId ? (BADGE_EMOJIS[equippedBadgeId] ?? "") : "";
+
+  const isUnder13 = age !== null && age < 13;
+
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedChapterIdx, setSelectedChapterIdx] = useState(0);
   const [inputText, setInputText] = useState("");
-  const [sending, setSending] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const listRef = useRef<FlatList>(null);
 
-  useEffect(() => {
-    loadRooms();
-  }, []);
+  const { data: roomsData = [], isLoading: loadingRooms } = useBuddyRooms();
+  const rooms: Room[] = Array.isArray(roomsData) ? roomsData : [];
 
-  useEffect(() => {
-    if (!selectedRoom) {
-      if (pollRef.current) clearInterval(pollRef.current);
-      return;
-    }
-    loadMessages(selectedRoom.id);
-    pollRef.current = setInterval(() => loadMessages(selectedRoom.id), POLL_INTERVAL_MS);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [selectedRoom?.id]);
+  const { data: messagesData } = useBuddyMessages(selectedRoom?.id ?? null);
+  const messages: ChatMessage[] = Array.isArray(messagesData)
+    ? messagesData
+    : (messagesData?.messages ?? []);
 
-  const loadRooms = async () => {
-    setLoadingRooms(true);
-    try {
-      const data = await fetchBuddyReads(getToken);
-      setRooms(Array.isArray(data) ? data : []);
-    } catch {
-      // silently fail — user may not have any rooms
-    } finally {
-      setLoadingRooms(false);
-    }
-  };
+  const sendMutation = useSendBuddyMessage(selectedRoom?.id ?? null);
 
-  const loadMessages = async (roomId: string) => {
-    try {
-      const data = await fetchBuddyReadMessages(roomId, getToken);
-      const msgs = Array.isArray(data) ? data : (data.messages ?? []);
-      setMessages(msgs);
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 50);
-    } catch {
-      // polling — silent fail
-    }
-  };
+  // Find the book in the local store matching the room's bookTitle
+  const roomBook = selectedRoom?.bookTitle
+    ? books.find((b) => b.title === selectedRoom.bookTitle)
+    : undefined;
+  const myCurrentPage = roomBook?.progress ?? 0;
+
+  const chapters = roomBook ? deriveChapters(roomBook.pages) : [];
+  const activeChapter = chapters[selectedChapterIdx];
+  const isChapterLocked =
+    activeChapter &&
+    spoilerLock &&
+    myCurrentPage < activeChapter.startPage &&
+    activeChapter.number > 1;
+
+  // Presence: users who sent a message recently (proxy for "currently reading")
+  const recentSenders = Array.from(
+    new Map(
+      [...messages]
+        .reverse()
+        .slice(0, 10)
+        .map((m) => [m.userId, m]),
+    ).values(),
+  ).slice(0, 5);
+  const nearbyReaders = recentSenders.filter(
+    (m) => m.userId !== userId,
+  );
 
   const sendMessage = async () => {
-    if (!selectedRoom || !inputText.trim() || sending) return;
-    setSending(true);
+    if (!selectedRoom || !inputText.trim() || sendMutation.isPending) return;
     const text = inputText.trim();
     setInputText("");
     try {
-      await postBuddyReadMessage(selectedRoom.id, text, getToken);
-      await loadMessages(selectedRoom.id);
+      await sendMutation.mutateAsync(text);
+      trackEvent("Buddy Message Sent");
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
     } catch {
       Alert.alert("Failed to send", "Check your connection and try again.");
       setInputText(text);
-    } finally {
-      setSending(false);
     }
+  };
+
+  const openRoom = (room: Room) => {
+    setSelectedRoom(room);
+    trackEvent("Buddy Read Opened", { roomId: room.id });
   };
 
   if (selectedRoom) {
     return (
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <View style={styles.chatHeader}>
-          <TouchableOpacity onPress={() => setSelectedRoom(null)} style={styles.backBtn}>
+          <TouchableOpacity onPress={() => { setSelectedRoom(null); setSelectedChapterIdx(0); }} style={styles.backBtn}>
             <Text style={styles.backBtnText}>← Rooms</Text>
           </TouchableOpacity>
           <Text style={styles.chatRoomName} numberOfLines={1}>{selectedRoom.name}</Text>
+          {chapters.length > 1 && (
+            <Text style={styles.chapterChatBadge}>✨ Chapter Chat</Text>
+          )}
         </View>
 
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          contentContainerStyle={styles.messagesList}
-          renderItem={({ item: m }) => {
-            const isMe = m.userId === userId;
-            return (
-              <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleThem]}>
-                {!isMe && (
-                  <Text style={styles.msgUser}>{m.userId.slice(0, 8)}</Text>
-                )}
-                <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{m.content}</Text>
-                <Text style={styles.msgTime}>
-                  {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </Text>
+        {/* Chapter tabs */}
+        {chapters.length > 1 && (
+          <View style={styles.chapterTabsWrapper}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chapterTabs}>
+              {chapters.map((ch, idx) => {
+                const locked = spoilerLock && myCurrentPage < ch.startPage && ch.number > 1;
+                return (
+                  <TouchableOpacity
+                    key={ch.number}
+                    style={[styles.chapterTab, selectedChapterIdx === idx && styles.chapterTabActive]}
+                    onPress={() => setSelectedChapterIdx(idx)}
+                  >
+                    <Text style={[styles.chapterTabText, selectedChapterIdx === idx && styles.chapterTabTextActive]}>
+                      {locked ? "🔒" : `Ch ${ch.number}`}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Presence indicator */}
+            {nearbyReaders.length > 0 && (
+              <View style={styles.presenceRow}>
+                {nearbyReaders.slice(0, 3).map((m) => (
+                  <View key={m.userId} style={styles.presenceAvatar}>
+                    <Text style={styles.presenceInitial}>{m.userId[0].toUpperCase()}</Text>
+                    <View style={styles.presenceDot} />
+                  </View>
+                ))}
+                <Text style={styles.presenceText}>reading nearby</Text>
               </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.emptyChat}>
-              <Text style={styles.emptyChatText}>No messages yet. Say hello!</Text>
-            </View>
-          }
-        />
-
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.inputField}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="Message…"
-            onSubmitEditing={sendMessage}
-            returnKeyType="send"
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, (!inputText.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={sendMessage}
-            disabled={!inputText.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.sendBtnText}>↑</Text>
             )}
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
+
+        {isChapterLocked ? (
+          <View style={styles.lockedChapter}>
+            <Text style={styles.lockedEmoji}>🔒</Text>
+            <Text style={styles.lockedTitle}>Chapter {activeChapter.number} locked</Text>
+            <Text style={styles.lockedSub}>
+              Reach page {activeChapter.startPage} to unlock this chapter's discussion.
+            </Text>
+            <Text style={styles.lockedCurrentPage}>
+              You're on page {myCurrentPage} — {activeChapter.startPage - myCurrentPage} pages to go.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.messagesList}
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            renderItem={({ item: m }) => {
+              const isMe = m.userId === userId;
+              return (
+                <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleThem]}>
+                  {!isMe && (
+                    <Text style={styles.msgUser}>{m.userId.slice(0, 8)}</Text>
+                  )}
+                  {isMe && equippedEmoji ? (
+                    <Text style={styles.msgFlair}>{equippedEmoji}</Text>
+                  ) : null}
+                  <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{m.content}</Text>
+                  <Text style={styles.msgTime}>
+                    {new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </Text>
+                </View>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={styles.emptyChat}>
+                <Text style={styles.emptyChatEmoji}>👋</Text>
+                <Text style={styles.emptyChatText}>Say the first thing!</Text>
+              </View>
+            }
+          />
+        )}
+
+        {isUnder13 ? (
+          <View style={styles.restrictedBar}>
+            <Text style={styles.restrictedText}>Chat is restricted for your account.</Text>
+          </View>
+        ) : (
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.inputField}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="Message…"
+              onSubmitEditing={sendMessage}
+              returnKeyType="send"
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, (!inputText.trim() || sendMutation.isPending) && styles.sendBtnDisabled]}
+              onPress={sendMessage}
+              disabled={!inputText.trim() || sendMutation.isPending}
+            >
+              {sendMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.sendBtnText}>↑</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </SafeAreaView>
     );
   }
@@ -177,24 +262,36 @@ export default function BuddyReadsScreen() {
             </Text>
           </View>
         ) : (
-          rooms.map((room) => (
-            <TouchableOpacity
-              key={room.id}
-              style={styles.roomCard}
-              onPress={() => setSelectedRoom(room)}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.roomName}>{room.name}</Text>
-                {room.bookTitle && (
-                  <Text style={styles.roomBook}>{room.bookTitle}</Text>
-                )}
-                {room.memberCount && (
-                  <Text style={styles.roomMembers}>{room.memberCount} readers</Text>
-                )}
+          <>
+            {(isPremium ? rooms : rooms.slice(0, FREE_LIMITS.BUDDY_ROOMS)).map((room) => (
+              <TouchableOpacity
+                key={room.id}
+                style={styles.roomCard}
+                onPress={() => openRoom(room)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.roomName}>{room.name}</Text>
+                  {room.bookTitle && (
+                    <Text style={styles.roomBook}>{room.bookTitle}</Text>
+                  )}
+                  {room.memberCount && (
+                    <Text style={styles.roomMembers}>{room.memberCount} readers</Text>
+                  )}
+                </View>
+                <Text style={styles.roomArrow}>→</Text>
+              </TouchableOpacity>
+            ))}
+            {!isPremium && rooms.length > FREE_LIMITS.BUDDY_ROOMS && (
+              <View style={styles.premiumRoomCard}>
+                <Text style={styles.premiumRoomText}>
+                  ✨ Premium — unlock unlimited buddy read rooms
+                </Text>
+                <Text style={styles.premiumRoomSub}>
+                  You have {rooms.length - FREE_LIMITS.BUDDY_ROOMS} more room{rooms.length - FREE_LIMITS.BUDDY_ROOMS !== 1 ? "s" : ""} waiting
+                </Text>
               </View>
-              <Text style={styles.roomArrow}>→</Text>
-            </TouchableOpacity>
-          ))
+            )}
+          </>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -215,21 +312,50 @@ const styles = StyleSheet.create({
   roomBook: { fontSize: 12, color: "#6b7280", marginTop: 2 },
   roomMembers: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
   roomArrow: { fontSize: 18, color: "#d1d5db" },
+  premiumRoomCard: { backgroundColor: "#fef9c3", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#fde68a", gap: 4 },
+  premiumRoomText: { fontSize: 14, fontWeight: "600", color: "#92400e" },
+  premiumRoomSub: { fontSize: 12, color: "#a16207" },
+  chapterChatBadge: { fontSize: 11, fontWeight: "600", color: "#9ca3af" },
   // Chat
   chatHeader: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0", backgroundColor: "#fff" },
   backBtn: { paddingVertical: 6 },
   backBtnText: { fontSize: 14, color: "#6b7280" },
   chatRoomName: { flex: 1, fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
+  // Chapter tabs
+  chapterTabsWrapper: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  chapterTabs: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
+  chapterTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#f3f4f6" },
+  chapterTabActive: { backgroundColor: "#1a1a1a" },
+  chapterTabText: { fontSize: 12, fontWeight: "500", color: "#6b7280" },
+  chapterTabTextActive: { color: "#fff" },
+  // Presence
+  presenceRow: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingBottom: 8 },
+  presenceAvatar: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#d1fae5", justifyContent: "center", alignItems: "center" },
+  presenceInitial: { fontSize: 9, fontWeight: "700", color: "#065f46" },
+  presenceDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#22c55e", position: "absolute", bottom: -1, right: -1, borderWidth: 1, borderColor: "#fff" },
+  presenceText: { fontSize: 10, color: "#9ca3af" },
+  // Locked chapter
+  lockedChapter: { flex: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 12 },
+  lockedEmoji: { fontSize: 48 },
+  lockedTitle: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
+  lockedSub: { fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 20 },
+  lockedCurrentPage: { fontSize: 12, color: "#9ca3af", textAlign: "center" },
+  // Messages
   messagesList: { padding: 12, gap: 10, flexGrow: 1 },
   msgBubble: { maxWidth: "80%", borderRadius: 16, padding: 10, gap: 2 },
   msgBubbleMe: { alignSelf: "flex-end", backgroundColor: "#1a1a1a" },
   msgBubbleThem: { alignSelf: "flex-start", backgroundColor: "#fff", borderWidth: 1, borderColor: "#f0f0f0" },
   msgUser: { fontSize: 10, color: "#9ca3af", marginBottom: 2 },
+  msgFlair: { fontSize: 10, alignSelf: "flex-end" },
   msgText: { fontSize: 14, color: "#1a1a1a", lineHeight: 19 },
   msgTextMe: { color: "#fff" },
   msgTime: { fontSize: 10, color: "#d1d5db", alignSelf: "flex-end" },
-  emptyChat: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 60 },
-  emptyChatText: { fontSize: 14, color: "#9ca3af" },
+  emptyChat: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 80, gap: 8 },
+  emptyChatEmoji: { fontSize: 36 },
+  emptyChatText: { fontSize: 15, color: "#9ca3af", fontWeight: "500" },
+  // Input
+  restrictedBar: { padding: 16, borderTopWidth: 1, borderTopColor: "#f0f0f0", backgroundColor: "#fef9c3", alignItems: "center" },
+  restrictedText: { fontSize: 13, color: "#92400e" },
   inputBar: { flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: "#f0f0f0", backgroundColor: "#fff" },
   inputField: { flex: 1, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, backgroundColor: "#fafafa" },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center", alignSelf: "flex-end" },

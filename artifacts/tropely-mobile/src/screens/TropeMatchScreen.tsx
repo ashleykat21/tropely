@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
+import { TROPES_BY_GENRE, GENRE_ORDER, type TropeGenre } from "@/constants/tropes";
+import { trackEvent } from "@/lib/analytics";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -31,17 +33,16 @@ export default function TropeMatchScreen() {
   const nav = useNavigation<Nav>();
   const { books } = useStore();
   const [selected, setSelected] = useState<string[]>([]);
+  const [tropeGenre, setTropeGenre] = useState<TropeGenre>(GENRE_ORDER[0]);
 
-  // Collect all unique tropes from user's books
-  const allTropes = useMemo(() => {
-    const tropeSet = new Set<string>();
-    for (const b of books) {
-      for (const t of b.tropes ?? []) tropeSet.add(t);
+  // Track when tropes are selected
+  useEffect(() => {
+    if (selected.length > 0) {
+      trackEvent("Trope Match Used", { tropes: selected });
     }
-    return Array.from(tropeSet);
-  }, [books]);
+  }, [selected.length]);
 
-  // Dominant mood from selected tropes
+  // Dominant mood from selected tropes → book data
   const dominantMood = useMemo(() => {
     if (selected.length === 0) return null;
     const moodCount: Record<string, number> = {};
@@ -55,7 +56,7 @@ export default function TropeMatchScreen() {
     return Object.entries(moodCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   }, [selected, books]);
 
-  // Matching books
+  // Matching books from user's library
   const matchingBooks = useMemo(() => {
     if (selected.length === 0) return { want: [], revisit: [] };
     const want = books.filter(
@@ -83,45 +84,68 @@ export default function TropeMatchScreen() {
           <Text style={styles.closeBtnText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.title}>I'm in the mood for…</Text>
-        <View style={{ width: 32 }} />
+        <View style={styles.selectedBadge}>
+          <Text style={styles.selectedBadgeText}>{selected.length}/3</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionLabel}>PICK UP TO 3 TROPES</Text>
-
-        {allTropes.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No tropes tagged yet</Text>
-            <Text style={styles.emptyText}>
-              Add books via Discover — tropes get auto-tagged when you add them.
-            </Text>
+        {/* Genre tabs */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.genreTabsScroll}>
+          {GENRE_ORDER.map((g) => (
             <TouchableOpacity
-              style={[styles.emptyBtn, { backgroundColor: accent }]}
-              onPress={() => nav.goBack()}
+              key={g}
+              style={[styles.genreTab, tropeGenre === g && { backgroundColor: accent, borderColor: accent }]}
+              onPress={() => setTropeGenre(g)}
             >
-              <Text style={styles.emptyBtnText}>Go to Discover</Text>
+              <Text style={[styles.genreTabText, tropeGenre === g && styles.genreTabTextActive]}>
+                {g}
+              </Text>
             </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.tropeGrid}>
-            {allTropes.map((t) => {
-              const on = selected.includes(t);
-              return (
-                <TouchableOpacity
-                  key={t}
-                  style={[
-                    styles.tropeChip,
-                    on && { backgroundColor: accent, borderColor: accent },
-                  ]}
-                  onPress={() => toggle(t)}
-                >
-                  <Text style={[styles.tropeChipText, on && { color: "#fff" }]}>{t}</Text>
-                </TouchableOpacity>
-              );
-            })}
+          ))}
+        </ScrollView>
+
+        <Text style={styles.sectionLabel}>
+          PICK UP TO 3 TROPES · {GENRE_ORDER.indexOf(tropeGenre) >= 0 ? tropeGenre.toUpperCase() : ""}
+        </Text>
+
+        <View style={styles.tropeGrid}>
+          {TROPES_BY_GENRE[tropeGenre].map((t) => {
+            const on = selected.includes(t);
+            const locked = !on && selected.length >= 3;
+            return (
+              <TouchableOpacity
+                key={t}
+                style={[
+                  styles.tropeChip,
+                  on && { backgroundColor: accent, borderColor: accent },
+                  locked && styles.tropeChipLocked,
+                ]}
+                onPress={() => !locked && toggle(t)}
+                activeOpacity={locked ? 1 : 0.7}
+              >
+                <Text style={[styles.tropeChipText, on && { color: "#fff" }]}>{t}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Selected trope pills */}
+        {selected.length > 0 && (
+          <View style={styles.selectedPills}>
+            {selected.map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.selectedPill, { backgroundColor: accent }]}
+                onPress={() => toggle(t)}
+              >
+                <Text style={styles.selectedPillText}>{t}  ✕</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
 
+        {/* Matching books */}
         {selected.length > 0 && (
           <>
             {matchingBooks.want.length > 0 && (
@@ -190,9 +214,9 @@ export default function TropeMatchScreen() {
 
             {matchingBooks.want.length === 0 && matchingBooks.revisit.length === 0 && (
               <View style={styles.emptyCard}>
-                <Text style={styles.emptyTitle}>No matches yet</Text>
+                <Text style={styles.emptyTitle}>No matches in your library yet</Text>
                 <Text style={styles.emptyText}>
-                  Books tagged with these tropes will appear here. Try adding more books to your shelves.
+                  Tag tropes on your books via Book Detail — they'll show up here when they match.
                 </Text>
               </View>
             )}
@@ -209,11 +233,21 @@ const styles = StyleSheet.create({
   closeBtn: { width: 32, height: 32, justifyContent: "center", alignItems: "center" },
   closeBtnText: { fontSize: 16, color: "#6b7280" },
   title: { fontSize: 18, fontWeight: "700", color: "#1a1a1a" },
+  selectedBadge: { backgroundColor: "rgba(0,0,0,0.1)", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
+  selectedBadgeText: { fontSize: 13, fontWeight: "700", color: "#1a1a1a" },
   content: { padding: 16, paddingBottom: 48, gap: 12 },
+  genreTabsScroll: { flexGrow: 0, marginBottom: 4 },
+  genreTab: { marginRight: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "rgba(26,26,26,0.15)", backgroundColor: "rgba(255,255,255,0.8)" },
+  genreTabText: { fontSize: 12, fontWeight: "500", color: "#374151" },
+  genreTabTextActive: { color: "#fff", fontWeight: "700" },
   sectionLabel: { fontSize: 10, fontWeight: "700", color: "#9ca3af", letterSpacing: 1.2 },
   tropeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   tropeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.8)", borderWidth: 1, borderColor: "rgba(26,26,26,0.12)" },
+  tropeChipLocked: { opacity: 0.4 },
   tropeChipText: { fontSize: 13, fontWeight: "500", color: "#374151" },
+  selectedPills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  selectedPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  selectedPillText: { fontSize: 12, fontWeight: "600", color: "#fff" },
   bookCard: { backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 14, padding: 12, flexDirection: "row", gap: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.6)" },
   revisitCard: { opacity: 0.85 },
   bookCover: { width: 48, height: 70, borderRadius: 6 },
@@ -227,6 +261,4 @@ const styles = StyleSheet.create({
   emptyCard: { backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 16, padding: 24, alignItems: "center", gap: 8, marginTop: 12 },
   emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
   emptyText: { fontSize: 13, color: "#6b7280", textAlign: "center", lineHeight: 20 },
-  emptyBtn: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10, marginTop: 4 },
-  emptyBtnText: { color: "#fff", fontWeight: "600", fontSize: 14 },
 });

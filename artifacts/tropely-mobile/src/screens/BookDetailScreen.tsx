@@ -15,6 +15,10 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, type Shelf, type Mood } from "@/store";
+import { usePremium } from "@/hooks/usePremium";
+import { FREE_LIMITS } from "@/constants/premiumFeatures";
+import { TROPES_BY_GENRE, GENRE_ORDER, type TropeGenre } from "@/constants/tropes";
+import { trackEvent } from "@/lib/analytics";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, "BookDetail">;
@@ -51,20 +55,26 @@ export default function BookDetailScreen() {
     updateBook, moveToShelf, addSession, setReflection, removeBook,
     addHighlight, deleteHighlight,
   } = useStore();
+  const { isPremium } = usePremium();
 
   const book = books.find((b) => b.id === bookId);
   const bookSessions = sessions.filter((s) => s.bookId === bookId).slice(0, 5);
   const reflection = reflections.find((r) => r.bookId === bookId);
   const bookHighlights = highlights.filter((h) => h.bookId === bookId);
 
+  const isAudio = book?.consumption === "listen";
+  const total = isAudio ? (book?.audioMinutes ?? book?.pages ?? 0) : (book?.pages ?? 0);
+
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
   const [progressInput, setProgressInput] = useState(book?.progress?.toString() ?? "");
   const [logPages, setLogPages] = useState("");
   const [logMinutes, setLogMinutes] = useState("");
+  const [logMood, setLogMood] = useState<Mood | null>(null);
   const [reflectionText, setReflectionText] = useState(reflection?.text ?? "");
   const [rating, setRating] = useState(reflection?.rating ?? 0);
+  const [tropeGenre, setTropeGenre] = useState<TropeGenre>(GENRE_ORDER[0]);
 
-  // Highlight form state
+  // Highlight form
   const [showHighlightForm, setShowHighlightForm] = useState(false);
   const [hlText, setHlText] = useState("");
   const [hlTrope, setHlTrope] = useState("");
@@ -79,9 +89,12 @@ export default function BookDetailScreen() {
     );
   }
 
+  const bookTropes = book.tropes ?? [];
+  const canAddHighlight = isPremium || bookHighlights.length < FREE_LIMITS.HIGHLIGHTS;
+
   const saveProgress = () => {
     const n = parseInt(progressInput, 10);
-    if (!isNaN(n) && n >= 0 && n <= book.pages) updateBook(bookId, { progress: n });
+    if (!isNaN(n) && n >= 0 && n <= total) updateBook(bookId, { progress: n });
   };
 
   const logSession = () => {
@@ -97,15 +110,19 @@ export default function BookDetailScreen() {
       fromPage: from,
       toPage: to,
       minutes: logMinutes ? parseInt(logMinutes, 10) : undefined,
+      mood: logMood ?? undefined,
     });
     updateBook(bookId, { progress: to });
     setProgressInput(to.toString());
     setLogPages("");
     setLogMinutes("");
+    setLogMood(null);
+    trackEvent("Session Logged", { bookId, pages: to - from });
   };
 
   const saveReflection = () => {
     setReflection(bookId, reflectionText, rating || undefined);
+    trackEvent("Reflection Saved", { bookId, rating });
     Alert.alert("Saved", "Your reflection has been saved.");
   };
 
@@ -119,6 +136,7 @@ export default function BookDetailScreen() {
       page: hlPage ? parseInt(hlPage, 10) : undefined,
       date: new Date().toISOString(),
     });
+    trackEvent("Highlight Added", { bookId, hasTrope: !!hlTrope });
     setHlText("");
     setHlTrope("");
     setHlMood(null);
@@ -126,7 +144,13 @@ export default function BookDetailScreen() {
     setShowHighlightForm(false);
   };
 
-  const bookTropes = book.tropes ?? [];
+  const toggleTrope = (trope: string) => {
+    const active = bookTropes.includes(trope);
+    if (!active && bookTropes.length >= 10) return;
+    const next = active ? bookTropes.filter((t) => t !== trope) : [...bookTropes, trope];
+    updateBook(bookId, { tropes: next });
+    if (!active) trackEvent("Trope Tagged", { trope, bookId });
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -159,9 +183,15 @@ export default function BookDetailScreen() {
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={styles.bookTitle}>{book.title}</Text>
               <Text style={styles.bookAuthor}>{book.author}</Text>
+              {isAudio ? (
+                <Text style={styles.bookMeta}>
+                  🎧 Audiobook{book.audioMinutes ? ` · ${book.audioMinutes} min` : ""}
+                </Text>
+              ) : (
+                <Text style={styles.bookMeta}>{book.pages} pages</Text>
+              )}
               {book.narrator && <Text style={styles.bookMeta}>Narrated by {book.narrator}</Text>}
               {book.translator && <Text style={styles.bookMeta}>Translated by {book.translator}</Text>}
-              <Text style={styles.bookMeta}>{book.pages} pages</Text>
             </View>
           </View>
 
@@ -193,7 +223,9 @@ export default function BookDetailScreen() {
                   style={[styles.moodChip, book.mood === m.key && styles.moodChipActive]}
                   onPress={() => updateBook(bookId, { mood: book.mood === m.key ? undefined : m.key })}
                 >
-                  <Text style={styles.moodChipText}>{m.emoji} {m.label}</Text>
+                  <Text style={[styles.moodChipText, book.mood === m.key && styles.moodChipTextActive]}>
+                    {m.emoji} {m.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -206,18 +238,22 @@ export default function BookDetailScreen() {
               <View
                 style={[
                   styles.progressBar,
-                  { width: `${book.pages > 0 ? Math.min(100, (book.progress / book.pages) * 100) : 0}%` },
+                  { width: `${total > 0 ? Math.min(100, (book.progress / total) * 100) : 0}%` },
                 ]}
               />
             </View>
-            <Text style={styles.progressText}>Page {book.progress} of {book.pages}</Text>
+            <Text style={styles.progressText}>
+              {isAudio
+                ? `${book.progress} min of ${total} min`
+                : `Page ${book.progress} of ${book.pages}`}
+            </Text>
             <View style={styles.row}>
               <TextInput
                 style={styles.input}
                 value={progressInput}
                 onChangeText={setProgressInput}
                 keyboardType="number-pad"
-                placeholder="Current page"
+                placeholder={isAudio ? "Minutes listened" : "Current page"}
               />
               <TouchableOpacity style={styles.saveBtn} onPress={saveProgress}>
                 <Text style={styles.saveBtnText}>Update</Text>
@@ -234,7 +270,7 @@ export default function BookDetailScreen() {
                 value={logPages}
                 onChangeText={setLogPages}
                 keyboardType="number-pad"
-                placeholder="Ended on page…"
+                placeholder={isAudio ? "Ended at minute…" : "Ended on page…"}
               />
               <TextInput
                 style={[styles.input, { width: 90 }]}
@@ -244,6 +280,20 @@ export default function BookDetailScreen() {
                 placeholder="Min"
               />
             </View>
+            <Text style={styles.fieldLabel}>SESSION MOOD (OPTIONAL)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {MOODS.map((m) => (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[styles.moodChip, logMood === m.key && styles.moodChipActive]}
+                  onPress={() => setLogMood(logMood === m.key ? null : m.key)}
+                >
+                  <Text style={[styles.moodChipText, logMood === m.key && styles.moodChipTextActive]}>
+                    {m.emoji}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
             <TouchableOpacity style={styles.logBtn} onPress={logSession}>
               <Text style={styles.logBtnText}>Log session</Text>
             </TouchableOpacity>
@@ -252,8 +302,15 @@ export default function BookDetailScreen() {
                 {bookSessions.map((s) => (
                   <View key={s.id} style={styles.sessionRow}>
                     <Text style={styles.sessionDate}>{new Date(s.date).toLocaleDateString()}</Text>
-                    <Text style={styles.sessionPages}>p. {s.fromPage}–{s.toPage}</Text>
+                    <Text style={styles.sessionPages}>
+                      {isAudio ? `${s.fromPage}–${s.toPage} min` : `p. ${s.fromPage}–${s.toPage}`}
+                    </Text>
                     {s.minutes && <Text style={styles.sessionMin}>{s.minutes} min</Text>}
+                    {s.mood && (
+                      <Text style={styles.sessionMoodEmoji}>
+                        {MOODS.find((m) => m.key === s.mood)?.emoji}
+                      </Text>
+                    )}
                   </View>
                 ))}
               </View>
@@ -292,19 +349,47 @@ export default function BookDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Tropes */}
-          {bookTropes.length > 0 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Tropes</Text>
-              <View style={styles.tropeChips}>
-                {bookTropes.map((t) => (
-                  <View key={t} style={styles.tropeChip}>
-                    <Text style={styles.tropeChipText}>{t}</Text>
-                  </View>
-                ))}
-              </View>
+          {/* Genre trope picker */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Book tropes</Text>
+              {bookTropes.length > 0 && (
+                <Text style={styles.tropeCountBadge}>{bookTropes.length} tagged</Text>
+              )}
             </View>
-          )}
+            <Text style={styles.cardSub}>Tap to tag tropes from any genre (max 10).</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {GENRE_ORDER.map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.genreTab, tropeGenre === g && styles.genreTabActive]}
+                  onPress={() => setTropeGenre(g)}
+                >
+                  <Text style={[styles.genreTabText, tropeGenre === g && styles.genreTabTextActive]}>
+                    {g}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <View style={styles.tropeChips}>
+              {TROPES_BY_GENRE[tropeGenre].map((trope) => {
+                const active = bookTropes.includes(trope);
+                const locked = !active && bookTropes.length >= 10;
+                return (
+                  <TouchableOpacity
+                    key={trope}
+                    style={[styles.tropeChip, active && styles.tropeChipActive, locked && styles.tropeChipLocked]}
+                    onPress={() => !locked && toggleTrope(trope)}
+                    activeOpacity={locked ? 1 : 0.7}
+                  >
+                    <Text style={[styles.tropeChipText, active && styles.tropeChipTextActive]}>
+                      {trope}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
           {/* Danger zone */}
           <TouchableOpacity
@@ -328,13 +413,24 @@ export default function BookDetailScreen() {
         <View style={{ flex: 1 }}>
           <View style={styles.hlHeader}>
             <Text style={styles.hlHeaderTitle}>Highlights & quotes</Text>
-            <TouchableOpacity
-              style={styles.hlAddBtn}
-              onPress={() => setShowHighlightForm(true)}
-            >
-              <Text style={styles.hlAddBtnText}>+ Add</Text>
-            </TouchableOpacity>
+            {canAddHighlight ? (
+              <TouchableOpacity style={styles.hlAddBtn} onPress={() => setShowHighlightForm(true)}>
+                <Text style={styles.hlAddBtnText}>+ Add</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.hlLockBadge}>
+                <Text style={styles.hlLockBadgeText}>✨ Premium to add more</Text>
+              </View>
+            )}
           </View>
+
+          {!isPremium && bookHighlights.length >= FREE_LIMITS.HIGHLIGHTS && (
+            <View style={styles.hlLimitBanner}>
+              <Text style={styles.hlLimitBannerText}>
+                Free plan limit reached ({FREE_LIMITS.HIGHLIGHTS} highlights). Upgrade to Premium for unlimited highlights.
+              </Text>
+            </View>
+          )}
 
           <ScrollView style={styles.scroll} contentContainerStyle={styles.hlContent}>
             {bookHighlights.length === 0 ? (
@@ -486,7 +582,9 @@ const styles = StyleSheet.create({
   bookAuthor: { fontSize: 13, color: "#6b7280" },
   bookMeta: { fontSize: 11, color: "#9ca3af" },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0f0f0", gap: 10 },
+  cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardTitle: { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
+  cardSub: { fontSize: 11, color: "#9ca3af", marginTop: -6, lineHeight: 16 },
   shelfChip: { marginRight: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#fafafa" },
   shelfChipActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
   shelfChipText: { fontSize: 13, color: "#6b7280" },
@@ -494,6 +592,7 @@ const styles = StyleSheet.create({
   moodChip: { marginRight: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: "#f3f4f6" },
   moodChipActive: { backgroundColor: "#1a1a1a" },
   moodChipText: { fontSize: 12, color: "#1a1a1a" },
+  moodChipTextActive: { color: "#fff" },
   progressBarTrack: { height: 6, backgroundColor: "#f3f4f6", borderRadius: 3, overflow: "hidden" },
   progressBar: { height: "100%", backgroundColor: "#1a1a1a", borderRadius: 3 },
   progressText: { fontSize: 12, color: "#9ca3af" },
@@ -501,6 +600,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, backgroundColor: "#fafafa", flex: 1 },
   saveBtn: { backgroundColor: "#1a1a1a", borderRadius: 10, paddingHorizontal: 16, justifyContent: "center" },
   saveBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  fieldLabel: { fontSize: 10, fontWeight: "700", color: "#9ca3af", letterSpacing: 1 },
   logBtn: { backgroundColor: "#f3f4f6", borderRadius: 10, paddingVertical: 11, alignItems: "center" },
   logBtnText: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
   sessionList: { gap: 6, marginTop: 4 },
@@ -508,15 +608,25 @@ const styles = StyleSheet.create({
   sessionDate: { fontSize: 11, color: "#9ca3af", flex: 1 },
   sessionPages: { fontSize: 12, color: "#6b7280" },
   sessionMin: { fontSize: 11, color: "#9ca3af" },
+  sessionMoodEmoji: { fontSize: 14 },
   companionBtn: { backgroundColor: "#1a1a1a", borderRadius: 14, paddingVertical: 14, alignItems: "center" },
   companionBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   starsRow: { flexDirection: "row", gap: 4 },
   star: { fontSize: 28, color: "#e5e7eb" },
   starFilled: { color: "#f59e0b" },
   textArea: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, minHeight: 100, backgroundColor: "#fafafa" },
+  // Genre trope picker
+  genreTab: { marginRight: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#fafafa" },
+  genreTabActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
+  genreTabText: { fontSize: 11, color: "#6b7280", fontWeight: "500" },
+  genreTabTextActive: { color: "#fff", fontWeight: "700" },
   tropeChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tropeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f3f4f6" },
-  tropeChipText: { fontSize: 12, color: "#6b7280" },
+  tropeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: "#f3f4f6", borderWidth: 1, borderColor: "transparent" },
+  tropeChipActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
+  tropeChipLocked: { opacity: 0.4 },
+  tropeChipText: { fontSize: 11, color: "#6b7280" },
+  tropeChipTextActive: { color: "#fff" },
+  tropeCountBadge: { fontSize: 11, fontWeight: "600", color: "#6b7280", backgroundColor: "#f3f4f6", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   removeBtn: { borderWidth: 1, borderColor: "#fee2e2", borderRadius: 12, paddingVertical: 14, alignItems: "center", backgroundColor: "#fff" },
   removeBtnText: { fontSize: 14, fontWeight: "600", color: "#ef4444" },
   // Highlights tab
@@ -524,6 +634,10 @@ const styles = StyleSheet.create({
   hlHeaderTitle: { fontSize: 17, fontWeight: "700", color: "#1a1a1a" },
   hlAddBtn: { backgroundColor: "#1a1a1a", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
   hlAddBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  hlLockBadge: { backgroundColor: "#fef3c7", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  hlLockBadgeText: { fontSize: 11, fontWeight: "600", color: "#92400e" },
+  hlLimitBanner: { marginHorizontal: 16, marginBottom: 8, backgroundColor: "#fef3c7", borderRadius: 10, padding: 12 },
+  hlLimitBannerText: { fontSize: 12, color: "#92400e", lineHeight: 18 },
   hlContent: { padding: 16, gap: 12, paddingBottom: 40 },
   hlEmpty: { alignItems: "center", paddingTop: 48, gap: 8 },
   hlEmptyEmoji: { fontSize: 36 },
@@ -549,7 +663,6 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
   modalSave: { fontSize: 15, fontWeight: "700", color: "#1a1a1a" },
   modalContent: { padding: 16, gap: 14, paddingBottom: 48 },
-  fieldLabel: { fontSize: 10, fontWeight: "700", color: "#9ca3af", letterSpacing: 1 },
   hlPickerChip: { marginRight: 8, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#fafafa" },
   hlPickerChipActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
   hlPickerChipText: { fontSize: 12, color: "#6b7280" },

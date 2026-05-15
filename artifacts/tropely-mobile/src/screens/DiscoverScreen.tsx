@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -16,42 +17,96 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import { searchBooks, olCoverUrl, moodTagBooks, type OLBook } from "@/lib/api";
-import { useAuth } from "@clerk/clerk-expo";
+import { trackEvent } from "@/lib/analytics";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const TROPE_BANNER_MS = 10_000;
+const DEBOUNCE_MS = 500;
+
+// Per-item animated add button so each item manages its own scale animation
+function AddButton({ alreadyAdded, onPress }: { alreadyAdded: boolean; onPress: () => void }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePress = () => {
+    if (alreadyAdded) return;
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 1.35, duration: 120, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }),
+    ]).start();
+    onPress();
+  };
+
+  return (
+    <TouchableOpacity onPress={handlePress} disabled={alreadyAdded}>
+      <Animated.View
+        style={[
+          styles.addBtn,
+          alreadyAdded && styles.addBtnDisabled,
+          { transform: [{ scale }] },
+        ]}
+      >
+        <Text style={styles.addBtnText}>{alreadyAdded ? "✓" : "+"}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
 
 export default function DiscoverScreen() {
-  const nav = useNavigation<Nav>();
-  const { getToken } = useAuth();
   const addBook = useStore((s) => s.addBook);
   const updateBook = useStore((s) => s.updateBook);
+  // Read books once outside renderItem so alreadyAdded is reactive
+  const books = useStore((s) => s.books);
+
+  const addedKeys = useMemo(
+    () => new Set(books.flatMap((b) => [b.openLibraryKey, b.title].filter(Boolean) as string[])),
+    [books],
+  );
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OLBook[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Trope banner state
+  // Trope banner — interaction flag prevents auto-dismiss while user acts
   const [tropeBanner, setTropeBanner] = useState<{
     bookId: string;
     title: string;
     tropes: string[];
     selected: string[];
+    interacting: boolean;
   } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const doSearch = async () => {
-    if (!query.trim()) return;
+  // Debounce timer for search
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const doSearch = useCallback(async (q: string) => {
+    if (!q.trim()) return;
     setLoading(true);
     try {
-      const data = await searchBooks(query);
+      const data = await searchBooks(q);
       setResults(data);
     } catch {
       Alert.alert("Search failed", "Check your connection and try again.");
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const onQueryChange = (text: string) => {
+    setQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => doSearch(text), DEBOUNCE_MS);
+  };
+
+  const startBannerTimer = () => {
+    if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    bannerTimer.current = setTimeout(() => {
+      setTropeBanner((prev) => {
+        if (prev?.interacting) return prev;
+        return null;
+      });
+    }, TROPE_BANNER_MS);
   };
 
   const handleAdd = async (book: OLBook) => {
@@ -65,19 +120,18 @@ export default function DiscoverScreen() {
       cover,
       openLibraryKey: book.key,
     });
+    trackEvent("Book Added", { title: book.title, hasCover: !!cover });
 
-    // Kick off trope tagging in background
-    moodTagBooks(
-      [{ key: book.key, title: book.title }],
-      getToken,
-    ).then((tagMap) => {
-      const tropes = tagMap[book.key] ?? [];
-      if (tropes.length === 0) return;
-      // Show trope banner for 10s
-      if (bannerTimer.current) clearTimeout(bannerTimer.current);
-      setTropeBanner({ bookId: id, title: book.title, tropes, selected: [] });
-      bannerTimer.current = setTimeout(() => setTropeBanner(null), TROPE_BANNER_MS);
-    }).catch(() => {});
+    moodTagBooks([{ key: book.key, title: book.title }])
+      .then((tagMap) => {
+        const tropes = tagMap[book.key] ?? [];
+        if (tropes.length === 0) return;
+        setTropeBanner({ bookId: id, title: book.title, tropes, selected: [], interacting: false });
+        startBannerTimer();
+      })
+      .catch((err) => {
+        console.warn("[DiscoverScreen] moodTagBooks failed:", err);
+      });
   };
 
   const confirmTropes = () => {
@@ -85,8 +139,20 @@ export default function DiscoverScreen() {
     if (tropeBanner.selected.length > 0) {
       updateBook(tropeBanner.bookId, { tropes: tropeBanner.selected });
     }
-    setTropeBanner(null);
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
+    setTropeBanner(null);
+  };
+
+  const toggleTrope = (t: string) => {
+    setTropeBanner((prev) => {
+      if (!prev) return null;
+      const selected = prev.selected.includes(t)
+        ? prev.selected.filter((s) => s !== t)
+        : [...prev.selected, t];
+      return { ...prev, selected, interacting: true };
+    });
+    // Restart timer now that user has interacted
+    startBannerTimer();
   };
 
   return (
@@ -96,11 +162,11 @@ export default function DiscoverScreen() {
           style={styles.input}
           placeholder="Search books by title or author…"
           value={query}
-          onChangeText={setQuery}
+          onChangeText={onQueryChange}
           returnKeyType="search"
-          onSubmitEditing={doSearch}
+          onSubmitEditing={() => doSearch(query)}
         />
-        <TouchableOpacity style={styles.searchBtn} onPress={doSearch}>
+        <TouchableOpacity style={styles.searchBtn} onPress={() => doSearch(query)}>
           <Text style={styles.searchBtnText}>Search</Text>
         </TouchableOpacity>
       </View>
@@ -117,18 +183,7 @@ export default function DiscoverScreen() {
                   styles.tropeChip,
                   tropeBanner.selected.includes(t) && styles.tropeChipSelected,
                 ]}
-                onPress={() =>
-                  setTropeBanner((prev) =>
-                    prev
-                      ? {
-                          ...prev,
-                          selected: prev.selected.includes(t)
-                            ? prev.selected.filter((s) => s !== t)
-                            : [...prev.selected, t],
-                        }
-                      : null,
-                  )
-                }
+                onPress={() => toggleTrope(t)}
               >
                 <Text style={styles.tropeChipText}>{t}</Text>
               </TouchableOpacity>
@@ -138,7 +193,7 @@ export default function DiscoverScreen() {
             <TouchableOpacity onPress={confirmTropes} style={styles.tropeSaveBtn}>
               <Text style={styles.tropeSaveBtnText}>Save</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setTropeBanner(null)}>
+            <TouchableOpacity onPress={() => { if (bannerTimer.current) clearTimeout(bannerTimer.current); setTropeBanner(null); }}>
               <Text style={styles.tropeDismiss}>Dismiss</Text>
             </TouchableOpacity>
           </View>
@@ -154,9 +209,8 @@ export default function DiscoverScreen() {
           contentContainerStyle={styles.listContent}
           renderItem={({ item: book }) => {
             const cover = book.cover_i ? olCoverUrl(book.cover_i, "S") : null;
-            const alreadyAdded = useStore.getState().books.some(
-              (b) => b.openLibraryKey === book.key || b.title === book.title,
-            );
+            const alreadyAdded =
+              addedKeys.has(book.key) || addedKeys.has(book.title);
             return (
               <View style={styles.bookRow}>
                 {cover ? (
@@ -175,13 +229,7 @@ export default function DiscoverScreen() {
                     <Text style={styles.bookMeta}>{book.first_publish_year}</Text>
                   )}
                 </View>
-                <TouchableOpacity
-                  style={[styles.addBtn, alreadyAdded && styles.addBtnDisabled]}
-                  onPress={() => !alreadyAdded && handleAdd(book)}
-                  disabled={alreadyAdded}
-                >
-                  <Text style={styles.addBtnText}>{alreadyAdded ? "✓" : "+"}</Text>
-                </TouchableOpacity>
+                <AddButton alreadyAdded={alreadyAdded} onPress={() => handleAdd(book)} />
               </View>
             );
           }}
