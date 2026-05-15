@@ -60,10 +60,13 @@ workflows:
         script: |
           xcode-project build-ipa \
             --workspace ios/Tropely.xcworkspace \
-            --scheme Tropely
+            --scheme Tropely 2>&1 | tee /tmp/xcode_full.log || true
+          grep -A 5 "error:" /tmp/xcode_full.log | head -50
+          exit ${PIPESTATUS[0]}
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - /tmp/xcode_full.log
     publishing:
       app_store_connect:
         auth: integration
