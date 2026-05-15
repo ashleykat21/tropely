@@ -8,6 +8,7 @@ workflows:
       groups:
         - tropely
       ios_signing:
+        api_key: Codemagic
         distribution_type: app_store
         bundle_identifier: com.nevora.tropely
       vars:
