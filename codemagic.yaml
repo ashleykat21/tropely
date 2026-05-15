@@ -5,6 +5,8 @@ workflows:
     integrations:
       app_store_connect: Codemagic
     environment:
+      groups:
+        - tropely
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.nevora.tropely
