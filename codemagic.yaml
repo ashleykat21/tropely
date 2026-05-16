@@ -41,6 +41,9 @@ workflows:
           with open('ios/Podfile', 'r') as f:
               content = f.read()
 
+          print("=== BEFORE PATCH ===")
+          print(content[:500])
+
           if 'use_modular_headers!' not in content:
               content = content.replace(
                   'platform :ios',
@@ -53,7 +56,6 @@ workflows:
               target.build_configurations.each do |config|
                 config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
                 config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
-                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
               end
             end
           """
@@ -69,6 +71,10 @@ workflows:
 
           with open('ios/Podfile', 'w') as f:
               f.write(content)
+
+          print("=== AFTER PATCH ===")
+          with open('ios/Podfile', 'r') as f:
+              print(f.read()[:500])
 
           print("Podfile patched successfully")
           PYEOF
