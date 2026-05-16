@@ -7,7 +7,7 @@ workflows:
     environment:
       groups:
         - tropely
-      xcode: 26.0
+      xcode: 16.4
       vars:
         BUNDLE_ID: com.nevora.tropely
         NODE: 20.17.0
