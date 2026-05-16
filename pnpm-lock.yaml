@@ -683,6 +683,9 @@ importers:
 
   artifacts/tropely-mobile:
     dependencies:
+      '@firebase/auth':
+        specifier: ^1.13.1
+        version: 1.13.1(@firebase/app@0.14.12)(@react-native-async-storage/async-storage@2.2.0(react-native@0.79.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.0.0)))
       '@react-native-async-storage/async-storage':
         specifier: ^2.1.2
         version: 2.2.0(react-native@0.79.6(@babel/core@7.29.0)(@types/react@19.2.14)(react@19.0.0))
