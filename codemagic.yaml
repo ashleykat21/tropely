@@ -109,7 +109,7 @@ workflows:
 
       - name: Build iOS
         script: |
-          xcode-project build-ipa --verbose \
+          xcode-project build-ipa \
             --workspace ios/Tropely.xcworkspace \
             --scheme Tropely
 
