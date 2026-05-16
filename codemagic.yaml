@@ -22,8 +22,12 @@ workflows:
           echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
           echo "EXPO_PUBLIC_MIXPANEL_TOKEN=$EXPO_PUBLIC_MIXPANEL_TOKEN" >> .env
-      - name: Expo prebuild
-        script: pnpm exec expo prebuild --platform ios --non-interactive
+      - name: Expo prebuild with auto-increment
+    script: |
+      UPDATED_BUILD_NUMBER=$(($BUILD_NUMBER + 15))
+      echo "Setting iOS Build Number to: $UPDATED_BUILD_NUMBER"
+      pnpm exec expo prebuild --platform ios --non-interactive
+      cd artifacts/tropely-mobile/ios && plutil -replace CFBundleVersion -string "$UPDATED_BUILD_NUMBER" AppWorkspace/Info.plist
       - name: Patch Podfile for c++17 and fmt fix
         script: |
           python3 << 'PYEOF'
