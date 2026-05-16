@@ -2,12 +2,6 @@
   "expo": {
     "name": "Tropely",
     "slug": "tropely-zlejqlsxgwsnwpfwrwir",
-    "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#fdf6f0"
-    },
     "owner": "nevora",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -26,7 +20,10 @@
       "bundleIdentifier": "com.nevora.tropely",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     },
     "android": {
