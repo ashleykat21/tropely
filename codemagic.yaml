@@ -31,7 +31,7 @@ workflows:
       - name: Patch Podfile for c++17 and fmt fix
         script: |
           python3 << 'PYEOF'
-              content = f.read()
+          content = f.read()
           patch = """
             installer.pods_project.targets.each do |target|
               target.build_configurations.each do |config|
