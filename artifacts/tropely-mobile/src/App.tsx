@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
 });
 
 function AppNavigator() {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     if (session?.user) {
@@ -38,7 +38,7 @@ function AppNavigator() {
     );
   }
 
-  return session ? <RootNavigator /> : <AuthScreen />;
+  return user ? <RootNavigator /> : <AuthScreen />;
 }
 
 export default function App() {

@@ -1,9 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { type Session, type User } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithOtp,
+  sendSignInLinkToEmail,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  type User,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 interface AuthContextValue {
-  session: Session | null;
   user: User | null;
   loading: boolean;
   signInWithEmail: (email: string) => Promise<{ error: string | null }>;
@@ -16,60 +23,66 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-    });
-    return () => listener.subscription.unsubscribe();
+    return unsub;
   }, []);
 
   const signInWithEmail = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true },
-    });
-    return { error: error?.message ?? null };
+    try {
+      await sendSignInLinkToEmail(auth, email, {
+        url: "tropely://auth/callback",
+        handleCodeInApp: true,
+        iOS: { bundleId: "com.nevora.tropely" },
+      });
+      return { error: null };
+    } catch (e: any) {
+      return { error: e.message };
+    }
   };
 
   const signInWithPassword = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      return { error: null };
+    } catch (e: any) {
+      return { error: e.message };
+    }
   };
 
   const signUpWithPassword = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error?.message ?? null };
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      return { error: null };
+    } catch (e: any) {
+      return { error: e.message };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await firebaseSignOut(auth);
   };
 
   const getToken = async () => {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
+    return user ? await user.getIdToken() : null;
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user: session?.user ?? null,
-        loading,
-        signInWithEmail,
-        signInWithPassword,
-        signUpWithPassword,
-        signOut,
-        getToken,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      signInWithEmail,
+      signInWithPassword,
+      signUpWithPassword,
+      signOut,
+      getToken,
+    }}>
       {children}
     </AuthContext.Provider>
   );
