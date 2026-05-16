@@ -41,15 +41,16 @@ workflows:
           with open('ios/Podfile', 'r') as f:
               content = f.read()
 
-          print("=== BEFORE PATCH ===")
-          print(content[:500])
-
-          if 'use_modular_headers!' not in content:
-              content = content.replace(
-                  'platform :ios',
-                  "use_modular_headers!\nplatform :ios",
-                  1
-              )
+          # Insert use_modular_headers! before the first 'platform' line
+          lines = content.split('\n')
+          new_lines = []
+          inserted = False
+          for line in lines:
+              if not inserted and line.strip().startswith('platform :ios'):
+                  new_lines.append('use_modular_headers!')
+                  inserted = True
+              new_lines.append(line)
+          content = '\n'.join(new_lines)
 
           patch = """
             installer.pods_project.targets.each do |target|
@@ -72,10 +73,7 @@ workflows:
           with open('ios/Podfile', 'w') as f:
               f.write(content)
 
-          print("=== AFTER PATCH ===")
-          with open('ios/Podfile', 'r') as f:
-              print(f.read()[:500])
-
+          print("use_modular_headers! inserted:", inserted)
           print("Podfile patched successfully")
           PYEOF
 
