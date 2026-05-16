@@ -27,7 +27,7 @@ workflows:
           UPDATED_BUILD_NUMBER=$(($BUILD_NUMBER + 15))
           echo "Setting iOS Build Number to: $UPDATED_BUILD_NUMBER"
           pnpm exec expo prebuild --platform ios --non-interactive
-          cd ios && plutil -replace CFBundleVersion -string "$UPDATED_BUILD_NUMBER" AppWorkspace/Info.plist
+          cd ios && plutil -replace CFBundleVersion -string "$UPDATED_BUILD_NUMBER" tropely/Info.plist
       - name: Patch Podfile for c++17 and fmt fix
         script: |
           python3 << 'PYEOF'
