@@ -35,13 +35,25 @@ workflows:
           pnpm exec expo prebuild --platform ios --non-interactive
           cd ios && plutil -replace CFBundleVersion -string "$UPDATED_BUILD_NUMBER" tropely/Info.plist
 
+      - name: Disable New Architecture
+        script: |
+          python3 << 'PYEOF'
+          import json
+          with open('ios/Podfile.properties.json', 'r') as f:
+              props = json.load(f)
+          props['newArchEnabled'] = 'false'
+          with open('ios/Podfile.properties.json', 'w') as f:
+              json.dump(props, f, indent=2)
+          print("New Architecture disabled")
+          print(json.dumps(props, indent=2))
+          PYEOF
+
       - name: Patch Podfile
         script: |
           python3 << 'PYEOF'
           with open('ios/Podfile', 'r') as f:
               content = f.read()
 
-          # Insert use_modular_headers! before the first 'platform' line
           lines = content.split('\n')
           new_lines = []
           inserted = False
@@ -73,7 +85,6 @@ workflows:
           with open('ios/Podfile', 'w') as f:
               f.write(content)
 
-          print("use_modular_headers! inserted:", inserted)
           print("Podfile patched successfully")
           PYEOF
 
