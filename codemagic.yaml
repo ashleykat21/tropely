@@ -35,11 +35,19 @@ workflows:
           pnpm exec expo prebuild --platform ios --non-interactive
           cd ios && plutil -replace CFBundleVersion -string "$UPDATED_BUILD_NUMBER" tropely/Info.plist
 
-      - name: Patch Podfile for c++17 and fmt fix
+      - name: Patch Podfile for Firebase and c++17
         script: |
           python3 << 'PYEOF'
           with open('ios/Podfile', 'r') as f:
               content = f.read()
+
+          # Add use_modular_headers! after the first line
+          if 'use_modular_headers!' not in content:
+              content = content.replace(
+                  'platform :ios',
+                  "use_modular_headers!\nplatform :ios",
+                  1
+              )
 
           patch = """
             installer.pods_project.targets.each do |target|
