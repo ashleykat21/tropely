@@ -7,7 +7,7 @@ workflows:
     environment:
       groups:
         - tropely
-      xcode: 16.4
+      xcode: 26.0
       vars:
         BUNDLE_ID: com.nevora.tropely
         NODE: 20.17.0
@@ -15,17 +15,17 @@ workflows:
     scripts:
       - name: Install pnpm
         script: npm install -g pnpm@10.26.1 --force
-
+ 
       - name: Install dependencies
         script: cd ../.. && pnpm install --no-frozen-lockfile
-
+ 
       - name: Set up .env
         script: |
           echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL" > .env
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY" >> .env
           echo "EXPO_PUBLIC_MIXPANEL_TOKEN=$EXPO_PUBLIC_MIXPANEL_TOKEN" >> .env
-
-      - name: Expo prebuild
+ 
+      - name: Expo prebuild with auto-increment
         script: |
           UPDATED_BUILD_NUMBER=$(($BUILD_NUMBER + 15))
           echo "Setting iOS Build Number to: $UPDATED_BUILD_NUMBER"
@@ -34,45 +34,27 @@ workflows:
           EXPO_PUBLIC_MIXPANEL_TOKEN=$EXPO_PUBLIC_MIXPANEL_TOKEN \
           pnpm exec expo prebuild --platform ios --non-interactive
           cd ios && plutil -replace CFBundleVersion -string "$UPDATED_BUILD_NUMBER" tropely/Info.plist
-
-      - name: Disable New Architecture
-        script: |
-          python3 << 'PYEOF'
-          import json
-          with open('ios/Podfile.properties.json', 'r') as f:
-              props = json.load(f)
-          props['newArchEnabled'] = 'false'
-          with open('ios/Podfile.properties.json', 'w') as f:
-              json.dump(props, f, indent=2)
-          print("New Architecture disabled")
-          print(json.dumps(props, indent=2))
-          PYEOF
-
-      - name: Patch Podfile
+ 
+      - name: Patch Podfile for c++17 and fmt fix
         script: |
           python3 << 'PYEOF'
           with open('ios/Podfile', 'r') as f:
               content = f.read()
-
-          lines = content.split('\n')
-          new_lines = []
-          inserted = False
-          for line in lines:
-              if not inserted and line.strip().startswith('platform :ios'):
-                  new_lines.append('use_modular_headers!')
-                  inserted = True
-              new_lines.append(line)
-          content = '\n'.join(new_lines)
-
+ 
           patch = """
             installer.pods_project.targets.each do |target|
               target.build_configurations.each do |config|
                 config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
                 config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+                config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)']
+                if target.name == 'fmt'
+                  config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+                  config.build_settings['OTHER_CPLUSPLUSFLAGS'] = '-std=c++17'
+                end
               end
             end
           """
-
+ 
           if 'post_install do |installer|' in content:
               content = content.replace(
                   'post_install do |installer|',
@@ -81,43 +63,44 @@ workflows:
               )
           else:
               content += '\npost_install do |installer|\n' + patch + '\nend\n'
-
+ 
           with open('ios/Podfile', 'w') as f:
               f.write(content)
-
+ 
           print("Podfile patched successfully")
           PYEOF
-
+ 
       - name: Install CocoaPods
         script: cd ios && pod install
-
+ 
       - name: Set up keychain
         script: keychain initialize
-
+ 
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
             --certificate-key "$CERTIFICATE_PRIVATE_KEY"
-
+ 
       - name: Add certificates to keychain
         script: keychain add-certificates
-
+ 
       - name: Set up code signing
         script: xcode-project use-profiles
-
+ 
       - name: Build iOS
         script: |
           xcode-project build-ipa \
             --workspace ios/Tropely.xcworkspace \
             --scheme Tropely
-
+ 
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
+ 
     publishing:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
+ 
