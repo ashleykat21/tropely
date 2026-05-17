@@ -66,6 +66,7 @@ function TypingIndicator() {
 export default function CompanionScreen() {
   const route = useRoute<Route>();
   const { books, age } = useStore();
+  const spoilerStrictness = useStore((s) => s.spoilerStrictness);
   const { isPremium } = usePremium();
 
   const isUnder13 = age !== null && age < 13;
@@ -145,9 +146,13 @@ export default function CompanionScreen() {
       const reply = await sendCompanionMessage(
         book.openLibraryKey ?? book.id,
         nextMessages,
-        mode === "character" && activeCharacter
-          ? { characterName: activeCharacter, tropes: book.tropes }
-          : { tropes: book.tropes },
+        {
+          ...(mode === "character" && activeCharacter ? { characterName: activeCharacter } : {}),
+          tropes: book.tropes,
+          currentPage: book.progress,
+          totalPages: book.pages,
+          spoilerStrictness,
+        },
       );
       const finalMessages: CompanionMessage[] = [...nextMessages, { role: "assistant", content: reply }];
       setMessages(finalMessages);

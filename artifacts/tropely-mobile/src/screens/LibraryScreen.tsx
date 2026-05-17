@@ -8,6 +8,7 @@ import {
   Image,
   FlatList,
   Animated,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
@@ -63,6 +64,7 @@ export default function LibraryScreen() {
   const [sort, setSort] = useState<SortKey>("recent");
   const [viewMode, setViewMode] = useState<"spine" | "grid">("spine");
   const [filters, setFilters] = useState<{ moods: string[]; tropes: string[] }>({ moods: [], tropes: [] });
+  const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
 
   const toggleMoodFilter = (mood: string) =>
@@ -113,6 +115,10 @@ export default function LibraryScreen() {
 
   const sorted = useMemo(() => {
     let list = shelfBooks;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((b) => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
+    }
     if (filters.moods.length > 0) list = list.filter((b) => b.mood && filters.moods.includes(b.mood));
     if (filters.tropes.length > 0) list = list.filter((b) => filters.tropes.every((t) => b.tropes?.includes(t)));
     return [...list].sort((a, b) => {
@@ -151,6 +157,19 @@ export default function LibraryScreen() {
             <Text style={[styles.viewBtnText, viewMode === "grid" && styles.viewBtnTextActive]}>⊞</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      {/* Search bar */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search your shelf…"
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+          placeholderTextColor="#9ca3af"
+        />
       </View>
 
       {/* Shelf tabs */}
@@ -353,6 +372,8 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fafaf9" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  searchRow: { paddingHorizontal: 12, paddingBottom: 6 },
+  searchInput: { backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#f0ede8", paddingHorizontal: 14, paddingVertical: 9, fontSize: 14, color: "#1a1a1a" },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
   viewToggle: { flexDirection: "row", gap: 4, backgroundColor: "#f5f0ea", borderRadius: 8, padding: 3 },
   viewBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },

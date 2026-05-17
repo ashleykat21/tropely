@@ -153,6 +153,9 @@ export default function ProfileScreen() {
     setSpoilerLock, setEquippedBadge,
   } = store;
 
+  const spoilerStrictness = useStore((s) => s.spoilerStrictness);
+  const setSpoilerStrictness = useStore((s) => s.setSpoilerStrictness);
+
   const [ageInput, setAgeInput] = useState(age?.toString() ?? "");
   const [editingAge, setEditingAge] = useState(false);
   const [editingReminderTime, setEditingReminderTime] = useState(false);
@@ -376,20 +379,41 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Spoiler lock */}
+        {/* Spoiler guardrails */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Spoiler lock</Text>
-          <Text style={styles.cardSub}>Hides content ahead of your current page in buddy reads and your library.</Text>
-          <View style={styles.reminderRow}>
-            <Text style={styles.reminderLabel}>Lock spoilers</Text>
-            <Switch
-              value={spoilerLock}
-              onValueChange={setSpoilerLock}
-              trackColor={{ false: "#e5e7eb", true: "#1a1a1a" }}
-              thumbColor="#fff"
-            />
-          </View>
+          <Text style={styles.cardTitle}>Spoiler guardrails</Text>
+          <Text style={styles.cardSub}>Controls blurring in Buddy Reads, social feed, and Companion responses.</Text>
+          {(["relaxed", "balanced", "strict"] as const).map((opt) => (
+            <TouchableOpacity
+              key={opt}
+              style={[styles.reminderRow, styles.optionRow]}
+              onPress={() => setSpoilerStrictness(opt)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.reminderLabel}>{opt.charAt(0).toUpperCase() + opt.slice(1)}</Text>
+                <Text style={styles.cardSub}>
+                  {opt === "relaxed" ? "Show all content, no blurring" :
+                   opt === "balanced" ? "Blur past your current page" :
+                   "Blur everything beyond chapter"}
+                </Text>
+              </View>
+              <View style={[styles.radio, spoilerStrictness === opt && styles.radioActive]} />
+            </TouchableOpacity>
+          ))}
         </View>
+
+        {/* Settings link */}
+        <TouchableOpacity
+          style={styles.referralBtn}
+          onPress={() => nav.navigate("Settings")}
+        >
+          <Text style={styles.referralBtnEmoji}>⚙️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.referralBtnTitle}>Settings</Text>
+            <Text style={styles.referralBtnSub}>Notifications, privacy & more</Text>
+          </View>
+          <Text style={styles.referralBtnArrow}>→</Text>
+        </TouchableOpacity>
 
         {/* Age setting */}
         <View style={styles.card}>
@@ -511,6 +535,9 @@ const styles = StyleSheet.create({
   achieveTabs: { flexDirection: "row", backgroundColor: "#f3f4f6", borderRadius: 10, padding: 3, gap: 3 },
   achieveTab: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: "center" },
   achieveTabActive: { backgroundColor: "#fff" },
+  optionRow: { gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: "#f0ede8" },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: "#e5e7eb" },
+  radioActive: { borderColor: "#1a1a1a", backgroundColor: "#1a1a1a" },
   achieveTabText: { fontSize: 12, fontWeight: "500", color: "#9ca3af" },
   achieveTabTextActive: { color: "#1a1a1a", fontWeight: "700" },
   badgeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },

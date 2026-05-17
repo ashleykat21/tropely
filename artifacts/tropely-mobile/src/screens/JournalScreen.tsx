@@ -20,7 +20,7 @@ import { trackEvent } from "@/lib/analytics";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-type KindFilter = "all" | "note" | "quote";
+type KindFilter = "all" | "note" | "quote" | "reflection" | "trigger";
 
 export default function JournalScreen() {
   const nav = useNavigation<Nav>();
@@ -28,7 +28,7 @@ export default function JournalScreen() {
   const { isPremium } = usePremium();
 
   const [showAdd, setShowAdd] = useState(false);
-  const [kind, setKind] = useState<"quote" | "note">("note");
+  const [kind, setKind] = useState<"quote" | "note" | "reflection" | "trigger">("note");
   const [text, setText] = useState("");
   const [page, setPage] = useState("");
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
@@ -100,6 +100,9 @@ export default function JournalScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => nav.goBack()} style={styles.closeBtn}>
+          <Text style={styles.closeBtnText}>✕</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>Journal</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -133,14 +136,18 @@ export default function JournalScreen() {
         style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
-        {(["all", "quote", "note"] as KindFilter[]).map((k) => (
+        {(["all", "quote", "note", "reflection", "trigger"] as KindFilter[]).map((k) => (
           <TouchableOpacity
             key={k}
             style={[styles.filterChip, kindFilter === k && styles.filterChipActive]}
             onPress={() => setKindFilter(k)}
           >
             <Text style={[styles.filterChipText, kindFilter === k && styles.filterChipTextActive]}>
-              {k === "all" ? "All" : k === "quote" ? "💬 Highlights" : "📝 Notes"}
+              {k === "all" ? "All" :
+               k === "quote" ? "💬 Highlights" :
+               k === "note" ? "📝 Notes" :
+               k === "reflection" ? "🪞 Reflections" :
+               "⚡ Triggers"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -184,9 +191,12 @@ export default function JournalScreen() {
             return (
               <View key={entry.id} style={styles.entryCard}>
                 <View style={styles.entryHeader}>
-                  <View style={[styles.kindBadge, entry.kind === "quote" && styles.kindBadgeQuote]}>
+                  <View style={[styles.kindBadge, entry.kind === "quote" && styles.kindBadgeQuote, entry.kind === "trigger" && styles.kindBadgeTrigger]}>
                     <Text style={styles.kindBadgeText}>
-                      {entry.kind === "quote" ? "💬 Highlight" : "📝 Note"}
+                      {entry.kind === "quote" ? "💬 Highlight" :
+                       entry.kind === "reflection" ? "🪞 Reflection" :
+                       entry.kind === "trigger" ? "⚡ Trigger" :
+                       "📝 Note"}
                     </Text>
                   </View>
                   {typeof entry.page === "number" && (
@@ -250,14 +260,17 @@ export default function JournalScreen() {
           <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalContent}>
             {/* Kind toggle */}
             <View style={styles.kindToggle}>
-              {(["note", "quote"] as const).map((k) => (
+              {(["note", "quote", "reflection", "trigger"] as const).map((k) => (
                 <TouchableOpacity
                   key={k}
                   style={[styles.kindBtn, kind === k && styles.kindBtnActive]}
                   onPress={() => setKind(k)}
                 >
                   <Text style={[styles.kindBtnText, kind === k && styles.kindBtnTextActive]}>
-                    {k === "note" ? "📝 Note" : "💬 Highlight"}
+                    {k === "note" ? "📝 Note" :
+                     k === "quote" ? "💬 Highlight" :
+                     k === "reflection" ? "🪞 Reflect" :
+                     "⚡ Trigger"}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -322,6 +335,8 @@ export default function JournalScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fafaf9" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#f5f0ea", justifyContent: "center", alignItems: "center" },
+  closeBtnText: { fontSize: 13, color: "#6b7280" },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
   headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
   exportBtn: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
@@ -349,6 +364,7 @@ const styles = StyleSheet.create({
   entryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   kindBadge: { backgroundColor: "#f3f4f6", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   kindBadgeQuote: { backgroundColor: "#fef3c7" },
+  kindBadgeTrigger: { backgroundColor: "#fee2e2" },
   kindBadgeText: { fontSize: 11, fontWeight: "600", color: "#6b7280" },
   pageLabel: { fontSize: 11, color: "#9ca3af" },
   deleteBtn: { marginLeft: "auto", padding: 4 },

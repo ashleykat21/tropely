@@ -10,6 +10,47 @@ export type Mood =
   | "hopeful" | "tense" | "melancholy" | "joyful" | "romantic"
   | "eerie" | "reflective" | "adventurous" | "cozy" | "intense";
 
+export type MoodKey =
+  | "cozy" | "calm" | "intense" | "melancholy" | "dreamy" | "joyful" | "mysterious";
+
+export type SpoilerStrictness = "relaxed" | "balanced" | "strict";
+export type ShareVisibility = "public" | "friends" | "private";
+
+export type Challenge = {
+  id: string;
+  title: string;
+  target: number;
+  unit: "books" | "pages" | "minutes";
+  progress: number;
+  completed: boolean;
+  dueDate?: string;
+};
+
+export type PageMarker = {
+  id: string;
+  bookId: string;
+  page: number;
+  note?: string;
+  date: string;
+};
+
+export type Checkpoint = {
+  id: string;
+  bookId: string;
+  page: number;
+  label: string;
+  locked: boolean;
+};
+
+export type TriggerEntry = {
+  id: string;
+  bookId: string;
+  trigger: string;
+  page?: number;
+  note?: string;
+  date: string;
+};
+
 export type Book = {
   id: string;
   title: string;
@@ -46,7 +87,7 @@ export type SessionLog = {
 export type JournalEntry = {
   id: string;
   bookId: string;
-  kind: "quote" | "note";
+  kind: "quote" | "note" | "reflection" | "trigger";
   text: string;
   page?: number;
   date: string;
@@ -114,6 +155,16 @@ type SettingsSlice = {
   referralCode: string | null;
   referralCount: number;
   freeMonthsEarned: number;
+  // v1 additions
+  activeMood: MoodKey | null;
+  spoilerStrictness: SpoilerStrictness;
+  defaultShareVisibility: ShareVisibility;
+  activeFlair: string | null;
+  challenges: Challenge[];
+  markers: PageMarker[];
+  checkpoints: Checkpoint[];
+  triggers: TriggerEntry[];
+  hasSeenTour: boolean;
   setAge: (age: number) => void;
   setDailyGoalPages: (n: number) => void;
   setDailyGoalMinutes: (n: number) => void;
@@ -127,6 +178,21 @@ type SettingsSlice = {
   setEquippedBadge: (id: string | null) => void;
   setReferralCode: (code: string) => void;
   incrementReferralCount: () => void;
+  // v1 setters
+  setActiveMood: (mood: MoodKey | null) => void;
+  setSpoilerStrictness: (s: SpoilerStrictness) => void;
+  setDefaultShareVisibility: (v: ShareVisibility) => void;
+  setActiveFlair: (flair: string | null) => void;
+  addChallenge: (c: Omit<Challenge, "id" | "progress" | "completed">) => void;
+  updateChallengeProgress: (id: string, progress: number) => void;
+  completeChallenge: (id: string) => void;
+  removeChallenge: (id: string) => void;
+  addMarker: (m: Omit<PageMarker, "id">) => void;
+  removeMarker: (id: string) => void;
+  addCheckpoint: (c: Omit<Checkpoint, "id">) => void;
+  removeCheckpoint: (id: string) => void;
+  addTrigger: (t: Omit<TriggerEntry, "id">) => void;
+  setHasSeenTour: (v: boolean) => void;
 };
 
 type AllSlices = LibrarySlice & JournalSlice & SettingsSlice;
@@ -227,6 +293,15 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   referralCode: null,
   referralCount: 0,
   freeMonthsEarned: 0,
+  activeMood: null,
+  spoilerStrictness: "balanced",
+  defaultShareVisibility: "friends",
+  activeFlair: null,
+  challenges: [],
+  markers: [],
+  checkpoints: [],
+  triggers: [],
+  hasSeenTour: false,
 
   setAge: (age) => set({ age }),
   setDailyGoalPages: (n) => set({ dailyGoalPages: n }),
@@ -248,6 +323,35 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
         freeMonthsEarned: s.freeMonthsEarned + (next % 3 === 0 ? 1 : 0),
       };
     }),
+  setActiveMood: (mood) => set({ activeMood: mood }),
+  setSpoilerStrictness: (s) => set({ spoilerStrictness: s }),
+  setDefaultShareVisibility: (v) => set({ defaultShareVisibility: v }),
+  setActiveFlair: (flair) => set({ activeFlair: flair }),
+  addChallenge: (c) =>
+    set((s) => ({
+      challenges: [...s.challenges, { ...c, id: uid(), progress: 0, completed: false }],
+    })),
+  updateChallengeProgress: (id, progress) =>
+    set((s) => ({
+      challenges: s.challenges.map((c) => (c.id === id ? { ...c, progress } : c)),
+    })),
+  completeChallenge: (id) =>
+    set((s) => ({
+      challenges: s.challenges.map((c) => (c.id === id ? { ...c, completed: true } : c)),
+    })),
+  removeChallenge: (id) =>
+    set((s) => ({ challenges: s.challenges.filter((c) => c.id !== id) })),
+  addMarker: (m) =>
+    set((s) => ({ markers: [{ ...m, id: uid() }, ...s.markers] })),
+  removeMarker: (id) =>
+    set((s) => ({ markers: s.markers.filter((m) => m.id !== id) })),
+  addCheckpoint: (c) =>
+    set((s) => ({ checkpoints: [...s.checkpoints, { ...c, id: uid() }] })),
+  removeCheckpoint: (id) =>
+    set((s) => ({ checkpoints: s.checkpoints.filter((c) => c.id !== id) })),
+  addTrigger: (t) =>
+    set((s) => ({ triggers: [{ ...t, id: uid() }, ...s.triggers] })),
+  setHasSeenTour: (v) => set({ hasSeenTour: v }),
 });
 
 // ── Store ─────────────────────────────────────────────────────────────────────

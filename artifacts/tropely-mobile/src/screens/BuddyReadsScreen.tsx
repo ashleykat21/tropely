@@ -48,6 +48,7 @@ export default function BuddyReadsScreen() {
   const { isPremium } = usePremium();
   const age = useStore((s) => s.age);
   const spoilerLock = useStore((s) => s.spoilerLock);
+  const spoilerStrictness = useStore((s) => s.spoilerStrictness);
   const books = useStore((s) => s.books);
   const equippedBadgeId = useStore((s) => s.equippedBadgeId);
 
@@ -87,7 +88,7 @@ export default function BuddyReadsScreen() {
   const activeChapter = chapters[selectedChapterIdx];
   const isChapterLocked =
     activeChapter &&
-    spoilerLock &&
+    spoilerStrictness !== "relaxed" &&
     myCurrentPage < activeChapter.startPage &&
     activeChapter.number > 1;
 
@@ -141,7 +142,7 @@ export default function BuddyReadsScreen() {
           <View style={styles.chapterTabsWrapper}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chapterTabs}>
               {chapters.map((ch, idx) => {
-                const locked = spoilerLock && myCurrentPage < ch.startPage && ch.number > 1;
+                const locked = spoilerStrictness !== "relaxed" && myCurrentPage < ch.startPage && ch.number > 1;
                 return (
                   <TouchableOpacity
                     key={ch.number}

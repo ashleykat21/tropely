@@ -27,14 +27,6 @@ function StatCard({ label, value, sub }: { label: string; value: string | number
   );
 }
 
-function MiniBar({ value, max, color }: { value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.min(1, value / max) : 0;
-  return (
-    <View style={styles.miniBarTrack}>
-      <View style={[styles.miniBarFill, { width: `${pct * 100}%`, backgroundColor: color }]} />
-    </View>
-  );
-}
 
 const MOOD_COLORS: Record<string, string> = {
   hopeful: "#d1fae5", tense: "#fee2e2", melancholy: "#e0e7ff",
@@ -78,7 +70,7 @@ function weekKey(date: Date) {
 
 export default function InsightsScreen() {
   const nav = useNavigation<Nav>();
-  const { books, sessions, journal, reflections } = useStore();
+  const { books, sessions, journal, reflections, challenges } = useStore();
   const { isPremium } = usePremium();
   const [selectedTropeMonth, setSelectedTropeMonth] = useState<TropeMonthData | null>(null);
   const [selectedPageMonth, setSelectedPageMonth] = useState<string | null>(null);
@@ -424,6 +416,28 @@ export default function InsightsScreen() {
           </View>
         )}
 
+        {/* Challenges */}
+        {challenges.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Challenges</Text>
+            {challenges.map((ch) => {
+              const pct = Math.min(100, ch.target > 0 ? Math.round((ch.progress / ch.target) * 100) : 0);
+              return (
+                <View key={ch.id} style={styles.challengeRow}>
+                  <View style={styles.challengeHeader}>
+                    <Text style={styles.challengeTitle}>{ch.title}</Text>
+                    {ch.completed && <Text style={styles.challengeDone}>✓ Done</Text>}
+                  </View>
+                  <View style={styles.challengeTrack}>
+                    <View style={[styles.challengeFill, { width: `${pct}%` }, ch.completed && styles.challengeFillDone]} />
+                  </View>
+                  <Text style={styles.challengeMeta}>{ch.progress} / {ch.target} {ch.unit} · {pct}%</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
         {/* Sessions total */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sessions</Text>
@@ -483,6 +497,14 @@ const styles = StyleSheet.create({
   tropeDNABarCount: { fontSize: 11, color: "#a89880", width: 16, textAlign: "right" },
   tropeDNALockedContainer: { position: "relative" },
   sessionTotal: { fontSize: 14, color: "#6b7280" },
+  challengeRow: { gap: 6 },
+  challengeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  challengeTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
+  challengeDone: { fontSize: 12, color: "#059669", fontWeight: "700" },
+  challengeTrack: { height: 6, backgroundColor: "#f5f0ea", borderRadius: 3, overflow: "hidden" },
+  challengeFill: { height: "100%", backgroundColor: "#1a1a1a", borderRadius: 3 },
+  challengeFillDone: { backgroundColor: "#059669" },
+  challengeMeta: { fontSize: 11, color: "#9ca3af" },
   premiumOverlay: { gap: 8 },
   premiumOverlayAbsolute: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },
   premiumBadge: { backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },

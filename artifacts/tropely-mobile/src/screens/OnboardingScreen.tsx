@@ -1,253 +1,201 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  Image,
-  Alert,
-  ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
-import { searchBooks, olCoverUrl, type OLBook } from "@/lib/api";
+import { LinearGradient } from "expo-linear-gradient";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const COMMON_TROPES = [
-  "enemies-to-lovers", "found family", "slow burn", "fake dating",
-  "chosen one", "redemption arc", "heist", "second chance",
-  "forbidden love", "magical realism", "unreliable narrator", "coming of age",
-  "portal fantasy", "love triangle", "rivals to lovers", "time loop",
-  "dark academia", "anti-hero", "quest", "mentor figure",
+const ALL_TROPES = [
+  "enemies-to-lovers", "slow burn", "found family", "redemption arc", "forced proximity",
+  "second chance", "chosen one", "dark romance", "academic rivals", "small town",
+  "forbidden love", "grumpy/sunshine", "fake dating", "morally grey", "prophecy",
 ];
 
-const MOOD_BG = ["#fce7f3", "#d1fae5", "#e0e7ff", "#fef9c3", "#fff7ed"];
+const STEPS = ["Welcome", "Age", "Tropes", "Goals"] as const;
+type Step = typeof STEPS[number];
 
 export default function OnboardingScreen() {
   const nav = useNavigation<Nav>();
-  const { addBook, setHasOnboarded, setPreferredTropes, setDailyGoalMinutes, dailyGoalMinutes } = useStore();
+  const { setAge, setHasOnboarded, setPreferredTropes, setDailyGoalPages, setDailyGoalMinutes } = useStore();
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState<Step>("Welcome");
+  const [ageInput, setAgeInput] = useState("");
   const [selectedTropes, setSelectedTropes] = useState<string[]>([]);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<OLBook[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [addedBook, setAddedBook] = useState<string | null>(null);
-  const [goalMinutes, setGoalMinutes] = useState(dailyGoalMinutes ?? 20);
+  const [goalPages, setGoalPages] = useState(20);
+  const [goalMinutes, setGoalMinutes] = useState(30);
 
-  const bgColor = MOOD_BG[step % MOOD_BG.length];
+  const stepIndex = STEPS.indexOf(step);
 
   const toggleTrope = (t: string) => {
     setSelectedTropes((prev) =>
-      prev.includes(t) ? prev.filter((x) => x !== t) : prev.length < 3 ? [...prev, t] : prev,
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
     );
   };
 
-  const doSearch = async () => {
-    if (!query.trim()) return;
-    setLoading(true);
-    try {
-      const data = await searchBooks(query);
-      setResults(data);
-    } catch {
-      Alert.alert("Search failed", "Check your connection.");
-    } finally {
-      setLoading(false);
+  const handleAgeNext = () => {
+    const n = parseInt(ageInput, 10);
+    if (!n || n < 5 || n > 120) {
+      Alert.alert("Please enter a valid age.");
+      return;
+    }
+    setAge(n);
+    if (n < 13) {
+      // Under-13 safe mode: skip to finish
+      finishOnboarding(n);
+    } else {
+      setStep("Tropes");
     }
   };
 
-  const handleAddBook = (book: OLBook) => {
-    const cover = book.cover_i ? olCoverUrl(book.cover_i, "M") : undefined;
-    addBook({
-      title: book.title,
-      author: book.author_name?.[0] ?? "Unknown",
-      pages: book.number_of_pages_median ?? 300,
-      progress: 0,
-      shelf: "reading",
-      cover,
-      openLibraryKey: book.key,
-    });
-    setAddedBook(book.title);
-    setResults([]);
-  };
-
-  const finish = () => {
+  const finishOnboarding = (age?: number) => {
     setPreferredTropes(selectedTropes);
+    setDailyGoalPages(goalPages);
     setDailyGoalMinutes(goalMinutes);
     setHasOnboarded(true);
     nav.reset({ index: 0, routes: [{ name: "Tabs" }] });
   };
 
-  const GOAL_PRESETS = [15, 20, 30, 45, 60];
-
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: bgColor }]} edges={["top", "bottom"]}>
-      {/* Step dots */}
-      <View style={styles.dots}>
-        {[0, 1, 2].map((i) => (
-          <View key={i} style={[styles.dot, i === step && styles.dotActive]} />
-        ))}
-      </View>
+    <LinearGradient colors={["#fdf6ec", "#f5e6cc"]} style={styles.flex}>
+      <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
 
-      {step === 0 && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.heading}>Pick up to 3 tropes{"\n"}you love</Text>
-          <Text style={styles.sub}>We'll use these to shape your whole experience.</Text>
-          <View style={styles.tropeGrid}>
-            {COMMON_TROPES.map((t) => {
-              const selected = selectedTropes.includes(t);
-              return (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.tropeChip, selected && styles.tropeChipSelected]}
-                  onPress={() => toggleTrope(t)}
-                >
-                  <Text style={[styles.tropeChipText, selected && styles.tropeChipTextSelected]}>
-                    {t}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <TouchableOpacity
-            style={styles.nextBtn}
-            onPress={() => setStep(1)}
-          >
-            <Text style={styles.nextBtnText}>
-              {selectedTropes.length > 0 ? "Continue →" : "Skip for now →"}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-
-      {step === 1 && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.heading}>Add your first{"\n"}current read</Text>
-          <Text style={styles.sub}>Search for a book you're reading right now.</Text>
-
-          {addedBook ? (
-            <View style={styles.addedCard}>
-              <Text style={styles.addedText}>✓ Added "{addedBook}"</Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.searchRow}>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search books…"
-                  value={query}
-                  onChangeText={setQuery}
-                  returnKeyType="search"
-                  onSubmitEditing={doSearch}
-                />
-                <TouchableOpacity style={styles.searchBtn} onPress={doSearch}>
-                  {loading
-                    ? <ActivityIndicator color="#fff" size="small" />
-                    : <Text style={styles.searchBtnText}>Go</Text>}
-                </TouchableOpacity>
-              </View>
-              {results.slice(0, 4).map((book) => (
-                <TouchableOpacity
-                  key={book.key}
-                  style={styles.resultRow}
-                  onPress={() => handleAddBook(book)}
-                >
-                  {book.cover_i ? (
-                    <Image source={{ uri: olCoverUrl(book.cover_i, "S") }} style={styles.resultCover} />
-                  ) : (
-                    <View style={[styles.resultCover, styles.coverPlaceholder]} />
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.resultTitle} numberOfLines={1}>{book.title}</Text>
-                    <Text style={styles.resultAuthor} numberOfLines={1}>{book.author_name?.[0]}</Text>
-                  </View>
-                  <Text style={styles.addIcon}>+</Text>
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
-
-          <View style={styles.stepBtns}>
-            <TouchableOpacity style={styles.skipBtn} onPress={() => setStep(2)}>
-              <Text style={styles.skipBtnText}>Skip →</Text>
-            </TouchableOpacity>
-            {addedBook && (
-              <TouchableOpacity style={styles.nextBtn} onPress={() => setStep(2)}>
-                <Text style={styles.nextBtnText}>Continue →</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </ScrollView>
-      )}
-
-      {step === 2 && (
-        <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.heading}>Set a daily{"\n"}reading goal</Text>
-          <Text style={styles.sub}>How many minutes a day do you want to read?</Text>
-          <View style={styles.goalRow}>
-            {GOAL_PRESETS.map((n) => (
-              <TouchableOpacity
-                key={n}
-                style={[styles.goalBtn, goalMinutes === n && styles.goalBtnActive]}
-                onPress={() => setGoalMinutes(n)}
-              >
-                <Text style={[styles.goalBtnText, goalMinutes === n && styles.goalBtnTextActive]}>
-                  {n}
-                </Text>
-              </TouchableOpacity>
+        {/* Progress dots */}
+        {step !== "Welcome" && (
+          <View style={styles.dots}>
+            {STEPS.filter((s) => s !== "Welcome").map((s) => (
+              <View key={s} style={[styles.dot, s === step && styles.dotActive]} />
             ))}
           </View>
-          <TouchableOpacity style={styles.nextBtn} onPress={finish}>
-            <Text style={styles.nextBtnText}>Start reading ✨</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.skipBtn} onPress={finish}>
-            <Text style={styles.skipBtnText}>Skip goal for now</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      )}
-    </SafeAreaView>
+        )}
+
+        {step === "Welcome" && (
+          <View style={styles.page}>
+            <Text style={styles.bigEmoji}>🌿</Text>
+            <Text style={styles.welcomeTitle}>Welcome to Tropely</Text>
+            <Text style={styles.welcomeSub}>
+              The reading tracker that speaks in tropes, moods, and moments.
+            </Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep("Age")}>
+              <Text style={styles.primaryBtnText}>Get started →</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {step === "Age" && (
+          <ScrollView contentContainerStyle={styles.page}>
+            <Text style={styles.stepEmoji}>🎂</Text>
+            <Text style={styles.stepTitle}>How old are you?</Text>
+            <Text style={styles.stepSub}>Used to show age-appropriate content. Under-13 readers get a safe mode.</Text>
+            <TextInput
+              style={styles.ageInput}
+              value={ageInput}
+              onChangeText={setAgeInput}
+              keyboardType="number-pad"
+              placeholder="Your age"
+              placeholderTextColor="#9ca3af"
+              maxLength={3}
+              autoFocus
+            />
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleAgeNext}>
+              <Text style={styles.primaryBtnText}>Continue →</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+
+        {step === "Tropes" && (
+          <ScrollView contentContainerStyle={styles.page}>
+            <Text style={styles.stepEmoji}>🎭</Text>
+            <Text style={styles.stepTitle}>Pick your tropes</Text>
+            <Text style={styles.stepSub}>We'll use these to personalise recommendations. Pick as many as you like.</Text>
+            <View style={styles.tropeGrid}>
+              {ALL_TROPES.map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.tropeChip, selectedTropes.includes(t) && styles.tropeChipActive]}
+                  onPress={() => toggleTrope(t)}
+                >
+                  <Text style={[styles.tropeChipText, selectedTropes.includes(t) && styles.tropeChipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep("Goals")}>
+              <Text style={styles.primaryBtnText}>Continue →</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+
+        {step === "Goals" && (
+          <ScrollView contentContainerStyle={styles.page}>
+            <Text style={styles.stepEmoji}>🎯</Text>
+            <Text style={styles.stepTitle}>Set your daily goal</Text>
+            <Text style={styles.stepSub}>You can always change this later in your profile.</Text>
+
+            <Text style={styles.goalLabel}>Pages per day</Text>
+            <View style={styles.presetRow}>
+              {[10, 20, 30, 50].map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.presetBtn, goalPages === n && styles.presetBtnActive]}
+                  onPress={() => setGoalPages(n)}
+                >
+                  <Text style={[styles.presetBtnText, goalPages === n && styles.presetBtnTextActive]}>{n}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.goalLabel, { marginTop: 16 }]}>Minutes per day</Text>
+            <View style={styles.presetRow}>
+              {[15, 30, 60].map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  style={[styles.presetBtn, goalMinutes === n && styles.presetBtnActive]}
+                  onPress={() => setGoalMinutes(n)}
+                >
+                  <Text style={[styles.presetBtnText, goalMinutes === n && styles.presetBtnTextActive]}>{n}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => finishOnboarding()}>
+              <Text style={styles.primaryBtnText}>Start reading 🌿</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  dots: { flexDirection: "row", gap: 6, justifyContent: "center", paddingTop: 16 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "rgba(26,26,26,0.2)" },
+  flex: { flex: 1 },
+  dots: { flexDirection: "row", justifyContent: "center", gap: 6, paddingTop: 12 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#d4c9a8" },
   dotActive: { backgroundColor: "#1a1a1a", width: 20 },
-  content: { padding: 24, paddingBottom: 48, gap: 20 },
-  heading: { fontSize: 30, fontWeight: "800", color: "#1a1a1a", lineHeight: 38 },
-  sub: { fontSize: 15, color: "#6b7280", marginTop: -8 },
-  tropeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  tropeChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.7)", borderWidth: 1, borderColor: "rgba(26,26,26,0.1)" },
-  tropeChipSelected: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
-  tropeChipText: { fontSize: 13, fontWeight: "500", color: "#374151" },
-  tropeChipTextSelected: { color: "#fff" },
-  nextBtn: { backgroundColor: "#1a1a1a", borderRadius: 14, paddingVertical: 16, alignItems: "center", marginTop: 8 },
-  nextBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  searchRow: { flexDirection: "row", gap: 8 },
-  searchInput: { flex: 1, borderWidth: 1, borderColor: "rgba(26,26,26,0.15)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, backgroundColor: "rgba(255,255,255,0.8)" },
-  searchBtn: { backgroundColor: "#1a1a1a", borderRadius: 12, paddingHorizontal: 18, justifyContent: "center" },
-  searchBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  resultRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 12, padding: 12 },
-  resultCover: { width: 40, height: 58, borderRadius: 5 },
-  coverPlaceholder: { backgroundColor: "#e5e7eb" },
-  resultTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
-  resultAuthor: { fontSize: 12, color: "#6b7280", marginTop: 2 },
-  addIcon: { fontSize: 22, color: "#1a1a1a", fontWeight: "700" },
-  addedCard: { backgroundColor: "rgba(255,255,255,0.9)", borderRadius: 12, padding: 16, alignItems: "center" },
-  addedText: { fontSize: 14, fontWeight: "600", color: "#059669" },
-  stepBtns: { flexDirection: "row", justifyContent: "flex-end", marginTop: 8, gap: 12 },
-  skipBtn: { paddingVertical: 12, paddingHorizontal: 20, alignItems: "center" },
-  skipBtnText: { fontSize: 15, color: "#6b7280", fontWeight: "600" },
-  goalRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center" },
-  goalBtn: { width: 80, paddingVertical: 18, borderRadius: 14, borderWidth: 1, borderColor: "rgba(26,26,26,0.15)", backgroundColor: "rgba(255,255,255,0.7)", alignItems: "center" },
-  goalBtnActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
-  goalBtnText: { fontSize: 18, fontWeight: "700", color: "#6b7280" },
-  goalBtnTextActive: { color: "#fff" },
+  page: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 32, gap: 16 },
+  bigEmoji: { fontSize: 64, marginBottom: 8 },
+  welcomeTitle: { fontSize: 32, fontWeight: "800", color: "#1a1a1a", textAlign: "center" },
+  welcomeSub: { fontSize: 16, color: "#6b7280", textAlign: "center", lineHeight: 24 },
+  stepEmoji: { fontSize: 48 },
+  stepTitle: { fontSize: 26, fontWeight: "700", color: "#1a1a1a", textAlign: "center" },
+  stepSub: { fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 21 },
+  primaryBtn: { backgroundColor: "#1a1a1a", borderRadius: 20, paddingVertical: 16, paddingHorizontal: 40, marginTop: 8 },
+  primaryBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  ageInput: { width: 120, textAlign: "center", fontSize: 32, fontWeight: "700", color: "#1a1a1a", borderBottomWidth: 2, borderBottomColor: "#1a1a1a", paddingVertical: 8 },
+  tropeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" },
+  tropeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: "#d4c9a8", backgroundColor: "rgba(255,255,255,0.7)" },
+  tropeChipActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
+  tropeChipText: { fontSize: 13, color: "#1a1a1a" },
+  tropeChipTextActive: { color: "#fff" },
+  goalLabel: { fontSize: 13, fontWeight: "700", color: "#6b7280", alignSelf: "flex-start", width: "100%" },
+  presetRow: { flexDirection: "row", gap: 10, alignSelf: "flex-start" },
+  presetBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, borderWidth: 1, borderColor: "#d4c9a8", backgroundColor: "rgba(255,255,255,0.7)" },
+  presetBtnActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
+  presetBtnText: { fontSize: 15, fontWeight: "600", color: "#1a1a1a" },
+  presetBtnTextActive: { color: "#fff" },
 });
