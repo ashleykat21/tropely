@@ -284,6 +284,11 @@ export default function LibraryScreen() {
                 </View>
               )}
               <Text style={styles.gridTitle} numberOfLines={2}>{b.title}</Text>
+              {(b.tropes ?? []).length > 0 && (
+                <View style={styles.gridTropePill}>
+                  <Text style={styles.gridTropePillText} numberOfLines={1}>{b.tropes![0]}</Text>
+                </View>
+              )}
               {activeShelf === "finished" && getStars(b.id) > 0 && (
                 <Text style={styles.stars}>{"★".repeat(getStars(b.id))}</Text>
               )}
@@ -324,9 +329,13 @@ export default function LibraryScreen() {
                     <Text style={styles.spoilerNote}>🔒 Not started</Text>
                   )}
                   {(b.tropes ?? []).length > 0 && (
-                    <Text style={styles.spineTrope} numberOfLines={1}>
-                      {b.tropes!.slice(0, 2).join(" · ")}
-                    </Text>
+                    <View style={styles.spineTropeRow}>
+                      {b.tropes!.slice(0, 2).map((t) => (
+                        <View key={t} style={styles.spineTropePill}>
+                          <Text style={styles.spineTropePillText}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
                   )}
                   {activeShelf === "finished" && getStars(b.id) > 0 && (
                     <Text style={styles.starsSmall}>{"★".repeat(getStars(b.id))}</Text>
@@ -345,14 +354,14 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fafaf9" },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
-  viewToggle: { flexDirection: "row", gap: 4, backgroundColor: "#f3f4f6", borderRadius: 8, padding: 3 },
+  viewToggle: { flexDirection: "row", gap: 4, backgroundColor: "#f5f0ea", borderRadius: 8, padding: 3 },
   viewBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
   viewBtnActive: { backgroundColor: "#fff" },
   viewBtnText: { fontSize: 14, color: "#9ca3af" },
   viewBtnTextActive: { color: "#1a1a1a" },
   tabsContainer: { flexGrow: 0 },
   tabs: { paddingHorizontal: 12, gap: 6, paddingVertical: 8 },
-  tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#f3f4f6" },
+  tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: "#f5f0ea" },
   tabActive: { backgroundColor: "#1a1a1a" },
   tabText: { fontSize: 13, fontWeight: "500", color: "#6b7280" },
   tabTextActive: { color: "#fff" },
@@ -363,13 +372,13 @@ const styles = StyleSheet.create({
   sortChipText: { fontSize: 12, color: "#6b7280" },
   sortChipTextActive: { color: "#fff" },
   sortDivider: { width: 1, height: 20, backgroundColor: "#e5e7eb", marginHorizontal: 2 },
-  tropeChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: "#f3f4f6" },
+  tropeChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, backgroundColor: "#f5f0ea" },
   tropeChipActive: { backgroundColor: "#1a1a1a" },
   tropeChipText: { fontSize: 12, color: "#6b7280" },
   tropeChipTextActive: { color: "#fff" },
   // Skeleton
   skeletonContainer: { padding: 16, gap: 12 },
-  skeletonCard: { flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: "#fff", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#f0f0f0" },
+  skeletonCard: { flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: "#fff", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#f0ede8" },
   skeletonCover: { width: 48, height: 72, borderRadius: 6, backgroundColor: "#e5e7eb" },
   skeletonLine: { height: 12, backgroundColor: "#e5e7eb", borderRadius: 6, width: "80%" },
   // Empty
@@ -387,12 +396,14 @@ const styles = StyleSheet.create({
   audioBadgeText: { fontSize: 10 },
   coverPlaceholder: { backgroundColor: "#e5e7eb", justifyContent: "center", alignItems: "center" },
   coverInitial: { fontSize: 20, fontWeight: "700", color: "#9ca3af" },
-  gridTitle: { fontSize: 10, color: "#1a1a1a", textAlign: "center" },
+  gridTitle: { fontSize: 10, color: "#2d1f10", textAlign: "center" },
+  gridTropePill: { backgroundColor: "#f5f0ea", borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1, alignSelf: "center" },
+  gridTropePillText: { fontSize: 8, color: "#7a6655", fontWeight: "500", textAlign: "center" },
   stars: { fontSize: 10, color: "#f59e0b" },
   // Spine (list view)
   spineScroll: { flex: 1 },
   spineContent: { padding: 16, gap: 2, paddingBottom: 32 },
-  spineRow: { flexDirection: "row", gap: 12, padding: 10, borderRadius: 12, backgroundColor: "#fff", marginBottom: 8, borderWidth: 1, borderColor: "#f0f0f0" },
+  spineRow: { flexDirection: "row", gap: 12, padding: 10, borderRadius: 12, backgroundColor: "#fff", marginBottom: 8, borderWidth: 1, borderColor: "#f0ede8" },
   spineRowCover: { width: 44, height: 66, borderRadius: 6 },
   spineRowInitial: { fontSize: 18, fontWeight: "700", color: "#9ca3af" },
   spineRowInfo: { flex: 1, gap: 4, justifyContent: "center" },
@@ -400,9 +411,11 @@ const styles = StyleSheet.create({
   spineRowTitleText: { flex: 1, fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
   audioIcon: { fontSize: 12 },
   spineRowAuthor: { fontSize: 12, color: "#9ca3af" },
-  progressTrack: { height: 3, backgroundColor: "#f3f4f6", borderRadius: 2, overflow: "hidden", marginTop: 2 },
+  progressTrack: { height: 3, backgroundColor: "#f5f0ea", borderRadius: 2, overflow: "hidden", marginTop: 2 },
   progressBar: { height: "100%", backgroundColor: "#1a1a1a", borderRadius: 2 },
   spoilerNote: { fontSize: 11, color: "#9ca3af" },
-  spineTrope: { fontSize: 10, color: "#9ca3af", fontStyle: "italic" },
+  spineTropeRow: { flexDirection: "row", gap: 4, flexWrap: "wrap" },
+  spineTropePill: { backgroundColor: "#f5f0ea", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  spineTropePillText: { fontSize: 9, color: "#7a6655", fontWeight: "500" },
   starsSmall: { fontSize: 10, color: "#f59e0b" },
 });

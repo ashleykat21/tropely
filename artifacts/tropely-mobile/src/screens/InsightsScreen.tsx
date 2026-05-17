@@ -371,40 +371,46 @@ export default function InsightsScreen() {
         {moodCounts.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Reading moods</Text>
-            <View style={styles.moodList}>
+            <View style={styles.moodChipGrid}>
               {moodCounts.map(([mood, count]) => (
-                <View key={mood} style={styles.moodRow}>
-                  <Text style={styles.moodLabel}>{mood}</Text>
-                  <MiniBar value={count} max={maxMoodCount} color={MOOD_COLORS[mood] ?? "#e5e7eb"} />
-                  <Text style={styles.moodCount}>{count}</Text>
+                <View key={mood} style={[styles.moodChip, { backgroundColor: MOOD_COLORS[mood] ?? "#f5f0ea" }]}>
+                  <Text style={styles.moodChipLabel}>{mood}</Text>
+                  <View style={styles.moodChipCountBubble}>
+                    <Text style={styles.moodChipCount}>{count}</Text>
+                  </View>
                 </View>
               ))}
             </View>
           </View>
         )}
 
-        {/* Trope DNA */}
+        {/* Trope DNA bar chart */}
         {(tropeDNA.length > 0 || !isPremium) && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Your Trope DNA</Text>
-            <Text style={styles.cardSub}>From your finished books — opacity = frequency.</Text>
+            <Text style={styles.cardSub}>From your finished books — bar width = frequency.</Text>
             {isPremium ? (
-              <View style={styles.tropeDNAGrid}>
-                {tropeDNA.map(([trope, count]) => {
-                  const opacity = 0.2 + 0.8 * (count / maxTropeDNA);
-                  return (
-                    <View key={trope} style={[styles.tropeDNAChip, { backgroundColor: `rgba(26,26,26,${opacity})` }]}>
-                      <Text style={styles.tropeDNAText}>{trope}</Text>
+              <View style={styles.tropeDNABars}>
+                {tropeDNA.slice(0, 10).map(([trope, count]) => (
+                  <View key={trope} style={styles.tropeDNABarRow}>
+                    <Text style={styles.tropeDNABarLabel} numberOfLines={1}>{trope}</Text>
+                    <View style={styles.tropeDNABarTrack}>
+                      <View style={[styles.tropeDNABarFill, { width: `${(count / maxTropeDNA) * 100}%` }]} />
                     </View>
-                  );
-                })}
+                    <Text style={styles.tropeDNABarCount}>{count}</Text>
+                  </View>
+                ))}
               </View>
             ) : (
               <View style={styles.tropeDNALockedContainer}>
-                <View style={[styles.tropeDNAGrid, { opacity: 0.12 }]} pointerEvents="none">
+                <View style={[styles.tropeDNABars, { opacity: 0.12 }]} pointerEvents="none">
                   {["slow burn", "enemies-to-lovers", "found family", "redemption arc", "chosen one"].map((t) => (
-                    <View key={t} style={[styles.tropeDNAChip, { backgroundColor: "rgba(26,26,26,0.6)" }]}>
-                      <Text style={styles.tropeDNAText}>{t}</Text>
+                    <View key={t} style={styles.tropeDNABarRow}>
+                      <Text style={styles.tropeDNABarLabel}>{t}</Text>
+                      <View style={styles.tropeDNABarTrack}>
+                        <View style={[styles.tropeDNABarFill, { width: "60%" }]} />
+                      </View>
+                      <Text style={styles.tropeDNABarCount}>2</Text>
                     </View>
                   ))}
                 </View>
@@ -438,11 +444,11 @@ const styles = StyleSheet.create({
   personalityLine: { fontSize: 16, fontWeight: "700", color: "#fff", lineHeight: 22 },
   personalityMeta: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  statCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#f0f0f0", minWidth: "45%", flex: 1, gap: 2 },
+  statCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#f0ede8", minWidth: "45%", flex: 1, gap: 2 },
   statValue: { fontSize: 24, fontWeight: "700", color: "#1a1a1a" },
   statLabel: { fontSize: 12, color: "#6b7280" },
   statSub: { fontSize: 11, color: "#9ca3af" },
-  card: { backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#f0f0f0", gap: 12 },
+  card: { backgroundColor: "#fff", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#f0ede8", gap: 12 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#1a1a1a" },
   cardSub: { fontSize: 12, color: "#9ca3af", marginTop: -6 },
   chart: { flexDirection: "row", alignItems: "flex-end", height: 120, gap: 8 },
@@ -464,15 +470,17 @@ const styles = StyleSheet.create({
   monthDetailTitle: { fontSize: 12, fontWeight: "600", color: "#6b7280" },
   monthDetailBook: { paddingVertical: 4 },
   monthDetailBookTitle: { fontSize: 13, color: "#1a1a1a" },
-  moodList: { gap: 8 },
-  moodRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  moodLabel: { fontSize: 12, color: "#6b7280", width: 80, textTransform: "capitalize" },
-  miniBarTrack: { flex: 1, height: 8, backgroundColor: "#f3f4f6", borderRadius: 4, overflow: "hidden" },
-  miniBarFill: { height: "100%", borderRadius: 4 },
-  moodCount: { fontSize: 12, color: "#9ca3af", width: 24, textAlign: "right" },
-  tropeDNAGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tropeDNAChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  tropeDNAText: { fontSize: 11, color: "#fff", fontWeight: "500" },
+  moodChipGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  moodChip: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 6 },
+  moodChipLabel: { fontSize: 12, fontWeight: "500", color: "#3b2e1a", textTransform: "capitalize" },
+  moodChipCountBubble: { backgroundColor: "rgba(0,0,0,0.10)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1 },
+  moodChipCount: { fontSize: 10, fontWeight: "700", color: "#3b2e1a" },
+  tropeDNABars: { gap: 8 },
+  tropeDNABarRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  tropeDNABarLabel: { fontSize: 11, color: "#7a6655", width: 110 },
+  tropeDNABarTrack: { flex: 1, height: 8, backgroundColor: "#f5f0ea", borderRadius: 4, overflow: "hidden" },
+  tropeDNABarFill: { height: "100%", backgroundColor: "#3b2e1a", borderRadius: 4 },
+  tropeDNABarCount: { fontSize: 11, color: "#a89880", width: 16, textAlign: "right" },
   tropeDNALockedContainer: { position: "relative" },
   sessionTotal: { fontSize: 14, color: "#6b7280" },
   premiumOverlay: { gap: 8 },

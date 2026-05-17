@@ -222,7 +222,7 @@ export default function ProfileScreen() {
           </View>
           <View style={{ flex: 1, gap: 2 }}>
             <Text style={styles.displayName}>
-              {user?.user_metadata?.full_name?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Reader"}
+              {user?.displayName?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Reader"}
               {equippedEmoji ? ` ${equippedEmoji}` : ""}
             </Text>
             <Text style={styles.email}>{user?.email}</Text>
@@ -494,18 +494,18 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fafaf9" },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 14, paddingBottom: 40 },
-  profileCard: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0f0f0" },
+  profileCard: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0ede8" },
   avatar: { width: 60, height: 60, borderRadius: 30 },
   avatarPlaceholder: { backgroundColor: "#e5e7eb", justifyContent: "center", alignItems: "center" },
   avatarInitial: { fontSize: 24, fontWeight: "700", color: "#6b7280" },
   addPhotoLabel: { fontSize: 10, color: "#9ca3af" },
   displayName: { fontSize: 17, fontWeight: "700", color: "#1a1a1a" },
   email: { fontSize: 13, color: "#9ca3af" },
-  statsRow: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#f0f0f0", overflow: "hidden" },
-  statBox: { flex: 1, alignItems: "center", paddingVertical: 14, borderRightWidth: 1, borderRightColor: "#f0f0f0" },
+  statsRow: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 16, borderWidth: 1, borderColor: "#f0ede8", overflow: "hidden" },
+  statBox: { flex: 1, alignItems: "center", paddingVertical: 14, borderRightWidth: 1, borderRightColor: "#f0ede8" },
   statNum: { fontSize: 20, fontWeight: "700", color: "#1a1a1a" },
   statLbl: { fontSize: 10, color: "#9ca3af", marginTop: 2 },
-  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0f0f0", gap: 10 },
+  card: { backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0ede8", gap: 10 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#1a1a1a" },
   cardSub: { fontSize: 12, color: "#9ca3af", marginTop: -4, lineHeight: 18 },
   achieveTabs: { flexDirection: "row", backgroundColor: "#f3f4f6", borderRadius: 10, padding: 3, gap: 3 },
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
   presetBtnActive: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
   presetBtnText: { fontSize: 14, fontWeight: "600", color: "#6b7280" },
   presetBtnTextActive: { color: "#fff" },
-  referralBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0f0f0" },
+  referralBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#f0ede8" },
   referralBtnEmoji: { fontSize: 24 },
   referralBtnTitle: { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
   referralBtnSub: { fontSize: 11, color: "#9ca3af", marginTop: 2 },

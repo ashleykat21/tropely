@@ -133,14 +133,14 @@ export default function JournalScreen() {
         style={styles.filterScroll}
         contentContainerStyle={styles.filterRow}
       >
-        {(["all", "note", "quote"] as KindFilter[]).map((k) => (
+        {(["all", "quote", "note"] as KindFilter[]).map((k) => (
           <TouchableOpacity
             key={k}
             style={[styles.filterChip, kindFilter === k && styles.filterChipActive]}
             onPress={() => setKindFilter(k)}
           >
             <Text style={[styles.filterChipText, kindFilter === k && styles.filterChipTextActive]}>
-              {k === "all" ? "All" : k === "note" ? "📝 Notes" : "💬 Highlights"}
+              {k === "all" ? "All" : k === "quote" ? "💬 Highlights" : "📝 Notes"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -204,9 +204,14 @@ export default function JournalScreen() {
                     <Text style={styles.deleteBtnText}>✕</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={[styles.entryText, entry.kind === "quote" && styles.entryTextQuote]}>
-                  {entry.kind === "quote" ? `"${entry.text}"` : entry.text}
-                </Text>
+                {entry.kind === "quote" ? (
+                  <View style={styles.blockquote}>
+                    <View style={styles.blockquoteBorder} />
+                    <Text style={styles.blockquoteText}>"{entry.text}"</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.entryText}>{entry.text}</Text>
+                )}
                 {book && (
                   <TouchableOpacity onPress={() => nav.navigate("BookDetail", { bookId: book.id })}>
                     <Text style={[styles.entryBook, styles.entryBookLink]}>{book.title}</Text>
@@ -340,7 +345,7 @@ const styles = StyleSheet.create({
   emptyHint: { fontSize: 14, color: "#9ca3af", textAlign: "center", paddingHorizontal: 32, lineHeight: 20 },
   emptyBtn: { backgroundColor: "#1a1a1a", borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10, marginTop: 8 },
   emptyBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
-  entryCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, gap: 8, borderWidth: 1, borderColor: "#f0f0f0" },
+  entryCard: { backgroundColor: "#fff", borderRadius: 14, padding: 14, gap: 8, borderWidth: 1, borderColor: "#f0ede8" },
   entryHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   kindBadge: { backgroundColor: "#f3f4f6", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   kindBadgeQuote: { backgroundColor: "#fef3c7" },
@@ -348,16 +353,18 @@ const styles = StyleSheet.create({
   pageLabel: { fontSize: 11, color: "#9ca3af" },
   deleteBtn: { marginLeft: "auto", padding: 4 },
   deleteBtnText: { fontSize: 12, color: "#d1d5db" },
-  entryText: { fontSize: 14, color: "#1a1a1a", lineHeight: 20 },
-  entryTextQuote: { fontStyle: "italic", color: "#374151" },
+  entryText: { fontSize: 14, color: "#2d1f10", lineHeight: 20 },
+  blockquote: { flexDirection: "row", gap: 10 },
+  blockquoteBorder: { width: 3, borderRadius: 2, backgroundColor: "#d4c9a8" },
+  blockquoteText: { flex: 1, fontSize: 14, color: "#3b2e1a", fontStyle: "italic", lineHeight: 22 },
   entryBook: { fontSize: 11, color: "#6b7280", fontStyle: "italic" },
   entryBookLink: { textDecorationLine: "underline" },
   entryDate: { fontSize: 10, color: "#d1d5db" },
-  footer: { borderTopWidth: 1, borderTopColor: "#f0f0f0", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff" },
+  footer: { borderTopWidth: 1, borderTopColor: "#f0ede8", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff" },
   footerText: { fontSize: 12, color: "#9ca3af", textAlign: "center" },
   // Modal
   modalSafe: { flex: 1, backgroundColor: "#fafaf9" },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 1, borderBottomColor: "#f0ede8" },
   cancelText: { fontSize: 15, color: "#9ca3af" },
   modalTitle: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
   saveText: { fontSize: 15, fontWeight: "600", color: "#1a1a1a" },

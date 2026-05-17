@@ -44,7 +44,7 @@ function deriveChapters(totalPages: number) {
 
 export default function BuddyReadsScreen() {
   const user = useUser();
-  const userId = user?.id ?? null;
+  const userId = user?.uid ?? null;
   const { isPremium } = usePremium();
   const age = useStore((s) => s.age);
   const spoilerLock = useStore((s) => s.spoilerLock);
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   empty: { paddingTop: 40, alignItems: "center", gap: 8 },
   emptyTitle: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
   emptyText: { fontSize: 13, color: "#9ca3af", textAlign: "center", paddingHorizontal: 20, lineHeight: 20 },
-  roomCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#f0f0f0" },
+  roomCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#f0ede8" },
   roomName: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
   roomBook: { fontSize: 12, color: "#6b7280", marginTop: 2 },
   roomMembers: { fontSize: 11, color: "#9ca3af", marginTop: 2 },
@@ -317,12 +317,12 @@ const styles = StyleSheet.create({
   premiumRoomSub: { fontSize: 12, color: "#a16207" },
   chapterChatBadge: { fontSize: 11, fontWeight: "600", color: "#9ca3af" },
   // Chat
-  chatHeader: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: 1, borderBottomColor: "#f0f0f0", backgroundColor: "#fff" },
+  chatHeader: { flexDirection: "row", alignItems: "center", gap: 12, padding: 12, borderBottomWidth: 1, borderBottomColor: "#f0ede8", backgroundColor: "#fff" },
   backBtn: { paddingVertical: 6 },
   backBtnText: { fontSize: 14, color: "#6b7280" },
   chatRoomName: { flex: 1, fontSize: 16, fontWeight: "700", color: "#1a1a1a" },
   // Chapter tabs
-  chapterTabsWrapper: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  chapterTabsWrapper: { backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#f0ede8" },
   chapterTabs: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chapterTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "#f3f4f6" },
   chapterTabActive: { backgroundColor: "#1a1a1a" },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   messagesList: { padding: 12, gap: 10, flexGrow: 1 },
   msgBubble: { maxWidth: "80%", borderRadius: 16, padding: 10, gap: 2 },
   msgBubbleMe: { alignSelf: "flex-end", backgroundColor: "#1a1a1a" },
-  msgBubbleThem: { alignSelf: "flex-start", backgroundColor: "#fff", borderWidth: 1, borderColor: "#f0f0f0" },
+  msgBubbleThem: { alignSelf: "flex-start", backgroundColor: "#fff", borderWidth: 1, borderColor: "#f0ede8" },
   msgUser: { fontSize: 10, color: "#9ca3af", marginBottom: 2 },
   msgFlair: { fontSize: 10, alignSelf: "flex-end" },
   msgText: { fontSize: 14, color: "#1a1a1a", lineHeight: 19 },
@@ -354,9 +354,9 @@ const styles = StyleSheet.create({
   emptyChatEmoji: { fontSize: 36 },
   emptyChatText: { fontSize: 15, color: "#9ca3af", fontWeight: "500" },
   // Input
-  restrictedBar: { padding: 16, borderTopWidth: 1, borderTopColor: "#f0f0f0", backgroundColor: "#fef9c3", alignItems: "center" },
+  restrictedBar: { padding: 16, borderTopWidth: 1, borderTopColor: "#f0ede8", backgroundColor: "#fef9c3", alignItems: "center" },
   restrictedText: { fontSize: 13, color: "#92400e" },
-  inputBar: { flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: "#f0f0f0", backgroundColor: "#fff" },
+  inputBar: { flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: "#f0ede8", backgroundColor: "#fff" },
   inputField: { flex: 1, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, backgroundColor: "#fafafa" },
   sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center", alignSelf: "flex-end" },
   sendBtnDisabled: { opacity: 0.4 },

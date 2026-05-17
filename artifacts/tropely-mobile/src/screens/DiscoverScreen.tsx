@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   tropeSaveBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   tropeDismiss: { fontSize: 13, color: "#9ca3af" },
   listContent: { padding: 12, gap: 12 },
-  bookRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#fff", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#f0f0f0" },
+  bookRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#fff", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#f0ede8" },
   cover: { width: 48, height: 70, borderRadius: 6 },
   coverPlaceholder: { backgroundColor: "#e5e7eb", justifyContent: "center", alignItems: "center" },
   coverInitial: { fontSize: 18, fontWeight: "700", color: "#9ca3af" },
