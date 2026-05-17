@@ -1,3 +1,4 @@
+import "react-native-url-polyfill/auto";
 import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
@@ -9,7 +10,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { RootNavigator } from "@/navigation";
 import { AuthScreen } from "@/screens/AuthScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
 import { trackEvent, identifyUser } from "@/lib/analytics";
 
 const queryClient = new QueryClient({
@@ -25,10 +26,10 @@ function AppNavigator() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (session?.user) {
-      identifyUser(session.user.id, { email: session.user.email });
+    if (user) {
+      identifyUser(user.uid, { email: user.email ?? "" });
     }
-  }, [session?.user?.id]);
+  }, [user?.uid]);
 
   if (loading) {
     return (
@@ -47,13 +48,7 @@ export default function App() {
 
     const handleUrl = async ({ url }: { url: string }) => {
       if (url.includes("access_token") || url.includes("refresh_token")) {
-        const fragment = url.split("#")[1] ?? url.split("?")[1] ?? "";
-        const params = new URLSearchParams(fragment);
-        const access_token = params.get("access_token");
-        const refresh_token = params.get("refresh_token");
-        if (access_token && refresh_token) {
-          await supabase.auth.setSession({ access_token, refresh_token });
-        }
+        // Firebase handles deep links automatically
       }
     };
 
