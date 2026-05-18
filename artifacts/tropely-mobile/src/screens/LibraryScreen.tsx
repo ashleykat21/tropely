@@ -14,8 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, useSpoilerLock, type Shelf } from "@/store";
-import { GradientView } from "@/components/GradientView";
-import { AtmosphereDecor } from "@/components/AtmosphereDecor";
+import MoodBackground from "@/theme/MoodBackground";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
 import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
@@ -144,8 +143,7 @@ export default function LibraryScreen() {
   const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
 
   return (
-    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
-      <AtmosphereDecor atmosphere={atmosphereKey} />
+    <MoodBackground themeId={atmosphereKey} style={{ flex: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: textColor }]}>Your shelf</Text>
@@ -394,7 +392,7 @@ export default function LibraryScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
-    </GradientView>
+    </MoodBackground>
   );
 }
 

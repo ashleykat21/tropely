@@ -17,8 +17,7 @@ import { useBuddyRooms, useBuddyMessages, useSendBuddyMessage } from "@/hooks/us
 import { usePremium } from "@/hooks/usePremium";
 import { trackEvent } from "@/lib/analytics";
 import { FREE_LIMITS } from "@/constants/premiumFeatures";
-import { GradientView } from "@/components/GradientView";
-import { AtmosphereDecor } from "@/components/AtmosphereDecor";
+import MoodBackground from "@/theme/MoodBackground";
 import { COLORS, getAvatarById } from "@/constants/theme";
 import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 import { useNavigation } from "@react-navigation/native";
@@ -267,8 +266,7 @@ export default function BuddyReadsScreen() {
   }
 
   return (
-    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
-      <AtmosphereDecor atmosphere={atmosphereKey} />
+    <MoodBackground themeId={atmosphereKey} style={{ flex: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.buddyHeader}>
@@ -363,7 +361,7 @@ export default function BuddyReadsScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
-    </GradientView>
+    </MoodBackground>
   );
 }
 

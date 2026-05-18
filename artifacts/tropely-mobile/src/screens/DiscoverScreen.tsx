@@ -19,8 +19,7 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import { searchBooks, olCoverUrl, moodTagBooks, type OLBook } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
-import { GradientView } from "@/components/GradientView";
-import { AtmosphereDecor } from "@/components/AtmosphereDecor";
+import MoodBackground from "@/theme/MoodBackground";
 import { COLORS } from "@/constants/theme";
 import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
@@ -180,8 +179,7 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
-      <AtmosphereDecor atmosphere={atmosphereKey} />
+    <MoodBackground themeId={atmosphereKey} style={{ flex: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.discoverHeader}>
         <View style={{ flex: 1 }}>
@@ -337,7 +335,7 @@ export default function DiscoverScreen() {
         </>
       )}
     </SafeAreaView>
-    </GradientView>
+    </MoodBackground>
   );
 }
 

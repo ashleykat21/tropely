@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { RootNavigator } from "@/navigation";
 import { AuthScreen } from "@/screens/AuthScreen";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/theme/ThemeContext";
 import { auth } from "@/lib/firebase";
 import { trackEvent, identifyUser } from "@/lib/analytics";
 
@@ -64,10 +65,12 @@ export default function App() {
       <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <SafeAreaProvider>
-            <StatusBar style="auto" />
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
+            <ThemeProvider>
+              <StatusBar style="auto" />
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </ThemeProvider>
           </SafeAreaProvider>
         </QueryClientProvider>
       </AuthProvider>
