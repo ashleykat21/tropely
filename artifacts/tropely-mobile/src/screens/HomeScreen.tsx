@@ -24,9 +24,18 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getGreeting(displayName: string): string {
+  const hour = new Date().getHours();
+  const name = displayName ? displayName.split(" ")[0] : "reader";
+  if (hour < 12) return `Good morning, ${name} ☕`;
+  if (hour < 17) return `Good afternoon, ${name} ✨`;
+  return `Good evening, ${name} 🌙`;
+}
+
 export default function HomeScreen() {
   const nav = useNavigation<Nav>();
 
+  const displayName = useStore((s) => s.displayName);
   const books = useStore((s) => s.books);
   const sessions = useStore((s) => s.sessions);
   const activeFocusBookId = useStore((s) => s.activeFocusBookId);
@@ -213,8 +222,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Large headline */}
+          {/* Personalized greeting */}
           <Text style={[styles.headline, { color: textColor }]}>
+            {getGreeting(displayName)}
+          </Text>
+          {/* Atmosphere headline */}
+          <Text style={[styles.subHeadline, { color: textColorMid }]}>
             {headline}
           </Text>
 
@@ -380,6 +393,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     lineHeight: 34,
+  },
+
+  subHeadline: {
+    fontSize: 15,
+    fontWeight: "500",
+    lineHeight: 22,
+    marginTop: -10,
   },
 
   sectionLabel: {

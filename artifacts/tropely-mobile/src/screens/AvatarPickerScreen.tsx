@@ -1,106 +1,189 @@
-import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { useStore } from "@/store";
-import { AVATARS, COLORS, SHADOW } from "@/constants/theme";
+import { getAvatarsByCategory, type AvatarCategory } from "@/constants/theme";
+import { GradientView } from "@/components/GradientView";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
+
+const CATEGORIES: { key: AvatarCategory; label: string }[] = [
+  { key: "female", label: "Female Avatars" },
+  { key: "male", label: "Male Avatars" },
+  { key: "icons", label: "Non-avatar Icons" },
+];
 
 export default function AvatarPickerScreen() {
   const nav = useNavigation<any>();
-  const { selectedAvatar, setSelectedAvatar } = useStore();
+  const atmosphere = useAtmosphere();
+  const selectedAvatar = useStore((s) => s.selectedAvatar);
+  const setSelectedAvatar = useStore((s) => s.setSelectedAvatar);
+  const setSelectedAvatarCategory = useStore((s) => s.setSelectedAvatarCategory);
+  const savedCategory = useStore((s) => s.selectedAvatarCategory);
 
-  const handleSelect = (id: string) => {
-    setSelectedAvatar(id);
+  const [activeCategory, setActiveCategory] = useState<AvatarCategory>(savedCategory ?? "female");
+  const [localSelected, setLocalSelected] = useState(selectedAvatar);
+
+  const avatars = getAvatarsByCategory(activeCategory);
+  const textColor = atmosphere.isDark ? "#fff" : "#1a1a1a";
+  const subColor = atmosphere.isDark ? "rgba(255,255,255,0.65)" : "#6b7280";
+
+  const handleSave = () => {
+    setSelectedAvatar(localSelected);
+    setSelectedAvatarCategory(activeCategory);
     nav.goBack();
   };
 
-  const renderSection = (title: string, items: readonly { id: string; emoji: string; label: string; bg: string }[]) => (
-    <>
-      <Text style={styles.sectionLabel}>{title}</Text>
-      <View style={styles.grid}>
-        {items.map((a) => {
-          const selected = selectedAvatar === a.id;
-          return (
-            <TouchableOpacity
-              key={a.id}
-              style={[
-                styles.avatarBubble,
-                { backgroundColor: a.bg },
-                selected && styles.avatarBubbleSelected,
-              ]}
-              onPress={() => handleSelect(a.id)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.avatarEmoji}>{a.emoji}</Text>
-              <Text style={styles.avatarLabel} numberOfLines={2}>{a.label}</Text>
-              {selected && <View style={styles.selectedTick}><Text style={styles.selectedTickText}>✓</Text></View>}
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </>
-  );
-
   return (
-    <SafeAreaView style={styles.safe} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Choose your avatar</Text>
-        <Text style={styles.sub}>Tap any avatar to select it.</Text>
-        {renderSection("Reader types", AVATARS.readers)}
-        {renderSection("Icons", AVATARS.icons)}
-      </ScrollView>
-    </SafeAreaView>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => nav.goBack()} style={styles.backBtn}>
+            <Text style={{ fontSize: 16, color: textColor }}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: textColor }]}>Choose Your Avatar</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {/* Category tabs */}
+        <View style={styles.tabRow}>
+          {CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat.key}
+              style={[
+                styles.tab,
+                activeCategory === cat.key && { backgroundColor: atmosphere.accentColor },
+                activeCategory !== cat.key && {
+                  backgroundColor: "rgba(255,255,255,0.3)",
+                  borderColor: "rgba(255,255,255,0.5)",
+                  borderWidth: 1,
+                },
+              ]}
+              onPress={() => setActiveCategory(cat.key)}
+            >
+              <Text style={[styles.tabText, { color: activeCategory === cat.key ? "#fff" : textColor }]}>
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Avatar grid */}
+        <ScrollView contentContainerStyle={styles.grid}>
+          {avatars.map((avatar) => {
+            const isSelected = localSelected === avatar.id;
+            return (
+              <TouchableOpacity
+                key={avatar.id}
+                style={styles.avatarWrapper}
+                onPress={() => setLocalSelected(avatar.id)}
+              >
+                <View
+                  style={[
+                    styles.avatarCircle,
+                    { backgroundColor: avatar.bg },
+                    isSelected && {
+                      borderWidth: 3,
+                      borderColor: atmosphere.accentColor,
+                      shadowColor: atmosphere.accentColor,
+                      shadowOpacity: 0.4,
+                      shadowRadius: 8,
+                      shadowOffset: { width: 0, height: 2 },
+                      elevation: 5,
+                    },
+                  ]}
+                >
+                  <Text style={styles.avatarEmoji}>{avatar.emoji}</Text>
+                  {isSelected && (
+                    <View style={[styles.checkBadge, { backgroundColor: atmosphere.accentColor }]}>
+                      <Text style={styles.checkText}>✓</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.avatarLabel, { color: subColor }]} numberOfLines={2}>
+                  {avatar.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Save button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: atmosphere.accentColor }]}
+            onPress={handleSave}
+          >
+            <Text style={styles.saveBtnText}>Save Avatar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </GradientView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
-  content: { padding: 20, gap: 12, paddingBottom: 40 },
-  heading: { fontSize: 22, fontWeight: "800", color: COLORS.ink },
-  sub: { fontSize: 14, color: COLORS.inkSoft, marginTop: -6 },
-  sectionLabel: {
-    fontSize: 11, fontWeight: "700", color: COLORS.inkSoft,
-    letterSpacing: 0.8, textTransform: "uppercase", marginTop: 8,
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  avatarBubble: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+  backBtn: { width: 40, height: 40, justifyContent: "center" },
+  title: { fontSize: 18, fontWeight: "700" },
+  tabRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    flexWrap: "wrap",
+  },
+  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  tabText: { fontSize: 13, fontWeight: "600" },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
+    paddingBottom: 100,
+    gap: 8,
+    justifyContent: "flex-start",
+  },
+  avatarWrapper: { width: "30%", alignItems: "center", marginBottom: 8 },
+  avatarCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     justifyContent: "center",
     alignItems: "center",
-    gap: 2,
-    ...SHADOW,
-  },
-  avatarBubbleSelected: {
-    borderWidth: 3,
-    borderColor: COLORS.lavender,
-    shadowColor: COLORS.lavender,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
   },
   avatarEmoji: { fontSize: 32 },
-  avatarLabel: { fontSize: 8, fontWeight: "600", color: COLORS.inkMid, textAlign: "center", paddingHorizontal: 4, lineHeight: 10 },
-  selectedTick: {
+  checkBadge: {
     position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: COLORS.lavender,
+    bottom: 2,
+    right: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
   },
-  selectedTickText: { fontSize: 9, color: "#fff", fontWeight: "700" },
+  checkText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+  avatarLabel: {
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    paddingBottom: 32,
+  },
+  saveBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center" },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

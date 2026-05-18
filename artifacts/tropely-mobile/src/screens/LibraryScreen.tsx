@@ -184,13 +184,19 @@ export default function LibraryScreen() {
       >
         {TABS.map((t) => {
           const count = books.filter((b) => b.shelf === t.key).length;
+          const isActive = activeShelf === t.key;
           return (
             <TouchableOpacity
               key={t.key}
               onPress={() => { setActiveShelf(t.key); clearFilters(); }}
-              style={[styles.tab, activeShelf === t.key && styles.tabActive]}
+              style={[
+                styles.tab,
+                isActive
+                  ? { backgroundColor: atmosphere.accentColor }
+                  : { backgroundColor: "rgba(255,255,255,0.3)", borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" },
+              ]}
             >
-              <Text style={[styles.tabText, activeShelf === t.key && styles.tabTextActive]}>
+              <Text style={[styles.tabText, { color: isActive ? "#fff" : textColor }]}>
                 {t.label}
                 {count > 0 ? ` (${count})` : ""}
               </Text>
@@ -209,17 +215,25 @@ export default function LibraryScreen() {
         >
           {(["recent", "az", "pages"] as SortKey[])
             .concat(activeShelf === "finished" ? ["rating" as SortKey] : [])
-            .map((s) => (
-              <TouchableOpacity
-                key={s}
-                onPress={() => setSort(s)}
-                style={[styles.sortChip, sort === s && styles.sortChipActive]}
-              >
-                <Text style={[styles.sortChipText, sort === s && styles.sortChipTextActive]}>
-                  {s === "az" ? "A→Z" : s === "recent" ? "Recent" : s === "pages" ? "Pages" : "Rating"}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            .map((s) => {
+              const isActive = sort === s;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => setSort(s)}
+                  style={[
+                    styles.sortChip,
+                    isActive
+                      ? { backgroundColor: atmosphere.accentColor, borderColor: atmosphere.accentColor }
+                      : { backgroundColor: "rgba(255,255,255,0.3)", borderColor: "rgba(255,255,255,0.5)" },
+                  ]}
+                >
+                  <Text style={[styles.sortChipText, { color: isActive ? "#fff" : textColor }]}>
+                    {s === "az" ? "A→Z" : s === "recent" ? "Recent" : s === "pages" ? "Pages" : "Rating"}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           {shelfMoods.length > 0 && <View style={styles.sortDivider} />}
           {shelfMoods.map((mood) => (
             <TouchableOpacity
@@ -325,7 +339,18 @@ export default function LibraryScreen() {
             return (
               <TouchableOpacity
                 key={b.id}
-                style={[styles.spineRow, { backgroundColor: atmosphere.cardTint }]}
+                style={[
+                  styles.spineRow,
+                  {
+                    backgroundColor: atmosphere.cardTint,
+                    borderColor: "rgba(255,255,255,0.5)",
+                    shadowColor: atmosphere.isDark ? "#000" : "#c0a0b0",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.18,
+                    shadowRadius: 12,
+                    elevation: 5,
+                  },
+                ]}
                 onPress={() => nav.navigate("BookDetail", { bookId: b.id })}
                 activeOpacity={0.7}
               >
@@ -343,8 +368,8 @@ export default function LibraryScreen() {
                   </View>
                   <Text style={[styles.spineRowAuthor, { color: textColorSoft }]} numberOfLines={1}>{b.author}</Text>
                   {activeShelf === "reading" && !spoiled && (
-                    <View style={styles.progressTrack}>
-                      <View style={[styles.progressBar, { width: `${pct}%` }]} />
+                    <View style={[styles.progressTrack, { backgroundColor: atmosphere.isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.1)" }]}>
+                      <View style={[styles.progressBar, { width: `${pct}%`, backgroundColor: atmosphere.progressColor }]} />
                     </View>
                   )}
                   {activeShelf === "reading" && spoiled && (

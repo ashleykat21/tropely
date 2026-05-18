@@ -121,6 +121,7 @@ export default function ProfileScreen() {
     selectedAvatar, readingVibe,
     inbox,
     isPremium, premiumTestingModeEnabled,
+    displayName: storeDisplayName, setDisplayName,
   } = store;
 
   const avatar = getAvatarById(selectedAvatar);
@@ -133,6 +134,8 @@ export default function ProfileScreen() {
   const [activeAchievementTab, setActiveAchievementTab] = useState<"lifetime" | "monthly">("lifetime");
   const [editingReminderTime, setEditingReminderTime] = useState(false);
   const [reminderTimeInput, setReminderTimeInput] = useState(reminderTime);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(storeDisplayName);
 
   const topTrope = currentBook?.tropes?.[0];
   const unreadCount = inbox.filter((i) => !i.read).length;
@@ -167,8 +170,15 @@ export default function ProfileScreen() {
     return earned;
   }, [books, sessions, highlights, journal, storeState]);
 
-  const displayName = user?.displayName?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Reader";
+  const displayName = storeDisplayName
+    ? storeDisplayName.split(" ")[0]
+    : (user?.displayName?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Reader");
   const streak = useMemo(() => computeStreak(sessions), [sessions]);
+
+  const handleSaveName = () => {
+    setDisplayName(nameInput.trim());
+    setEditingName(false);
+  };
   const finishedCount = books.filter((b) => b.shelf === "finished").length;
 
   const nowDate = new Date();
@@ -194,20 +204,30 @@ export default function ProfileScreen() {
           </View>
 
           {/* Profile header */}
-          <View style={[styles.card, styles.profileCard]}>
-            <TouchableOpacity
-              style={[styles.avatarBubble, { backgroundColor: avatar.bg }]}
-              onPress={() => nav.navigate("AvatarPicker")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.avatarEmoji}>{avatar.emoji}</Text>
-              <View style={styles.editAvatarBadge}>
-                <Text style={styles.editAvatarBadgeText}>✎</Text>
-              </View>
-            </TouchableOpacity>
+          <View style={[styles.card, styles.profileCard, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)", shadowColor: atmosphere.isDark ? "#000" : "#c0a0b0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12, elevation: 5 }]}>
+            <View style={{ alignItems: "center", gap: 6 }}>
+              <TouchableOpacity
+                style={[styles.avatarBubble, { backgroundColor: avatar.bg }]}
+                onPress={() => nav.navigate("AvatarPicker")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.avatarEmoji}>{avatar.emoji}</Text>
+                <View style={styles.editAvatarBadge}>
+                  <Text style={styles.editAvatarBadgeText}>✎</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => nav.navigate("AvatarPicker")} activeOpacity={0.8}>
+                <Text style={[styles.changeAvatarLink, { color: atmosphere.accentColor }]}>Change</Text>
+              </TouchableOpacity>
+            </View>
             <View style={{ flex: 1, gap: 3 }}>
-              <Text style={styles.displayName}>{displayName}</Text>
-              <Text style={styles.email}>{user?.email}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={[styles.displayName, { color: textColor }]}>{displayName}</Text>
+                <TouchableOpacity onPress={() => { setNameInput(storeDisplayName); setEditingName(true); }} activeOpacity={0.8}>
+                  <Text style={[styles.editNameLink, { color: atmosphere.accentColor }]}>✎</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.email, { color: textColorSoft }]}>{user?.email}</Text>
               {readingVibe ? <Text style={styles.vibe}>{readingVibe}</Text> : null}
               {(isPremium || premiumTestingModeEnabled) && (
                 <View style={styles.premiumBadge}>
@@ -220,28 +240,23 @@ export default function ProfileScreen() {
           </View>
 
           {/* Stats row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNum}>{finishedCount}</Text>
-              <Text style={styles.statLbl}>Finished</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNum}>{sessions.length}</Text>
-              <Text style={styles.statLbl}>Sessions</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNum}>{streak}</Text>
-              <Text style={styles.statLbl}>Streak</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNum}>{journal.length}</Text>
-              <Text style={styles.statLbl}>Entries</Text>
-            </View>
+          <View style={[styles.statsRow, { backgroundColor: "rgba(255,255,255,0.3)", borderColor: "rgba(255,255,255,0.5)" }]}>
+            {[
+              { num: finishedCount, lbl: "Finished" },
+              { num: sessions.length, lbl: "Sessions" },
+              { num: streak, lbl: "Streak" },
+              { num: journal.length, lbl: "Entries" },
+            ].map(({ num, lbl }) => (
+              <View key={lbl} style={styles.statBox}>
+                <Text style={[styles.statNum, { color: textColor }]}>{num}</Text>
+                <Text style={[styles.statLbl, { color: textColorSoft }]}>{lbl}</Text>
+              </View>
+            ))}
           </View>
 
           {/* Achievements */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Achievements</Text>
+          <View style={[styles.card, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)", shadowColor: atmosphere.isDark ? "#000" : "#c0a0b0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12, elevation: 5 }]}>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Achievements</Text>
             <View style={styles.achieveTabs}>
               {(["lifetime", "monthly"] as const).map((tab) => (
                 <TouchableOpacity
@@ -310,9 +325,9 @@ export default function ProfileScreen() {
           </View>
 
           {/* Spoiler lock */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Spoiler guardrails</Text>
-            <Text style={styles.cardSub}>Hides content ahead of your current page in buddy reads.</Text>
+          <View style={[styles.card, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)" }]}>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Spoiler guardrails</Text>
+            <Text style={[styles.cardSub, { color: textColorSoft }]}>Hides content ahead of your current page in buddy reads.</Text>
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>Lock spoilers</Text>
               <Switch value={spoilerLock} onValueChange={setSpoilerLock} trackColor={{ false: "#e5e7eb", true: COLORS.lavender }} thumbColor="#fff" />
@@ -320,8 +335,8 @@ export default function ProfileScreen() {
           </View>
 
           {/* Daily reminder */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Daily reading reminder</Text>
+          <View style={[styles.card, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)" }]}>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Daily reading reminder</Text>
             <View style={styles.toggleRow}>
               <Text style={styles.toggleLabel}>Enable reminder</Text>
               <Switch value={reminderEnabled} onValueChange={toggleReminder} trackColor={{ false: "#e5e7eb", true: COLORS.lavender }} thumbColor="#fff" />
@@ -357,8 +372,8 @@ export default function ProfileScreen() {
           </View>
 
           {/* Daily goals */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Daily reading goal</Text>
+          <View style={[styles.card, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)" }]}>
+            <Text style={[styles.cardTitle, { color: textColor }]}>Daily reading goal</Text>
             <Text style={styles.goalLabel}>Pages / day</Text>
             <View style={styles.presetRow}>
               {[10, 20, 30, 50].map((n) => (
@@ -386,7 +401,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* Quick links */}
-          <TouchableOpacity style={styles.card} onPress={() => nav.navigate("Premium")} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.card, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)" }]} onPress={() => nav.navigate("Premium")} activeOpacity={0.85}>
             <View style={styles.linkRow}>
               <Text style={styles.linkEmoji}>✨</Text>
               <View style={{ flex: 1 }}>
@@ -399,7 +414,7 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.card} onPress={() => nav.navigate("Referral")} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.card, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)" }]} onPress={() => nav.navigate("Referral")} activeOpacity={0.85}>
             <View style={styles.linkRow}>
               <Text style={styles.linkEmoji}>🎁</Text>
               <View style={{ flex: 1 }}>
@@ -449,6 +464,32 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* Edit Name Modal */}
+      <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEditingName(false)}>
+          <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalEmoji}>✏️</Text>
+            <Text style={styles.modalTitle}>Edit Display Name</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={nameInput}
+              onChangeText={setNameInput}
+              placeholder="Your name"
+              autoFocus
+              maxLength={30}
+              onSubmitEditing={handleSaveName}
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={styles.modalBtn} onPress={handleSaveName}>
+              <Text style={styles.modalBtnText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setEditingName(false)}>
+              <Text style={[styles.modalBody, { marginTop: 0 }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </GradientView>
   );
 }
@@ -464,11 +505,14 @@ const styles = StyleSheet.create({
   inboxBadge: { position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.rose, justifyContent: "center", alignItems: "center" },
   inboxBadgeText: { fontSize: 9, color: "#fff", fontWeight: "700" },
   card: { ...CARD_STYLE, ...SHADOW, gap: 10 },
-  profileCard: { flexDirection: "row", alignItems: "center", gap: 14 },
+  profileCard: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   avatarBubble: { width: 80, height: 80, borderRadius: 40, justifyContent: "center", alignItems: "center", borderWidth: 3, borderColor: COLORS.lavender },
   editAvatarBadge: { position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.lavender, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: "#fff" },
   editAvatarBadgeText: { fontSize: 10, color: "#fff" },
   avatarEmoji: { fontSize: 40 },
+  changeAvatarLink: { fontSize: 11, fontWeight: "600" },
+  editNameLink: { fontSize: 16, fontWeight: "600" },
+  nameInput: { borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, color: COLORS.ink, width: "100%", textAlign: "center", marginTop: 4 },
   displayName: { fontSize: 18, fontWeight: "700", color: COLORS.ink },
   email: { fontSize: 12, color: COLORS.inkSoft },
   vibe: { fontSize: 12, color: COLORS.lavender, fontWeight: "600" },

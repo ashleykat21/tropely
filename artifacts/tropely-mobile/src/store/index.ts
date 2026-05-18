@@ -1,8 +1,9 @@
 import { create, StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { MoodKey, BackgroundMode, MoodAtmosphere as MoodAtmosphereType } from "@/constants/theme";
+import type { MoodKey, BackgroundMode, MoodAtmosphere as MoodAtmosphereType, AvatarCategory } from "@/constants/theme";
 export type { BackgroundMode };
+export type { AvatarCategory };
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -165,6 +166,12 @@ type SettingsSlice = {
   // Avatar
   selectedAvatar: AvatarId;
   setSelectedAvatar: (id: AvatarId) => void;
+  // Avatar category
+  selectedAvatarCategory: AvatarCategory;
+  setSelectedAvatarCategory: (c: AvatarCategory) => void;
+  // Display name
+  displayName: string;
+  setDisplayName: (name: string) => void;
   // Adult confirmation
   adultConfirmed: boolean;
   setAdultConfirmed: (v: boolean) => void;
@@ -336,7 +343,9 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   referralCode: null,
   referralCount: 0,
   freeMonthsEarned: 0,
-  selectedAvatar: "cozy_romance",
+  selectedAvatar: "f_cozy_romance",
+  selectedAvatarCategory: "female",
+  displayName: "",
   adultConfirmed: false,
   selectedGenres: [],
   selectedTropesQuiz: [],
@@ -364,6 +373,8 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   matchCurrentBookMood: true,
 
   setSelectedAvatar: (id) => set({ selectedAvatar: id }),
+  setSelectedAvatarCategory: (c) => set({ selectedAvatarCategory: c }),
+  setDisplayName: (name) => set({ displayName: name }),
   setAdultConfirmed: (v) => set({ adultConfirmed: v }),
   setSelectedGenres: (g) => set({ selectedGenres: g }),
   setSelectedTropesQuiz: (t) => set({ selectedTropesQuiz: t }),

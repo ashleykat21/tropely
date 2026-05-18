@@ -56,6 +56,8 @@ export default function BuddyReadsScreen() {
   const user = useUser();
   const userId = user?.uid ?? null;
   const { isPremium } = usePremium();
+  const premiumTestingModeEnabled = useStore((s) => s.premiumTestingModeEnabled);
+  const maxUsers = isPremium || premiumTestingModeEnabled ? 10 : 3;
   const age = useStore((s) => s.age);
   const spoilerLock = useStore((s) => s.spoilerLock);
   const books = useStore((s) => s.books);
@@ -293,14 +295,39 @@ export default function BuddyReadsScreen() {
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>📚</Text>
             <Text style={[styles.emptyTitle, { color: textColor }]}>No Buddy Reads yet</Text>
-            <Text style={[styles.emptyText, { color: textColorSoft }]}>Start a private reading room with up to 3 friends.</Text>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => { /* placeholder */ }}>
+            <Text style={[styles.emptyText, { color: textColorSoft }]}>
+              Start a private reading room with up to 3 friends. Premium supports up to 10.
+            </Text>
+            <View style={[styles.limitCard, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)" }]}>
+              <Text style={[styles.limitText, { color: textColor }]}>
+                {isPremium || premiumTestingModeEnabled
+                  ? "Premium room · up to 10 readers"
+                  : "Free room · up to 3 readers"}
+              </Text>
+              {premiumTestingModeEnabled && (
+                <Text style={[styles.testingNote, { color: atmosphere.accentColor }]}>
+                  ✨ Premium unlocked during testing
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: atmosphere.accentColor }]} onPress={() => { /* placeholder */ }}>
               <Text style={styles.primaryBtnText}>Start Buddy Read</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryBtn} onPress={() => { /* placeholder */ }}>
               <Text style={[styles.secondaryBtnText, { color: atmosphere.accentColor }]}>Enter Invite Code</Text>
             </TouchableOpacity>
-            <Text style={[styles.freeNote, { color: textColorSoft }]}>Free rooms support up to 3 readers</Text>
+            {!isPremium && !premiumTestingModeEnabled && (
+              <TouchableOpacity style={styles.upgradeBtn} onPress={() => nav.navigate("Premium")} activeOpacity={0.85}>
+                <Text style={[styles.upgradeBtnText, { color: atmosphere.accentColor }]}>
+                  Want a bigger room? Premium rooms support up to 10 readers →
+                </Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.freeNote, { color: textColorSoft }]}>
+              {isPremium || premiumTestingModeEnabled
+                ? `Premium rooms support up to ${maxUsers} readers`
+                : "Free rooms support up to 3 readers"}
+            </Text>
           </View>
         ) : (
           <>
@@ -315,8 +342,8 @@ export default function BuddyReadsScreen() {
                   {room.bookTitle && (
                     <Text style={styles.roomBook}>{room.bookTitle}</Text>
                   )}
-                  {room.memberCount && (
-                    <Text style={styles.roomMembers}>{room.memberCount} readers</Text>
+                  {room.memberCount != null && (
+                    <Text style={styles.roomMembers}>{room.memberCount} / {maxUsers} readers</Text>
                   )}
                 </View>
                 <Text style={styles.roomArrow}>→</Text>
@@ -362,6 +389,11 @@ const styles = StyleSheet.create({
   secondaryBtn: { marginTop: 4, paddingVertical: 8 },
   secondaryBtnText: { fontSize: 14, fontWeight: "600" },
   freeNote: { fontSize: 12, marginTop: 8, textAlign: "center" },
+  limitCard: { borderRadius: 12, borderWidth: 1, padding: 12, alignItems: "center", gap: 4, width: "100%" },
+  limitText: { fontSize: 13, fontWeight: "600", textAlign: "center" },
+  testingNote: { fontSize: 11, fontWeight: "500" },
+  upgradeBtn: { paddingVertical: 8, paddingHorizontal: 16 },
+  upgradeBtnText: { fontSize: 13, fontWeight: "600", textAlign: "center" },
   roomCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#f0ede8" },
   roomName: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
   roomBook: { fontSize: 12, color: "#6b7280", marginTop: 2 },

@@ -203,9 +203,30 @@ export default function OnboardingScreen() {
           <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.heading}>Choose your avatar</Text>
             <Text style={styles.sub}>This is how you'll appear to friends.</Text>
-            <Text style={styles.sectionLabel}>Reader types</Text>
+            <Text style={styles.sectionLabel}>Female Avatars</Text>
             <View style={styles.avatarGrid}>
-              {AVATARS.readers.map((a) => {
+              {AVATARS.female.map((a) => {
+                const selected = selectedAvatar === a.id;
+                return (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={[
+                      styles.avatarBubble,
+                      { backgroundColor: a.bg },
+                      selected && styles.avatarBubbleSelected,
+                    ]}
+                    onPress={() => setSelectedAvatar(a.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.avatarEmoji}>{a.emoji}</Text>
+                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Male Avatars</Text>
+            <View style={styles.avatarGrid}>
+              {AVATARS.male.map((a) => {
                 const selected = selectedAvatar === a.id;
                 return (
                   <TouchableOpacity

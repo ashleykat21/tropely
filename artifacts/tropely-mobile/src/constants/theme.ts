@@ -63,42 +63,55 @@ export const EMOJI_REACTIONS = [
 ];
 
 export const AVATARS = {
-  readers: [
-    { id: "cozy_romance", emoji: "📚", label: "Cozy Romance Reader", bg: "#fce4ec" },
-    { id: "fantasy_reader", emoji: "🔮", label: "Fantasy Reader", bg: "#ede7f6" },
-    { id: "dark_academia", emoji: "🕯️", label: "Dark Academia", bg: "#efebe9" },
-    { id: "audiobook_listener", emoji: "🎧", label: "Audiobook Listener", bg: "#e3f2fd" },
-    { id: "soft_librarian", emoji: "🌸", label: "Soft Librarian", bg: "#fce4ec" },
-    { id: "chaotic_bestie", emoji: "⚡", label: "Chaotic Book Bestie", bg: "#fff9c4" },
-    { id: "mystery_reader", emoji: "🔍", label: "Mystery Reader", bg: "#e8f5e9" },
-    { id: "cottagecore", emoji: "🌿", label: "Cottagecore Reader", bg: "#f1f8e9" },
-    { id: "night_reader", emoji: "🌙", label: "Night Reader", bg: "#e8eaf6" },
-    { id: "coffee_reader", emoji: "☕", label: "Coffee Shop Reader", bg: "#fff3e0" },
+  female: [
+    { id: "f_cozy_romance", emoji: "📚", label: "Cozy Romance Reader", bg: "#fce4ec" },
+    { id: "f_fantasy", emoji: "🔮", label: "Fantasy Reader", bg: "#ede7f6" },
+    { id: "f_audiobook", emoji: "🎧", label: "Audiobook Listener", bg: "#e3f2fd" },
+    { id: "f_librarian", emoji: "🌸", label: "Soft Librarian", bg: "#fce4ec" },
+    { id: "f_chaotic", emoji: "⚡", label: "Chaotic Book Bestie", bg: "#fff9c4" },
+    { id: "f_mystery", emoji: "🔍", label: "Mystery Reader", bg: "#e8f5e9" },
+    { id: "f_cottagecore", emoji: "🌿", label: "Cottagecore Reader", bg: "#f1f8e9" },
+    { id: "f_night", emoji: "🌙", label: "Night Reader", bg: "#e8eaf6" },
+  ],
+  male: [
+    { id: "m_cozy", emoji: "☕", label: "Cozy Reader", bg: "#fff3e0" },
+    { id: "m_fantasy", emoji: "⚔️", label: "Fantasy Reader", bg: "#ede7f6" },
+    { id: "m_dark_academia", emoji: "🕯️", label: "Dark Academia Reader", bg: "#efebe9" },
+    { id: "m_audiobook", emoji: "🎧", label: "Audiobook Listener", bg: "#e3f2fd" },
+    { id: "m_coffee", emoji: "☕", label: "Coffee Shop Reader", bg: "#fff3e0" },
+    { id: "m_mystery", emoji: "🔍", label: "Mystery Reader", bg: "#e8f5e9" },
+    { id: "m_night", emoji: "🌙", label: "Night Reader", bg: "#e8eaf6" },
+    { id: "m_dragon", emoji: "🐉", label: "Book Dragon Companion", bg: "#f3e5f5" },
   ],
   icons: [
-    { id: "open_book", emoji: "📖", label: "Open Book", bg: "#e3f2fd" },
-    { id: "teacup", emoji: "🍵", label: "Teacup", bg: "#f1f8e9" },
-    { id: "moon_book", emoji: "🌙", label: "Moon Book", bg: "#ede7f6" },
-    { id: "pink_bookmark", emoji: "🔖", label: "Pink Bookmark", bg: "#fce4ec" },
-    { id: "glowing_star", emoji: "⭐", label: "Glowing Star", bg: "#fffde7" },
-    { id: "flower", emoji: "🌸", label: "Flower", bg: "#fce4ec" },
-    { id: "candle", emoji: "🕯️", label: "Candle", bg: "#fff8e1" },
-    { id: "headphones", emoji: "🎧", label: "Headphones", bg: "#e3f2fd" },
-    { id: "book_stack", emoji: "📚", label: "Book Stack", bg: "#e8f5e9" },
-    { id: "dragon", emoji: "🐉", label: "Tiny Dragon", bg: "#f3e5f5" },
+    { id: "i_teacup", emoji: "🍵", label: "Teacup", bg: "#f1f8e9" },
+    { id: "i_books", emoji: "📚", label: "Stack of Books", bg: "#e8f5e9" },
+    { id: "i_open_book", emoji: "📖", label: "Open Book", bg: "#e3f2fd" },
+    { id: "i_moon", emoji: "🌙", label: "Crescent Moon", bg: "#ede7f6" },
+    { id: "i_candle", emoji: "🕯️", label: "Candle", bg: "#fff8e1" },
+    { id: "i_crystal", emoji: "🔮", label: "Crystal", bg: "#f3e5f5" },
+    { id: "i_camera", emoji: "📷", label: "Camera", bg: "#e3f2fd" },
+    { id: "i_typewriter", emoji: "⌨️", label: "Typewriter", bg: "#efebe9" },
+    { id: "i_plant", emoji: "🌿", label: "Plant", bg: "#e8f5e9" },
+    { id: "i_cloud", emoji: "☁️", label: "Cloud", bg: "#e3f2fd" },
+    { id: "i_lantern", emoji: "🏮", label: "Lantern", bg: "#fff3e0" },
   ],
 } as const;
 
 export type AvatarId = string;
-
+export type AvatarCategory = "female" | "male" | "icons";
 export type AvatarEntry = { id: string; emoji: string; label: string; bg: string };
 
 export function getAllAvatars(): AvatarEntry[] {
-  return [...AVATARS.readers, ...AVATARS.icons];
+  return [...AVATARS.female, ...AVATARS.male, ...AVATARS.icons];
 }
 
 export function getAvatarById(id: string): AvatarEntry {
-  return getAllAvatars().find((a) => a.id === id) ?? AVATARS.readers[0];
+  return getAllAvatars().find((a) => a.id === id) ?? AVATARS.female[0];
+}
+
+export function getAvatarsByCategory(category: AvatarCategory): AvatarEntry[] {
+  return AVATARS[category] as unknown as AvatarEntry[];
 }
 
 export const GENRES = [
