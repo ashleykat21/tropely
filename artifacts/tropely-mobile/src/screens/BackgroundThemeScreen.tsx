@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { GradientView } from "@/components/GradientView";
+import { useTheme } from "@/theme/ThemeContext";
 import { useStore } from "@/store";
 import {
   MOOD_ATMOSPHERES, ALL_ATMOSPHERE_KEYS,
@@ -65,20 +65,23 @@ function ModePreview({ modeKey }: { modeKey: string }) {
 }
 
 export default function BackgroundThemeScreen() {
-  const backgroundMode = useStore((s) => s.backgroundMode);
-  const selectedStaticBackground = useStore((s) => s.selectedStaticBackground);
-  const setBackgroundMode = useStore((s) => s.setBackgroundMode);
-  const setSelectedStaticBackground = useStore((s) => s.setSelectedStaticBackground);
+  const { setBackgroundMode, setSelectedStaticBackground, setMatchCurrentBookMood,
+          backgroundMode, selectedStaticBackground, matchCurrentBookMood } = useTheme();
   const setMoodAtmosphereOverride = useStore((s) => s.setMoodAtmosphereOverride);
   const setThemeOverrideEnabled = useStore((s) => s.setThemeOverrideEnabled);
 
-  const handleMatchBook = () => {
-    setBackgroundMode("mood_adaptive");
-    setThemeOverrideEnabled(false);
-    setMoodAtmosphereOverride(null);
+  const handleMatchBook = (v: boolean) => {
+    if (v) {
+      setBackgroundMode("mood_adaptive");
+      setThemeOverrideEnabled(false);
+      setMoodAtmosphereOverride(null);
+    } else {
+      setBackgroundMode("static");
+    }
+    setMatchCurrentBookMood(v);
   };
 
-  const isMatchBookEnabled = backgroundMode === "mood_adaptive";
+  const isMatchBookEnabled = matchCurrentBookMood && backgroundMode === "mood_adaptive";
 
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
@@ -128,11 +131,10 @@ export default function BackgroundThemeScreen() {
                     activeOpacity={0.8}
                     style={styles.bgCardWrapper}
                   >
-                    <GradientView
-                      colors={[atm.gradient[0], atm.gradient[1]]}
+                    <View
                       style={[
                         styles.bgCard,
-                        { width: THUMBNAIL_WIDTH },
+                        { width: THUMBNAIL_WIDTH, backgroundColor: atm.gradient[0] },
                         isSelected && {
                           borderWidth: 2,
                           borderColor: atm.accentColor,
@@ -144,8 +146,10 @@ export default function BackgroundThemeScreen() {
                         },
                       ]}
                     >
+                      {/* Overlay second gradient color at bottom */}
+                      <View style={[StyleSheet.absoluteFill, { backgroundColor: atm.gradient[1], opacity: 0.45, borderRadius: 14 }]} />
                       <Text style={styles.bgCardEmoji}>{atm.emoji}</Text>
-                    </GradientView>
+                    </View>
                     <Text style={styles.bgCardLabel} numberOfLines={2}>
                       {atm.label}
                     </Text>
@@ -164,17 +168,14 @@ export default function BackgroundThemeScreen() {
           </View>
           <Switch
             value={isMatchBookEnabled}
-            onValueChange={(v) => {
-              if (v) handleMatchBook();
-              else setBackgroundMode("static");
-            }}
-            trackColor={{ false: "#e5e7eb", true: "#a78bfa" }}
+            onValueChange={handleMatchBook}
+            trackColor={{ false: "#e5e7eb", true: "#e8608a" }}
             thumbColor="#fff"
           />
         </View>
 
         {/* Note */}
-        <Text style={styles.noteText}>💡 You can change this anytime in Settings.</Text>
+        <Text style={styles.noteText}>♥ You can change this anytime in Settings.</Text>
       </ScrollView>
     </SafeAreaView>
   );

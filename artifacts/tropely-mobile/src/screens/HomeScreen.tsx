@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore, computeStreak } from "@/store";
 import MoodBackground from "@/theme/MoodBackground";
 import { useTheme } from "@/theme/ThemeContext";
+import { useProfile } from "@/hooks/useProfile";
 import { MOOD_ATMOSPHERES, ALL_ATMOSPHERE_KEYS } from "@/constants/theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -24,14 +25,20 @@ function todayKey() {
 function getGreeting(displayName: string): string {
   const hour = new Date().getHours();
   const name = displayName ? displayName.split(" ")[0] : "reader";
-  if (hour < 12) return `Good morning, ${name} ☕`;
-  if (hour < 17) return `Good afternoon, ${name} ✨`;
-  return `Good evening, ${name} 🌙`;
+  // 5am–11:59am morning ☕ | 12pm–4:59pm afternoon ✨ | 5pm–9:59pm evening 🌙 | 10pm–4:59am night 🌙
+  if (hour >= 5 && hour < 12)  return `Good morning, ${name} ☕`;
+  if (hour >= 12 && hour < 17) return `Good afternoon, ${name} ✨`;
+  if (hour >= 17 && hour < 22) return `Good evening, ${name} 🌙`;
+  return `Good night, ${name} 🌙`;
 }
 
 export default function HomeScreen() {
   const nav = useNavigation<Nav>();
   const { themeId, theme } = useTheme();
+  const { loadProfile } = useProfile();
+
+  // Hydrate displayName + avatar from Firebase once on mount
+  useEffect(() => { loadProfile(); }, []);
 
   const displayName = useStore((s) => s.displayName);
   const books = useStore((s) => s.books);

@@ -16,8 +16,12 @@ import { useStore } from "@/store";
 import { GradientView } from "@/components/GradientView";
 import {
   COLORS, GENRES, TROPES_BY_GENRE, READING_VIBE_RESULTS,
-  AVATARS, getAvatarById, getAllAvatars,
 } from "@/constants/theme";
+import {
+  FEMALE_AVATARS, MALE_AVATARS, NON_AVATAR_ICONS,
+  getAvatarById as getNewAvatarById,
+} from "@/data/avatars";
+import { useProfile } from "@/hooks/useProfile";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -46,35 +50,38 @@ export default function OnboardingScreen() {
     setSelectedTropesQuiz, setReadingVibe,
     selectedAvatar,
   } = useStore();
+  const { saveAvatar } = useProfile();
 
   const [step, setStep] = useState(0);
 
-  // Step 2: Age gate
+  // Step 1: Age gate
   const [dobDay, setDobDay] = useState("");
   const [dobMonth, setDobMonth] = useState("");
   const [dobYear, setDobYear] = useState("");
   const [ageBlocked, setAgeBlocked] = useState(false);
 
-  // Step 3: Avatar
-  // uses selectedAvatar from store
+  // Step 2: Avatar — local tracking so we can save category
+  const [localAvatarId, setLocalAvatarId] = useState("cozy_romance_reader");
+  const [localAvatarCategory, setLocalAvatarCategory] = useState<"female" | "male" | "non_avatar">("female");
 
-  // Step 4-5: Tour
+  // Step 3-4: Tour
   const [tourSlide, setTourSlide] = useState(0);
 
-  // Step 6: Genres
+  // Step 5: Genres
   const [genres, setGenres] = useState<string[]>([]);
 
-  // Step 7: Tropes
+  // Step 6: Tropes
   const [tropes, setTropes] = useState<string[]>([]);
 
   const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
-  const finish = () => {
+  const finish = async () => {
+    // Save avatar to Firebase (if user is authenticated already)
+    await saveAvatar(localAvatarId, localAvatarCategory).catch(() => {});
     setHasOnboarded(true);
     setSelectedGenres(genres);
     setSelectedTropesQuiz(tropes);
-    // Compute reading vibe
     const vibeKey = genres[0] && tropes[0] ? `${genres[0]}_${tropes[0]}` : "default";
     const vibe = READING_VIBE_RESULTS[vibeKey] ?? READING_VIBE_RESULTS["default"];
     setReadingVibe(vibe);
@@ -108,7 +115,7 @@ export default function OnboardingScreen() {
   const availableTropes = genres.flatMap((g) => TROPES_BY_GENRE[g] ?? []);
   const uniqueTropes = [...new Set(availableTropes)].slice(0, 20);
 
-  const currentAvatar = getAvatarById(selectedAvatar);
+  const currentAvatar = getNewAvatarById(localAvatarId);
 
   // Compute vibe for step 8
   const vibeKey = genres[0] && tropes[0] ? `${genres[0]}_${tropes[0]}` : "default";
@@ -201,71 +208,81 @@ export default function OnboardingScreen() {
         {/* Step 2: Avatar picker */}
         {step === 2 && (
           <ScrollView contentContainerStyle={styles.content}>
-            <Text style={styles.heading}>Choose your avatar</Text>
-            <Text style={styles.sub}>This is how you'll appear to friends.</Text>
+            <Text style={styles.heading}>Choose your profile icon</Text>
+            <Text style={styles.sub}>Pick the face (or friend) that feels most you. ✦</Text>
+
+            {/* Selected preview */}
+            <View style={[styles.avatarPreview, { backgroundColor: currentAvatar.backgroundColor }]}>
+              <Text style={{ fontSize: 36 }}>{currentAvatar.emoji}</Text>
+            </View>
+            <Text style={[styles.sub, { textAlign: "center", marginTop: 4 }]}>{currentAvatar.name}</Text>
+
             <Text style={styles.sectionLabel}>Female Avatars</Text>
             <View style={styles.avatarGrid}>
-              {AVATARS.female.map((a) => {
-                const selected = selectedAvatar === a.id;
+              {FEMALE_AVATARS.map((a) => {
+                const selected = localAvatarId === a.id;
                 return (
                   <TouchableOpacity
                     key={a.id}
                     style={[
                       styles.avatarBubble,
-                      { backgroundColor: a.bg },
+                      { backgroundColor: a.backgroundColor },
                       selected && styles.avatarBubbleSelected,
                     ]}
-                    onPress={() => setSelectedAvatar(a.id)}
+                    onPress={() => { setLocalAvatarId(a.id); setLocalAvatarCategory("female"); setSelectedAvatar(a.id); }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.avatarEmoji}>{a.emoji}</Text>
-                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.label}</Text>
+                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.name}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+
             <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Male Avatars</Text>
             <View style={styles.avatarGrid}>
-              {AVATARS.male.map((a) => {
-                const selected = selectedAvatar === a.id;
+              {MALE_AVATARS.map((a) => {
+                const selected = localAvatarId === a.id;
                 return (
                   <TouchableOpacity
                     key={a.id}
                     style={[
                       styles.avatarBubble,
-                      { backgroundColor: a.bg },
+                      { backgroundColor: a.backgroundColor },
                       selected && styles.avatarBubbleSelected,
                     ]}
-                    onPress={() => setSelectedAvatar(a.id)}
+                    onPress={() => { setLocalAvatarId(a.id); setLocalAvatarCategory("male"); setSelectedAvatar(a.id); }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.avatarEmoji}>{a.emoji}</Text>
-                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.label}</Text>
+                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.name}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-            <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Icons</Text>
+
+            <Text style={[styles.sectionLabel, { marginTop: 16 }]}>Non-Avatar Icons</Text>
             <View style={styles.avatarGrid}>
-              {AVATARS.icons.map((a) => {
-                const selected = selectedAvatar === a.id;
+              {NON_AVATAR_ICONS.map((a) => {
+                const selected = localAvatarId === a.id;
                 return (
                   <TouchableOpacity
                     key={a.id}
                     style={[
                       styles.avatarBubble,
-                      { backgroundColor: a.bg },
+                      { backgroundColor: a.backgroundColor },
                       selected && styles.avatarBubbleSelected,
                     ]}
-                    onPress={() => setSelectedAvatar(a.id)}
+                    onPress={() => { setLocalAvatarId(a.id); setLocalAvatarCategory("non_avatar"); setSelectedAvatar(a.id); }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.avatarEmoji}>{a.emoji}</Text>
-                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.label}</Text>
+                    <Text style={styles.avatarLabel} numberOfLines={2}>{a.name}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+
             <TouchableOpacity style={[styles.nextBtn, { marginTop: 20 }]} onPress={next}>
               <Text style={styles.nextBtnText}>Continue →</Text>
             </TouchableOpacity>
@@ -353,7 +370,7 @@ export default function OnboardingScreen() {
         {/* Step 7: Result */}
         {step === 7 && (
           <ScrollView contentContainerStyle={[styles.content, { alignItems: "center" }]}>
-            <View style={[styles.resultAvatar, { backgroundColor: currentAvatar.bg }]}>
+            <View style={[styles.resultAvatar, { backgroundColor: currentAvatar.backgroundColor }]}>
               <Text style={styles.resultAvatarEmoji}>{currentAvatar.emoji}</Text>
             </View>
             <Text style={styles.resultVibeLabel}>Your Reading Vibe</Text>
@@ -417,6 +434,15 @@ const styles = StyleSheet.create({
   blockedTitle: { fontSize: 24, fontWeight: "800", color: COLORS.ink },
   blockedDesc: { fontSize: 15, color: COLORS.inkMid, textAlign: "center", lineHeight: 22 },
   sectionLabel: { fontSize: 12, fontWeight: "700", color: COLORS.inkSoft, letterSpacing: 0.8, textTransform: "uppercase" },
+  avatarPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignSelf: "center",
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 8,
+  },
   avatarGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   avatarBubble: {
     width: 80,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,8 +17,11 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, useCurrentBook, computeStreak } from "@/store";
-import { COLORS, CARD_STYLE, SHADOW, getAvatarById } from "@/constants/theme";
+import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
+import { getAvatarById } from "@/data/avatars";
 import MoodBackground from "@/theme/MoodBackground";
+import DisplayNameInput from "@/components/DisplayNameInput";
+import { useProfile } from "@/hooks/useProfile";
 import * as Notifications from "expo-notifications";
 import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
@@ -129,6 +132,11 @@ export default function ProfileScreen() {
   const textColor = atmosphere.isDark ? "#ffffff" : COLORS.ink;
   const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
 
+  const { loadProfile } = useProfile();
+
+  // Hydrate profile from Firebase once on mount
+  useEffect(() => { loadProfile(); }, []);
+
   const [comingSoonModal, setComingSoonModal] = useState<typeof COMING_SOON_ITEMS[0] | null>(null);
   const [activeAchievementTab, setActiveAchievementTab] = useState<"lifetime" | "monthly">("lifetime");
   const [editingReminderTime, setEditingReminderTime] = useState(false);
@@ -205,7 +213,7 @@ export default function ProfileScreen() {
           <View style={[styles.card, styles.profileCard, { backgroundColor: atmosphere.cardTint, borderColor: "rgba(255,255,255,0.5)", shadowColor: atmosphere.isDark ? "#000" : "#c0a0b0", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12, elevation: 5 }]}>
             <View style={{ alignItems: "center", gap: 6 }}>
               <TouchableOpacity
-                style={[styles.avatarBubble, { backgroundColor: avatar.bg }]}
+                style={[styles.avatarBubble, { backgroundColor: avatar.backgroundColor }]}
                 onPress={() => nav.navigate("AvatarPicker")}
                 activeOpacity={0.85}
               >
@@ -462,26 +470,19 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Edit Name Modal */}
+      {/* Edit Name Modal — uses DisplayNameInput component */}
       <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEditingName(false)}>
           <View style={styles.modalCard} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalEmoji}>✏️</Text>
             <Text style={styles.modalTitle}>Edit Display Name</Text>
-            <TextInput
-              style={styles.nameInput}
-              value={nameInput}
-              onChangeText={setNameInput}
-              placeholder="Your name"
-              autoFocus
-              maxLength={30}
-              onSubmitEditing={handleSaveName}
-              returnKeyType="done"
-            />
-            <TouchableOpacity style={styles.modalBtn} onPress={handleSaveName}>
-              <Text style={styles.modalBtnText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setEditingName(false)}>
+            <View style={{ width: "100%", marginTop: 8 }}>
+              <DisplayNameInput
+                initialValue={storeDisplayName}
+                onSaved={() => setEditingName(false)}
+              />
+            </View>
+            <TouchableOpacity onPress={() => setEditingName(false)} style={{ marginTop: 8 }}>
               <Text style={[styles.modalBody, { marginTop: 0 }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
