@@ -19,6 +19,7 @@ import ReferralScreen from "@/screens/ReferralScreen";
 import AvatarPickerScreen from "@/screens/AvatarPickerScreen";
 import InboxScreen from "@/screens/InboxScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
+import PremiumScreen from "@/screens/PremiumScreen";
 import { useStore } from "@/store";
 import { NAV_ICONS } from "@/constants/theme";
 
@@ -47,6 +48,7 @@ export type RootStackParamList = {
   AvatarPicker: undefined;
   Inbox: undefined;
   Insights: undefined;
+  Premium: undefined;
 };
 
 // ── Tab icon ─────────────────────────────────────────────────────────────────
@@ -164,6 +166,11 @@ export function RootNavigator() {
         name="WhatsNew"
         component={SettingsScreen}
         options={{ headerShown: true, title: "What's New" }}
+      />
+      <Stack.Screen
+        name="Premium"
+        component={PremiumScreen}
+        options={{ headerShown: false, presentation: "modal" }}
       />
     </Stack.Navigator>
   );

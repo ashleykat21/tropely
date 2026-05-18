@@ -193,6 +193,26 @@ type SettingsSlice = {
   addInboxItem: (item: Omit<InboxItem, "id">) => void;
   markInboxRead: (id: string) => void;
   clearInbox: () => void;
+  // Premium entitlements
+  premiumTestingModeEnabled: boolean;
+  premiumSource: "testing" | "referral" | "subscription" | "admin" | "none";
+  premiumExpiresAt: string | null;
+  referralRewardMonths: number;
+  activeBuddyReadRoomLimit: number;
+  maxUsersPerBuddyReadRoom: number;
+  aiMessageLimit: number;
+  characterAIEnabled: boolean;
+  advancedInsightsEnabled: boolean;
+  advancedRecommendationsEnabled: boolean;
+  // Active focus book for Today screen
+  activeFocusBookId: string | null;
+  setActiveFocusBook: (id: string | null) => void;
+  // Mood atmosphere override
+  moodAtmosphereOverride: string | null;
+  setMoodAtmosphereOverride: (a: string | null) => void;
+  // Premium setters
+  setPremiumTestingMode: (v: boolean) => void;
+  setPremiumSource: (s: "testing" | "referral" | "subscription" | "admin" | "none") => void;
   setAge: (age: number) => void;
   setDailyGoalPages: (n: number) => void;
   setDailyGoalMinutes: (n: number) => void;
@@ -316,6 +336,18 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   activeMood: null,
   spoilerStrictness: "balanced",
   defaultShareVisibility: "friends",
+  premiumTestingModeEnabled: true,
+  premiumSource: "testing",
+  premiumExpiresAt: null,
+  referralRewardMonths: 0,
+  activeBuddyReadRoomLimit: 3,
+  maxUsersPerBuddyReadRoom: 3,
+  aiMessageLimit: 10,
+  characterAIEnabled: false,
+  advancedInsightsEnabled: false,
+  advancedRecommendationsEnabled: false,
+  activeFocusBookId: null,
+  moodAtmosphereOverride: null,
 
   setSelectedAvatar: (id) => set({ selectedAvatar: id }),
   setAdultConfirmed: (v) => set({ adultConfirmed: v }),
@@ -381,6 +413,10 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   setActiveMood: (mood) => set({ activeMood: mood }),
   setSpoilerStrictness: (s) => set({ spoilerStrictness: s }),
   setDefaultShareVisibility: (v) => set({ defaultShareVisibility: v }),
+  setActiveFocusBook: (id) => set({ activeFocusBookId: id }),
+  setMoodAtmosphereOverride: (a) => set({ moodAtmosphereOverride: a }),
+  setPremiumTestingMode: (v) => set({ premiumTestingModeEnabled: v }),
+  setPremiumSource: (s) => set({ premiumSource: s }),
 
   setAge: (age) => set({ age }),
   setDailyGoalPages: (n) => set({ dailyGoalPages: n }),

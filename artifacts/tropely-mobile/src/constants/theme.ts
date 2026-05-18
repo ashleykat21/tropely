@@ -168,3 +168,122 @@ export const MOOD_COLORS: Record<string, string> = {
   joyful: "#fef9c3", romantic: "#fce7f3", eerie: "#f3e8ff",
   reflective: "#f0fdf4", adventurous: "#fff7ed", cozy: "#fef3c7", intense: "#fee2e2",
 };
+
+// ── Mood Atmospheres ──────────────────────────────────────────────────────────
+
+export type MoodAtmosphere = "cozy_romantic" | "mysterious_dark" | "fantasy_magical" | "emotional_heartfelt" | "dark_intense" | "light_fun";
+
+export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
+  label: string;
+  gradient: readonly [string, string, string];
+  accentColor: string;
+  glowColor: string;
+  cardTint: string;
+  progressColor: string;
+  headlines: string[];
+  emoji: string;
+}> = {
+  cozy_romantic: {
+    label: "Cozy & Romantic",
+    gradient: ["#fdf0f5", "#f9e4ee", "#f0d4e8"],
+    accentColor: "#f472b6",
+    glowColor: "rgba(244,114,182,0.2)",
+    cardTint: "rgba(255,240,248,0.85)",
+    progressColor: "#f472b6",
+    headlines: [
+      "Feeling cozy and romantic",
+      "Warm hearts, slow nights, sweet stories",
+      "Lost in soft pages and sweet moments",
+    ],
+    emoji: "🌸",
+  },
+  mysterious_dark: {
+    label: "Mysterious & Dark",
+    gradient: ["#1e1b2e", "#2d1b3d", "#1a1535"],
+    accentColor: "#a78bfa",
+    glowColor: "rgba(167,139,250,0.25)",
+    cardTint: "rgba(45,27,61,0.75)",
+    progressColor: "#a78bfa",
+    headlines: [
+      "Some secrets are better read after dark",
+      "In the mood for mystery and late nights",
+      "The shadows hold the best stories",
+    ],
+    emoji: "🌙",
+  },
+  fantasy_magical: {
+    label: "Fantasy & Magical",
+    gradient: ["#ede9fe", "#ddd6fe", "#c4b5fd"],
+    accentColor: "#7c3aed",
+    glowColor: "rgba(124,58,237,0.2)",
+    cardTint: "rgba(237,233,254,0.85)",
+    progressColor: "#7c3aed",
+    headlines: [
+      "Ready to escape somewhere magical",
+      "Step into worlds beyond your imagination",
+      "Between pages, magic lives",
+    ],
+    emoji: "✨",
+  },
+  emotional_heartfelt: {
+    label: "Emotional & Heartfelt",
+    gradient: ["#eff6ff", "#dbeafe", "#fce7f3"],
+    accentColor: "#3b82f6",
+    glowColor: "rgba(59,130,246,0.18)",
+    cardTint: "rgba(239,246,255,0.88)",
+    progressColor: "#3b82f6",
+    headlines: [
+      "Stories that stay with you long after",
+      "Need a story that understands you",
+      "Reading with your whole heart",
+    ],
+    emoji: "💙",
+  },
+  dark_intense: {
+    label: "Dark & Intense",
+    gradient: ["#1c0a0a", "#2d0d0d", "#3d1515"],
+    accentColor: "#ef4444",
+    glowColor: "rgba(239,68,68,0.25)",
+    cardTint: "rgba(45,13,13,0.8)",
+    progressColor: "#ef4444",
+    headlines: [
+      "Fueled by intensity and high stakes",
+      "In the mood for chaos and consequences",
+      "Nothing ordinary survives tonight",
+    ],
+    emoji: "⚡",
+  },
+  light_fun: {
+    label: "Light & Fun",
+    gradient: ["#fefce8", "#fef9c3", "#fff0f5"],
+    accentColor: "#f59e0b",
+    glowColor: "rgba(245,158,11,0.2)",
+    cardTint: "rgba(254,252,232,0.88)",
+    progressColor: "#f59e0b",
+    headlines: [
+      "Looking for something bright and easy",
+      "A little fun, a little chaos, a happy escape",
+      "Good vibes and happy endings",
+    ],
+    emoji: "☀️",
+  },
+};
+
+export const DEFAULT_ATMOSPHERE: MoodAtmosphere = "cozy_romantic";
+
+export const MOOD_ATMOSPHERE_KEYS: MoodAtmosphere[] = [
+  "cozy_romantic", "mysterious_dark", "fantasy_magical",
+  "emotional_heartfelt", "dark_intense", "light_fun",
+];
+
+// Helper: map a book's Mood to a MoodAtmosphere
+export function moodToAtmosphere(mood: string | undefined): MoodAtmosphere {
+  const map: Record<string, MoodAtmosphere> = {
+    cozy: "cozy_romantic", romantic: "cozy_romantic", hopeful: "cozy_romantic",
+    melancholy: "emotional_heartfelt", reflective: "emotional_heartfelt",
+    eerie: "mysterious_dark", tense: "dark_intense",
+    adventurous: "fantasy_magical", joyful: "light_fun", intense: "dark_intense",
+    dreamy: "fantasy_magical", mysterious: "mysterious_dark", calm: "emotional_heartfelt",
+  };
+  return map[mood ?? ""] ?? "cozy_romantic";
+}

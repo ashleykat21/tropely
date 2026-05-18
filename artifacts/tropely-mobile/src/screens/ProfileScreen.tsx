@@ -102,6 +102,7 @@ export default function ProfileScreen() {
     setSpoilerLock, setEquippedBadge,
     selectedAvatar, readingVibe,
     inbox,
+    isPremium, premiumTestingModeEnabled,
   } = store;
 
   const avatar = getAvatarById(selectedAvatar);
@@ -183,6 +184,13 @@ export default function ProfileScreen() {
               <Text style={styles.displayName}>{displayName}</Text>
               <Text style={styles.email}>{user?.email}</Text>
               {readingVibe ? <Text style={styles.vibe}>{readingVibe}</Text> : null}
+              {(isPremium || premiumTestingModeEnabled) && (
+                <View style={styles.premiumBadge}>
+                  <Text style={styles.premiumBadgeText}>
+                    ✨ Premium{premiumTestingModeEnabled ? " (Testing Mode)" : ""}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -353,6 +361,19 @@ export default function ProfileScreen() {
           </View>
 
           {/* Quick links */}
+          <TouchableOpacity style={styles.card} onPress={() => nav.navigate("Premium")} activeOpacity={0.85}>
+            <View style={styles.linkRow}>
+              <Text style={styles.linkEmoji}>✨</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.linkTitle}>
+                  Premium{premiumTestingModeEnabled ? " (Testing Mode)" : ""}
+                </Text>
+                <Text style={styles.linkSub}>View your Premium benefits</Text>
+              </View>
+              <Text style={styles.linkArrow}>→</Text>
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.card} onPress={() => nav.navigate("Referral")} activeOpacity={0.85}>
             <View style={styles.linkRow}>
               <Text style={styles.linkEmoji}>🎁</Text>
@@ -389,6 +410,8 @@ const styles = StyleSheet.create({
   displayName: { fontSize: 18, fontWeight: "700", color: COLORS.ink },
   email: { fontSize: 12, color: COLORS.inkSoft },
   vibe: { fontSize: 12, color: COLORS.lavender, fontWeight: "600" },
+  premiumBadge: { alignSelf: "flex-start", backgroundColor: "rgba(244,114,182,0.15)", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, marginTop: 2 },
+  premiumBadgeText: { fontSize: 11, color: "#c026d3", fontWeight: "700" },
   statsRow: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.75)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.6)", overflow: "hidden", ...SHADOW },
   statBox: { flex: 1, alignItems: "center", paddingVertical: 14, borderRightWidth: 1, borderRightColor: "rgba(0,0,0,0.05)" },
   statNum: { fontSize: 20, fontWeight: "700", color: COLORS.ink },
