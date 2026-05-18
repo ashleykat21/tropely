@@ -1,65 +1,170 @@
-// Design system constants for Tropely v1
-
 export const COLORS = {
   bg: "#fafaf9",
-  bgWarm: "#f5f0ea",
-  card: "#ffffff",
-  border: "#f0ede8",
-  borderMid: "#e8e0d4",
-  text: "#1a1a1a",
-  textMid: "#6b7280",
-  textSoft: "#9ca3af",
+  gradPrimary: ["#f9e8f4", "#ede4f7", "#e4ecf9"] as const,
+  gradRomantic: ["#fce4ec", "#f8bbd0", "#e1bee7"] as const,
+  gradCalm: ["#e3f2fd", "#e8eaf6", "#f3e5f5"] as const,
+  gradMystery: ["#ede7f6", "#e8eaf6", "#fce4ec"] as const,
+  gradDark: ["#2d1b3d", "#1a1035", "#0d0820"] as const,
+  gradFantasy: ["#e8f5e9", "#e3f2fd", "#f3e5f5"] as const,
+  card: "rgba(255,255,255,0.75)",
+  cardBorder: "rgba(255,255,255,0.6)",
   ink: "#1a1a1a",
-  accent: "#1a1a1a",
+  inkMid: "#4a4a5a",
+  inkSoft: "#9ca3af",
+  pink: "#f472b6",
+  lavender: "#a78bfa",
+  peach: "#fb923c",
+  gold: "#fbbf24",
+  mint: "#34d399",
+  rose: "#f43f5e",
 };
 
-export type MoodKey =
-  | "cozy"
-  | "calm"
-  | "intense"
-  | "melancholy"
-  | "dreamy"
-  | "joyful"
-  | "mysterious";
+export type MoodKey = "cozy" | "calm" | "intense" | "melancholy" | "dreamy" | "joyful" | "mysterious";
 
-export const MOOD_COLORS: Record<MoodKey, { bg: string; grad: [string, string]; chip: string; label: string; emoji: string }> = {
-  cozy:       { bg: "#fdf6ec", grad: ["#fdf6ec", "#f5e6cc"], chip: "#f5e6cc", label: "Cozy",       emoji: "🧸" },
-  calm:       { bg: "#eef4fb", grad: ["#eef4fb", "#d6e8f5"], chip: "#d6e8f5", label: "Calm",       emoji: "🌊" },
-  intense:    { bg: "#f9eaea", grad: ["#f9eaea", "#f0cccc"], chip: "#f0cccc", label: "Intense",    emoji: "🔥" },
-  melancholy: { bg: "#eff0f7", grad: ["#eff0f7", "#d8daf0"], chip: "#d8daf0", label: "Melancholy", emoji: "🌧️" },
-  dreamy:     { bg: "#f5eef8", grad: ["#f5eef8", "#e4ccf0"], chip: "#e4ccf0", label: "Dreamy",     emoji: "✨" },
-  joyful:     { bg: "#fefce8", grad: ["#fefce8", "#fde68a"], chip: "#fde68a", label: "Joyful",     emoji: "☀️" },
-  mysterious: { bg: "#f0ece8", grad: ["#f0ece8", "#d4c9a8"], chip: "#d4c9a8", label: "Mysterious", emoji: "🌙" },
+export const MOOD_GRADIENTS: Record<MoodKey, readonly [string, string, string]> = {
+  cozy:       ["#fdf6ec", "#f9e4cc", "#f5d9b8"],
+  calm:       ["#e8f4fd", "#dbeafe", "#e0e7ff"],
+  intense:    ["#fdf2f8", "#fce7f3", "#fee2e2"],
+  melancholy: ["#eff0f7", "#e0e7ff", "#ddd6fe"],
+  dreamy:     ["#f5f0ff", "#ede9fe", "#fce4ec"],
+  joyful:     ["#fffbeb", "#fef9c3", "#fef3c7"],
+  mysterious: ["#1e1b2e", "#2d1b3d", "#3d2352"],
 };
 
-export const MOOD_KEYS = Object.keys(MOOD_COLORS) as MoodKey[];
-
-// Mood for existing 10-mood store type → display
-export const LEGACY_MOOD_DISPLAY: Record<string, { emoji: string; color: string }> = {
-  hopeful:     { emoji: "🌱", color: "#d1fae5" },
-  tense:       { emoji: "⚡", color: "#fef3c7" },
-  melancholy:  { emoji: "🌧️", color: "#e0e7ff" },
-  joyful:      { emoji: "☀️", color: "#fef9c3" },
-  romantic:    { emoji: "🌹", color: "#fce7f3" },
-  eerie:       { emoji: "🌙", color: "#ede9fe" },
-  reflective:  { emoji: "🪞", color: "#f0f9ff" },
-  adventurous: { emoji: "⛵", color: "#dbeafe" },
-  cozy:        { emoji: "🧸", color: "#fef3c7" },
-  intense:     { emoji: "🔥", color: "#fee2e2" },
+export const MOOD_INFO: Record<MoodKey, { label: string; emoji: string; headline: string }> = {
+  cozy:       { label: "Cozy",       emoji: "🧸", headline: "Feeling cozy and snug" },
+  calm:       { label: "Calm",       emoji: "🌊", headline: "In a calm, reflective space" },
+  intense:    { label: "Intense",    emoji: "🔥", headline: "Craving something intense" },
+  melancholy: { label: "Melancholy", emoji: "🌧️", headline: "In a beautifully melancholy mood" },
+  dreamy:     { label: "Dreamy",     emoji: "✨", headline: "Feeling dreamy and escapist" },
+  joyful:     { label: "Joyful",     emoji: "☀️", headline: "Bright, joyful and ready to read" },
+  mysterious: { label: "Mysterious", emoji: "🌙", headline: "Craving something dark and intense" },
 };
 
-export const SHELF_LABELS: Record<string, { label: string; emoji: string }> = {
-  reading:  { label: "Reading",    emoji: "📖" },
-  want:     { label: "Want to Read", emoji: "💌" },
-  finished: { label: "Finished",   emoji: "✅" },
-  paused:   { label: "Paused",     emoji: "⏸️" },
-  dnf:      { label: "DNF",        emoji: "🚫" },
+export const LEGACY_MOOD_BG: Record<string, string> = {
+  hopeful: "#d1fae5", tense: "#fee2e2", melancholy: "#e0e7ff",
+  joyful: "#fef9c3", romantic: "#fce7f3", eerie: "#f3e8ff",
+  reflective: "#f0fdf4", adventurous: "#fff7ed", cozy: "#fef3c7", intense: "#fee2e2",
+};
+
+export const EMOJI_REACTIONS = [
+  { emoji: "💕", label: "Romantic" },
+  { emoji: "😭", label: "Emotional" },
+  { emoji: "😱", label: "Shocked" },
+  { emoji: "😂", label: "Funny" },
+  { emoji: "🔥", label: "Intense" },
+  { emoji: "🌸", label: "Cozy" },
+  { emoji: "👀", label: "Suspicious" },
+  { emoji: "🤯", label: "Plot twist" },
+  { emoji: "🥹", label: "Soft" },
+  { emoji: "💔", label: "Hurt" },
+  { emoji: "😤", label: "Betrayed" },
+  { emoji: "🌙", label: "Dark" },
+];
+
+export const AVATARS = {
+  readers: [
+    { id: "cozy_romance", emoji: "📚", label: "Cozy Romance Reader", bg: "#fce4ec" },
+    { id: "fantasy_reader", emoji: "🔮", label: "Fantasy Reader", bg: "#ede7f6" },
+    { id: "dark_academia", emoji: "🕯️", label: "Dark Academia", bg: "#efebe9" },
+    { id: "audiobook_listener", emoji: "🎧", label: "Audiobook Listener", bg: "#e3f2fd" },
+    { id: "soft_librarian", emoji: "🌸", label: "Soft Librarian", bg: "#fce4ec" },
+    { id: "chaotic_bestie", emoji: "⚡", label: "Chaotic Book Bestie", bg: "#fff9c4" },
+    { id: "mystery_reader", emoji: "🔍", label: "Mystery Reader", bg: "#e8f5e9" },
+    { id: "cottagecore", emoji: "🌿", label: "Cottagecore Reader", bg: "#f1f8e9" },
+    { id: "night_reader", emoji: "🌙", label: "Night Reader", bg: "#e8eaf6" },
+    { id: "coffee_reader", emoji: "☕", label: "Coffee Shop Reader", bg: "#fff3e0" },
+  ],
+  icons: [
+    { id: "open_book", emoji: "📖", label: "Open Book", bg: "#e3f2fd" },
+    { id: "teacup", emoji: "🍵", label: "Teacup", bg: "#f1f8e9" },
+    { id: "moon_book", emoji: "🌙", label: "Moon Book", bg: "#ede7f6" },
+    { id: "pink_bookmark", emoji: "🔖", label: "Pink Bookmark", bg: "#fce4ec" },
+    { id: "glowing_star", emoji: "⭐", label: "Glowing Star", bg: "#fffde7" },
+    { id: "flower", emoji: "🌸", label: "Flower", bg: "#fce4ec" },
+    { id: "candle", emoji: "🕯️", label: "Candle", bg: "#fff8e1" },
+    { id: "headphones", emoji: "🎧", label: "Headphones", bg: "#e3f2fd" },
+    { id: "book_stack", emoji: "📚", label: "Book Stack", bg: "#e8f5e9" },
+    { id: "dragon", emoji: "🐉", label: "Tiny Dragon", bg: "#f3e5f5" },
+  ],
+} as const;
+
+export type AvatarId = string;
+
+export type AvatarEntry = { id: string; emoji: string; label: string; bg: string };
+
+export function getAllAvatars(): AvatarEntry[] {
+  return [...AVATARS.readers, ...AVATARS.icons];
+}
+
+export function getAvatarById(id: string): AvatarEntry {
+  return getAllAvatars().find((a) => a.id === id) ?? AVATARS.readers[0];
+}
+
+export const GENRES = [
+  "Romance", "Fantasy", "Mystery", "Thriller", "Horror",
+  "Contemporary", "Historical", "Sci-fi", "Young Adult", "Manga/Graphic Novel", "Nonfiction",
+];
+
+export const TROPES_BY_GENRE: Record<string, string[]> = {
+  "Romance": ["Enemies to Lovers", "Friends to Lovers", "Grumpy x Sunshine", "Fake Dating", "Slow Burn", "Forced Proximity", "Second Chance", "Forbidden Romance", "Marriage of Convenience", "One Bed", "Secret Identity", "Love Triangle", "Workplace Romance", "Small Town Romance", "Sports Romance", "Royal Romance"],
+  "Fantasy": ["Chosen One", "Found Family", "Morally Gray Hero", "Magical Academy", "Hidden Powers", "Quest", "Enemies to Allies", "Dragons", "Fae", "Cursed Kingdom", "Portal Fantasy", "Lost Heir", "Ancient Prophecy", "Forbidden Magic", "Reluctant Hero"],
+  "Mystery": ["Unreliable Narrator", "Missing Person", "Locked Room", "Cold Case", "Secret Past", "Small Town Secrets", "Amateur Detective", "Dark Academia", "Psychological Twist", "Detective Duo", "Hidden Identity", "Conspiracy", "Revenge Plot", "Final Girl"],
+  "Thriller": ["Unreliable Narrator", "Conspiracy", "Revenge Plot", "Hidden Identity", "Psychological Twist", "Dark Academia"],
+  "Horror": ["Final Girl", "Psychological Twist", "Hidden Identity", "Revenge Plot"],
+  "Contemporary": ["Found Family", "Second Chance", "Slow Burn", "Small Town Romance"],
+  "Historical": ["Forbidden Romance", "Second Chance", "Royal Romance", "Marriage of Convenience"],
+  "Sci-fi": ["Chosen One", "Hidden Powers", "Quest", "Morally Gray Hero"],
+  "Young Adult": ["Chosen One", "Found Family", "Enemies to Lovers", "Forbidden Romance", "Hidden Powers"],
+  "Manga/Graphic Novel": ["Enemies to Lovers", "Slow Burn", "Found Family", "Forbidden Romance"],
+  "Nonfiction": [],
+};
+
+export const READING_VIBE_RESULTS: Record<string, string> = {
+  "Romance_Enemies to Lovers": "Chaotic Romantic Extremist",
+  "Romance_Slow Burn": "Cozy Romantic Escapist",
+  "Fantasy_Chosen One": "Epic Fantasy Adventurer",
+  "Mystery_Dark Academia": "Dark Academic Detective",
+  "default": "Mood-First Reader",
+};
+
+export const NAV_ICONS: Record<string, { active: string; inactive: string; label: string }> = {
+  Today:      { active: "🌅", inactive: "📖", label: "Today" },
+  Library:    { active: "🌙", inactive: "📚", label: "Library" },
+  Discover:   { active: "⭐", inactive: "🧭", label: "Discover" },
+  BuddyReads: { active: "💬", inactive: "👥", label: "Buddy Reads" },
+  Me:         { active: "🌙", inactive: "🌙", label: "Me" },
+};
+
+export const CARD_STYLE = {
+  backgroundColor: "rgba(255,255,255,0.75)",
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: "rgba(255,255,255,0.6)",
+  padding: 16,
 };
 
 export const SHADOW = {
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 4,
-  elevation: 2,
+  shadowColor: "#a78bfa",
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.12,
+  shadowRadius: 12,
+  elevation: 4,
+};
+
+export const SHELF_LABELS: Record<string, { label: string; emoji: string }> = {
+  reading:  { label: "Reading",       emoji: "📖" },
+  want:     { label: "Want to Read",  emoji: "💌" },
+  finished: { label: "Finished",      emoji: "✅" },
+  paused:   { label: "Paused",        emoji: "⏸️" },
+  dnf:      { label: "DNF",           emoji: "🚫" },
+};
+
+export const MOOD_KEYS: MoodKey[] = ["cozy", "calm", "intense", "melancholy", "dreamy", "joyful", "mysterious"];
+
+// Legacy compat
+export const MOOD_COLORS: Record<string, string> = {
+  hopeful: "#d1fae5", tense: "#fee2e2", melancholy: "#e0e7ff",
+  joyful: "#fef9c3", romantic: "#fce7f3", eerie: "#f3e8ff",
+  reflective: "#f0fdf4", adventurous: "#fff7ed", cozy: "#fef3c7", intense: "#fee2e2",
 };

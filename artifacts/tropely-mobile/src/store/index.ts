@@ -1,54 +1,57 @@
 import { create, StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import type { MoodKey } from "@/constants/theme";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export type { MoodKey };
 export type Shelf = "reading" | "want" | "finished" | "dnf" | "paused";
+export type SpoilerStrictness = "relaxed" | "balanced" | "strict";
+export type ShareVisibility = "public" | "friends" | "private";
 
 export type Mood =
   | "hopeful" | "tense" | "melancholy" | "joyful" | "romantic"
   | "eerie" | "reflective" | "adventurous" | "cozy" | "intense";
 
-export type MoodKey =
-  | "cozy" | "calm" | "intense" | "melancholy" | "dreamy" | "joyful" | "mysterious";
+export type ReadingFormat = "physical" | "ebook" | "audiobook" | "unknown";
+export type SessionState = "not_started" | "active" | "paused" | "completed" | "deleted";
 
-export type SpoilerStrictness = "relaxed" | "balanced" | "strict";
-export type ShareVisibility = "public" | "friends" | "private";
-
-export type Challenge = {
-  id: string;
-  title: string;
-  target: number;
-  unit: "books" | "pages" | "minutes";
-  progress: number;
-  completed: boolean;
-  dueDate?: string;
-};
-
-export type PageMarker = {
-  id: string;
-  bookId: string;
-  page: number;
-  note?: string;
-  date: string;
-};
-
-export type Checkpoint = {
-  id: string;
-  bookId: string;
-  page: number;
+export type EmojiReaction = {
+  emoji: string;
   label: string;
-  locked: boolean;
 };
 
-export type TriggerEntry = {
+export type ReadingSession = {
   id: string;
   bookId: string;
-  trigger: string;
-  page?: number;
+  state: SessionState;
+  format: ReadingFormat;
+  startedAt: string;
+  pausedAt?: string;
+  endedAt?: string;
+  startPage?: number;
+  endPage?: number;
+  startMinutes?: number;
+  endMinutes?: number;
+  durationMinutes?: number;
+  chapterNumber?: number;
+  reactions: string[];
   note?: string;
+  mood?: Mood;
+};
+
+export type AvatarId = string;
+
+export type InboxItem = {
+  id: string;
+  type: "buddy_invite" | "buddy_message" | "achievement" | "system";
+  title: string;
+  body: string;
+  read: boolean;
   date: string;
+  bookId?: string;
+  roomId?: string;
 };
 
 export type Book = {
@@ -71,6 +74,9 @@ export type Book = {
   audioMinutes?: number;
   checkpoints?: { page: number; label: string }[];
   reactions?: Record<string, string>;
+  readingFormat?: ReadingFormat;
+  totalDurationMinutes?: number;
+  selectedEdition?: string;
 };
 
 export type SessionLog = {
@@ -87,7 +93,7 @@ export type SessionLog = {
 export type JournalEntry = {
   id: string;
   bookId: string;
-  kind: "quote" | "note" | "reflection" | "trigger";
+  kind: "quote" | "note";
   text: string;
   page?: number;
   date: string;
@@ -155,16 +161,38 @@ type SettingsSlice = {
   referralCode: string | null;
   referralCount: number;
   freeMonthsEarned: number;
-  // v1 additions
+  // Avatar
+  selectedAvatar: AvatarId;
+  setSelectedAvatar: (id: AvatarId) => void;
+  // Adult confirmation
+  adultConfirmed: boolean;
+  setAdultConfirmed: (v: boolean) => void;
+  // Quiz answers
+  selectedGenres: string[];
+  setSelectedGenres: (g: string[]) => void;
+  selectedTropesQuiz: string[];
+  setSelectedTropesQuiz: (t: string[]) => void;
+  readingVibe: string;
+  setReadingVibe: (v: string) => void;
+  // Active session
+  activeSession: ReadingSession | null;
+  startSession: (bookId: string, format: ReadingFormat, startPage?: number, startMinutes?: number) => void;
+  pauseSession: () => void;
+  resumeSession: () => void;
+  finishSession: (endPage?: number, endMinutes?: number, reactions?: string[], mood?: Mood, note?: string) => void;
+  deleteSession: () => void;
+  // UI mood and spoiler
   activeMood: MoodKey | null;
+  setActiveMood: (mood: MoodKey | null) => void;
   spoilerStrictness: SpoilerStrictness;
+  setSpoilerStrictness: (s: SpoilerStrictness) => void;
   defaultShareVisibility: ShareVisibility;
-  activeFlair: string | null;
-  challenges: Challenge[];
-  markers: PageMarker[];
-  checkpoints: Checkpoint[];
-  triggers: TriggerEntry[];
-  hasSeenTour: boolean;
+  setDefaultShareVisibility: (v: ShareVisibility) => void;
+  // Inbox
+  inbox: InboxItem[];
+  addInboxItem: (item: Omit<InboxItem, "id">) => void;
+  markInboxRead: (id: string) => void;
+  clearInbox: () => void;
   setAge: (age: number) => void;
   setDailyGoalPages: (n: number) => void;
   setDailyGoalMinutes: (n: number) => void;
@@ -178,21 +206,6 @@ type SettingsSlice = {
   setEquippedBadge: (id: string | null) => void;
   setReferralCode: (code: string) => void;
   incrementReferralCount: () => void;
-  // v1 setters
-  setActiveMood: (mood: MoodKey | null) => void;
-  setSpoilerStrictness: (s: SpoilerStrictness) => void;
-  setDefaultShareVisibility: (v: ShareVisibility) => void;
-  setActiveFlair: (flair: string | null) => void;
-  addChallenge: (c: Omit<Challenge, "id" | "progress" | "completed">) => void;
-  updateChallengeProgress: (id: string, progress: number) => void;
-  completeChallenge: (id: string) => void;
-  removeChallenge: (id: string) => void;
-  addMarker: (m: Omit<PageMarker, "id">) => void;
-  removeMarker: (id: string) => void;
-  addCheckpoint: (c: Omit<Checkpoint, "id">) => void;
-  removeCheckpoint: (id: string) => void;
-  addTrigger: (t: Omit<TriggerEntry, "id">) => void;
-  setHasSeenTour: (v: boolean) => void;
 };
 
 type AllSlices = LibrarySlice & JournalSlice & SettingsSlice;
@@ -293,15 +306,81 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   referralCode: null,
   referralCount: 0,
   freeMonthsEarned: 0,
+  selectedAvatar: "cozy_romance",
+  adultConfirmed: false,
+  selectedGenres: [],
+  selectedTropesQuiz: [],
+  readingVibe: "",
+  activeSession: null,
+  inbox: [],
   activeMood: null,
   spoilerStrictness: "balanced",
   defaultShareVisibility: "friends",
-  activeFlair: null,
-  challenges: [],
-  markers: [],
-  checkpoints: [],
-  triggers: [],
-  hasSeenTour: false,
+
+  setSelectedAvatar: (id) => set({ selectedAvatar: id }),
+  setAdultConfirmed: (v) => set({ adultConfirmed: v }),
+  setSelectedGenres: (g) => set({ selectedGenres: g }),
+  setSelectedTropesQuiz: (t) => set({ selectedTropesQuiz: t }),
+  setReadingVibe: (v) => set({ readingVibe: v }),
+
+  startSession: (bookId, format, startPage, startMinutes) =>
+    set({
+      activeSession: {
+        id: uid(),
+        bookId,
+        state: "active",
+        format,
+        startedAt: new Date().toISOString(),
+        startPage,
+        startMinutes,
+        reactions: [],
+      },
+    }),
+
+  pauseSession: () =>
+    set((s) => {
+      if (!s.activeSession || s.activeSession.state !== "active") return s;
+      return { activeSession: { ...s.activeSession, state: "paused", pausedAt: new Date().toISOString() } };
+    }),
+
+  resumeSession: () =>
+    set((s) => {
+      if (!s.activeSession || s.activeSession.state !== "paused") return s;
+      return { activeSession: { ...s.activeSession, state: "active", pausedAt: undefined } };
+    }),
+
+  finishSession: (endPage, endMinutes, reactions, mood, note) =>
+    set((s) => {
+      if (!s.activeSession) return s;
+      const startedAt = new Date(s.activeSession.startedAt).getTime();
+      const durationMinutes = Math.round((Date.now() - startedAt) / 60_000);
+      const completed: ReadingSession = {
+        ...s.activeSession,
+        state: "completed",
+        endedAt: new Date().toISOString(),
+        endPage,
+        endMinutes,
+        durationMinutes,
+        reactions: reactions ?? s.activeSession.reactions,
+        mood: mood ?? s.activeSession.mood,
+        note: note ?? s.activeSession.note,
+      };
+      return { activeSession: null };
+    }),
+
+  deleteSession: () => set({ activeSession: null }),
+
+  addInboxItem: (item) =>
+    set((s) => ({ inbox: [{ ...item, id: uid() }, ...s.inbox] })),
+
+  markInboxRead: (id) =>
+    set((s) => ({ inbox: s.inbox.map((item) => (item.id === id ? { ...item, read: true } : item)) })),
+
+  clearInbox: () => set({ inbox: [] }),
+
+  setActiveMood: (mood) => set({ activeMood: mood }),
+  setSpoilerStrictness: (s) => set({ spoilerStrictness: s }),
+  setDefaultShareVisibility: (v) => set({ defaultShareVisibility: v }),
 
   setAge: (age) => set({ age }),
   setDailyGoalPages: (n) => set({ dailyGoalPages: n }),
@@ -323,35 +402,6 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
         freeMonthsEarned: s.freeMonthsEarned + (next % 3 === 0 ? 1 : 0),
       };
     }),
-  setActiveMood: (mood) => set({ activeMood: mood }),
-  setSpoilerStrictness: (s) => set({ spoilerStrictness: s }),
-  setDefaultShareVisibility: (v) => set({ defaultShareVisibility: v }),
-  setActiveFlair: (flair) => set({ activeFlair: flair }),
-  addChallenge: (c) =>
-    set((s) => ({
-      challenges: [...s.challenges, { ...c, id: uid(), progress: 0, completed: false }],
-    })),
-  updateChallengeProgress: (id, progress) =>
-    set((s) => ({
-      challenges: s.challenges.map((c) => (c.id === id ? { ...c, progress } : c)),
-    })),
-  completeChallenge: (id) =>
-    set((s) => ({
-      challenges: s.challenges.map((c) => (c.id === id ? { ...c, completed: true } : c)),
-    })),
-  removeChallenge: (id) =>
-    set((s) => ({ challenges: s.challenges.filter((c) => c.id !== id) })),
-  addMarker: (m) =>
-    set((s) => ({ markers: [{ ...m, id: uid() }, ...s.markers] })),
-  removeMarker: (id) =>
-    set((s) => ({ markers: s.markers.filter((m) => m.id !== id) })),
-  addCheckpoint: (c) =>
-    set((s) => ({ checkpoints: [...s.checkpoints, { ...c, id: uid() }] })),
-  removeCheckpoint: (id) =>
-    set((s) => ({ checkpoints: s.checkpoints.filter((c) => c.id !== id) })),
-  addTrigger: (t) =>
-    set((s) => ({ triggers: [{ ...t, id: uid() }, ...s.triggers] })),
-  setHasSeenTour: (v) => set({ hasSeenTour: v }),
 });
 
 // ── Store ─────────────────────────────────────────────────────────────────────

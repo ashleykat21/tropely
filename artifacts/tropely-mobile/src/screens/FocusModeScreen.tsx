@@ -8,7 +8,7 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import type { Mood } from "@/store";
 import { LinearGradient } from "expo-linear-gradient";
-import { MOOD_COLORS, type MoodKey } from "@/constants/theme";
+import { MOOD_GRADIENTS, COLORS, type MoodKey } from "@/constants/theme";
 
 type Route = RouteProp<RootStackParamList, "FocusMode">;
 
@@ -41,7 +41,7 @@ export default function FocusModeScreen() {
   const [note, setNote] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const moodTheme = activeMood ? MOOD_COLORS[activeMood] : MOOD_COLORS.calm;
+  const gradColors = activeMood && MOOD_GRADIENTS[activeMood] ? MOOD_GRADIENTS[activeMood] : COLORS.gradPrimary;
 
   useEffect(() => {
     if (running) {
@@ -69,7 +69,7 @@ export default function FocusModeScreen() {
   }, [bookId, book, elapsed, endPage, mood, note, addSession, nav]);
 
   return (
-    <LinearGradient colors={moodTheme.grad} style={styles.flex}>
+    <LinearGradient colors={gradColors} style={styles.flex}>
       <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
         {/* Header */}
         <View style={styles.header}>

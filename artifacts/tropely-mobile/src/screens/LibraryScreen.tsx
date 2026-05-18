@@ -8,13 +8,14 @@ import {
   Image,
   FlatList,
   Animated,
-  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, useSpoilerLock, type Shelf } from "@/store";
+import { LinearGradient } from "expo-linear-gradient";
+import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -57,14 +58,14 @@ function SkeletonCard({ opacity }: { opacity: Animated.Value }) {
 
 export default function LibraryScreen() {
   const nav = useNavigation<Nav>();
-  const { books, reflections } = useStore();
+  const { books, reflections, inbox } = useStore();
   const spoilerLock = useSpoilerLock();
+  const unreadCount = inbox.filter((i) => !i.read).length;
 
   const [activeShelf, setActiveShelf] = useState<Shelf>("reading");
   const [sort, setSort] = useState<SortKey>("recent");
   const [viewMode, setViewMode] = useState<"spine" | "grid">("spine");
   const [filters, setFilters] = useState<{ moods: string[]; tropes: string[] }>({ moods: [], tropes: [] });
-  const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
 
   const toggleMoodFilter = (mood: string) =>
@@ -115,10 +116,6 @@ export default function LibraryScreen() {
 
   const sorted = useMemo(() => {
     let list = shelfBooks;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((b) => b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q));
-    }
     if (filters.moods.length > 0) list = list.filter((b) => b.mood && filters.moods.includes(b.mood));
     if (filters.tropes.length > 0) list = list.filter((b) => filters.tropes.every((t) => b.tropes?.includes(t)));
     return [...list].sort((a, b) => {
@@ -140,9 +137,11 @@ export default function LibraryScreen() {
     spoilerLock && activeShelf === "reading" && book.progress === 0;
 
   return (
+    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Your shelf</Text>
+        <View style={styles.headerRight}>
         <View style={styles.viewToggle}>
           <TouchableOpacity
             style={[styles.viewBtn, viewMode === "spine" && styles.viewBtnActive]}
@@ -157,19 +156,15 @@ export default function LibraryScreen() {
             <Text style={[styles.viewBtnText, viewMode === "grid" && styles.viewBtnTextActive]}>⊞</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Search bar */}
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search your shelf…"
-          value={search}
-          onChangeText={setSearch}
-          clearButtonMode="while-editing"
-          returnKeyType="search"
-          placeholderTextColor="#9ca3af"
-        />
+        <TouchableOpacity style={styles.inboxBtn} onPress={() => nav.navigate("Inbox")} activeOpacity={0.8}>
+          <Text style={styles.inboxEmoji}>💬</Text>
+          {unreadCount > 0 && (
+            <View style={styles.inboxBadge}>
+              <Text style={styles.inboxBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        </View>
       </View>
 
       {/* Shelf tabs */}
@@ -366,15 +361,19 @@ export default function LibraryScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fafaf9" },
+  safe: { flex: 1 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
-  searchRow: { paddingHorizontal: 12, paddingBottom: 6 },
-  searchInput: { backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#f0ede8", paddingHorizontal: 14, paddingVertical: 9, fontSize: 14, color: "#1a1a1a" },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
+  inboxBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.5)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.6)" },
+  inboxEmoji: { fontSize: 16 },
+  inboxBadge: { position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.rose, justifyContent: "center", alignItems: "center" },
+  inboxBadgeText: { fontSize: 9, color: "#fff", fontWeight: "700" },
   viewToggle: { flexDirection: "row", gap: 4, backgroundColor: "#f5f0ea", borderRadius: 8, padding: 3 },
   viewBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 },
   viewBtnActive: { backgroundColor: "#fff" },

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,13 @@ import { useBuddyRooms, useBuddyMessages, useSendBuddyMessage } from "@/hooks/us
 import { usePremium } from "@/hooks/usePremium";
 import { trackEvent } from "@/lib/analytics";
 import { FREE_LIMITS } from "@/constants/premiumFeatures";
+import { LinearGradient } from "expo-linear-gradient";
+import { COLORS, getAvatarById } from "@/constants/theme";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@/navigation";
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type Room = {
   id: string;
@@ -43,14 +50,18 @@ function deriveChapters(totalPages: number) {
 }
 
 export default function BuddyReadsScreen() {
+  const nav = useNavigation<Nav>();
   const user = useUser();
   const userId = user?.uid ?? null;
   const { isPremium } = usePremium();
   const age = useStore((s) => s.age);
   const spoilerLock = useStore((s) => s.spoilerLock);
-  const spoilerStrictness = useStore((s) => s.spoilerStrictness);
   const books = useStore((s) => s.books);
   const equippedBadgeId = useStore((s) => s.equippedBadgeId);
+  const selectedAvatar = useStore((s) => s.selectedAvatar);
+  const inbox = useStore((s) => s.inbox);
+  const avatar = getAvatarById(selectedAvatar);
+  const unreadCount = inbox.filter((i) => !i.read).length;
 
   const BADGE_EMOJIS: Record<string, string> = {
     first_book: "📖", consistent_reader: "🔥", bookmarker: "🔖", finisher: "🏁",
@@ -88,7 +99,7 @@ export default function BuddyReadsScreen() {
   const activeChapter = chapters[selectedChapterIdx];
   const isChapterLocked =
     activeChapter &&
-    spoilerStrictness !== "relaxed" &&
+    spoilerLock &&
     myCurrentPage < activeChapter.startPage &&
     activeChapter.number > 1;
 
@@ -142,7 +153,7 @@ export default function BuddyReadsScreen() {
           <View style={styles.chapterTabsWrapper}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chapterTabs}>
               {chapters.map((ch, idx) => {
-                const locked = spoilerStrictness !== "relaxed" && myCurrentPage < ch.startPage && ch.number > 1;
+                const locked = spoilerLock && myCurrentPage < ch.startPage && ch.number > 1;
                 return (
                   <TouchableOpacity
                     key={ch.number}
@@ -248,10 +259,26 @@ export default function BuddyReadsScreen() {
   }
 
   return (
+    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Buddy Reads</Text>
-        <Text style={styles.subtitle}>Read together, share reactions in real time.</Text>
+        <View style={styles.buddyHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Buddy Reads</Text>
+            <Text style={styles.subtitle}>Read together, share reactions in real time.</Text>
+          </View>
+          <View style={[styles.myAvatarBubble, { backgroundColor: avatar.bg }]}>
+            <Text style={styles.myAvatarEmoji}>{avatar.emoji}</Text>
+          </View>
+          <TouchableOpacity style={styles.inboxBtn} onPress={() => nav.navigate("Inbox")} activeOpacity={0.8}>
+            <Text style={styles.inboxEmoji}>💬</Text>
+            {unreadCount > 0 && (
+              <View style={styles.inboxBadge}>
+                <Text style={styles.inboxBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {loadingRooms ? (
           <ActivityIndicator style={{ marginTop: 40 }} />
@@ -296,11 +323,19 @@ export default function BuddyReadsScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fafaf9" },
+  safe: { flex: 1 },
+  buddyHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
+  myAvatarBubble: { width: 36, height: 36, borderRadius: 18, justifyContent: "center", alignItems: "center" },
+  myAvatarEmoji: { fontSize: 20 },
+  inboxBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.5)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.6)" },
+  inboxEmoji: { fontSize: 16 },
+  inboxBadge: { position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.rose, justifyContent: "center", alignItems: "center" },
+  inboxBadgeText: { fontSize: 9, color: "#fff", fontWeight: "700" },
   scroll: { flex: 1 },
   content: { padding: 16, gap: 14, paddingBottom: 32 },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },

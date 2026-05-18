@@ -1,27 +1,35 @@
-import React, { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Image,
-  ActivityIndicator, Alert, Animated,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  Image,
+  ActivityIndicator,
+  Alert,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
-import {
-  searchBooks, olCoverUrl, moodTagBooks, type OLBook,
-  fetchNewReleases, fetchUpcomingReleases, subscribeToRelease, type BookRelease,
-} from "@/lib/api";
+import { searchBooks, olCoverUrl, moodTagBooks, type OLBook } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
+import { LinearGradient } from "expo-linear-gradient";
+import { COLORS } from "@/constants/theme";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Tab = "search" | "new" | "upcoming";
 
 const TROPE_BANNER_MS = 10_000;
 const DEBOUNCE_MS = 500;
 
+// Per-item animated add button so each item manages its own scale animation
 function AddButton({ alreadyAdded, onPress }: { alreadyAdded: boolean; onPress: () => void }) {
   const scale = useRef(new Animated.Value(1)).current;
+
   const handlePress = () => {
     if (alreadyAdded) return;
     Animated.sequence([
@@ -30,83 +38,51 @@ function AddButton({ alreadyAdded, onPress }: { alreadyAdded: boolean; onPress: 
     ]).start();
     onPress();
   };
+
   return (
     <TouchableOpacity onPress={handlePress} disabled={alreadyAdded}>
-      <Animated.View style={[styles.addBtn, alreadyAdded && styles.addBtnDisabled, { transform: [{ scale }] }]}>
+      <Animated.View
+        style={[
+          styles.addBtn,
+          alreadyAdded && styles.addBtnDisabled,
+          { transform: [{ scale }] },
+        ]}
+      >
         <Text style={styles.addBtnText}>{alreadyAdded ? "✓" : "+"}</Text>
       </Animated.View>
     </TouchableOpacity>
   );
 }
 
-function ReleaseCard({ item, onSubscribe }: { item: BookRelease; onSubscribe: (id: string) => void }) {
-  const [subscribed, setSubscribed] = useState(false);
-  return (
-    <View style={styles.releaseCard}>
-      {item.cover ? (
-        <Image source={{ uri: item.cover }} style={styles.releaseCover} />
-      ) : (
-        <View style={[styles.releaseCover, styles.coverPlaceholder]}>
-          <Text style={styles.coverInitial}>{item.title[0]}</Text>
-        </View>
-      )}
-      <View style={styles.releaseInfo}>
-        <Text style={styles.releaseTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.releaseAuthor}>{item.author}</Text>
-        <Text style={styles.releaseDate}>{new Date(item.releaseDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</Text>
-        {item.tropes && item.tropes.length > 0 && (
-          <View style={styles.tropeRow}>
-            {item.tropes.slice(0, 2).map((t) => (
-              <View key={t} style={styles.tropeChip}><Text style={styles.tropeChipText}>{t}</Text></View>
-            ))}
-          </View>
-        )}
-      </View>
-      <TouchableOpacity
-        style={[styles.subscribeBtn, subscribed && styles.subscribedBtn]}
-        onPress={() => { setSubscribed(true); onSubscribe(item.id); }}
-        disabled={subscribed}
-      >
-        <Text style={[styles.subscribeBtnText, subscribed && styles.subscribedBtnText]}>
-          {subscribed ? "✓" : "🔔"}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 export default function DiscoverScreen() {
-  const nav = useNavigation<Nav>();
   const addBook = useStore((s) => s.addBook);
   const updateBook = useStore((s) => s.updateBook);
   const books = useStore((s) => s.books);
+  const inbox = useStore((s) => s.inbox);
+  const nav = useNavigation<Nav>();
+  const unreadCount = inbox.filter((i) => !i.read).length;
 
   const addedKeys = useMemo(
     () => new Set(books.flatMap((b) => [b.openLibraryKey, b.title].filter(Boolean) as string[])),
     [books],
   );
 
-  const [tab, setTab] = useState<Tab>("search");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OLBook[]>([]);
   const [loading, setLoading] = useState(false);
-  const [newReleases, setNewReleases] = useState<BookRelease[]>([]);
-  const [upcoming, setUpcoming] = useState<BookRelease[]>([]);
 
+  // Trope banner — interaction flag prevents auto-dismiss while user acts
   const [tropeBanner, setTropeBanner] = useState<{
-    bookId: string; title: string; tropes: string[]; selected: string[]; interacting: boolean;
+    bookId: string;
+    title: string;
+    tropes: string[];
+    selected: string[];
+    interacting: boolean;
   } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    if (tab === "new" && newReleases.length === 0) {
-      fetchNewReleases().then(setNewReleases).catch(() => {});
-    }
-    if (tab === "upcoming" && upcoming.length === 0) {
-      fetchUpcomingReleases().then(setUpcoming).catch(() => {});
-    }
-  }, [tab]);
+  // Debounce timer for search
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) return;
@@ -130,7 +106,10 @@ export default function DiscoverScreen() {
   const startBannerTimer = () => {
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
     bannerTimer.current = setTimeout(() => {
-      setTropeBanner((prev) => (prev?.interacting ? prev : null));
+      setTropeBanner((prev) => {
+        if (prev?.interacting) return prev;
+        return null;
+      });
     }, TROPE_BANNER_MS);
   };
 
@@ -146,6 +125,7 @@ export default function DiscoverScreen() {
       openLibraryKey: book.key,
     });
     trackEvent("Book Added", { title: book.title, hasCover: !!cover });
+
     moodTagBooks([{ key: book.key, title: book.title }])
       .then((tagMap) => {
         const tropes = tagMap[book.key] ?? [];
@@ -153,12 +133,16 @@ export default function DiscoverScreen() {
         setTropeBanner({ bookId: id, title: book.title, tropes, selected: [], interacting: false });
         startBannerTimer();
       })
-      .catch((err) => console.warn("[DiscoverScreen] moodTagBooks failed:", err));
+      .catch((err) => {
+        console.warn("[DiscoverScreen] moodTagBooks failed:", err);
+      });
   };
 
   const confirmTropes = () => {
     if (!tropeBanner) return;
-    if (tropeBanner.selected.length > 0) updateBook(tropeBanner.bookId, { tropes: tropeBanner.selected });
+    if (tropeBanner.selected.length > 0) {
+      updateBook(tropeBanner.bookId, { tropes: tropeBanner.selected });
+    }
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
     setTropeBanner(null);
   };
@@ -171,168 +155,148 @@ export default function DiscoverScreen() {
         : [...prev.selected, t];
       return { ...prev, selected, interacting: true };
     });
+    // Restart timer now that user has interacted
     startBannerTimer();
   };
 
-  const handleSubscribe = async (id: string) => {
-    try { await subscribeToRelease(id); } catch { /* silently fail */ }
-  };
-
-  const TABS: { key: Tab; label: string }[] = [
-    { key: "search",   label: "🔍 Search" },
-    { key: "new",      label: "✨ New" },
-    { key: "upcoming", label: "📅 Upcoming" },
-  ];
-
   return (
+    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {TABS.map((t) => (
-          <TouchableOpacity key={t.key} style={[styles.tab, tab === t.key && styles.tabActive]} onPress={() => setTab(t.key)}>
-            <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.discoverHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.discoverTitle}>Discover</Text>
+          <Text style={styles.discoverSub}>What kind of story are you craving?</Text>
+        </View>
+        <TouchableOpacity style={styles.inboxBtn} onPress={() => nav.navigate("Inbox")} activeOpacity={0.8}>
+          <Text style={styles.inboxEmoji}>💬</Text>
+          {unreadCount > 0 && (
+            <View style={styles.inboxBadge}>
+              <Text style={styles.inboxBadgeText}>{unreadCount > 9 ? "9+" : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+      <View style={styles.searchBar}>
+        <TextInput
+          style={styles.input}
+          placeholder="Search books by title or author…"
+          value={query}
+          onChangeText={onQueryChange}
+          returnKeyType="search"
+          onSubmitEditing={() => doSearch(query)}
+        />
+        <TouchableOpacity style={styles.searchBtn} onPress={() => doSearch(query)}>
+          <Text style={styles.searchBtnText}>Search</Text>
+        </TouchableOpacity>
       </View>
 
-      {tab === "search" && (
-        <>
-          <View style={styles.searchBar}>
-            <TextInput
-              style={styles.input}
-              placeholder="Search by title or author…"
-              value={query}
-              onChangeText={onQueryChange}
-              returnKeyType="search"
-              onSubmitEditing={() => doSearch(query)}
-            />
-            <TouchableOpacity style={styles.searchBtn} onPress={() => doSearch(query)}>
-              <Text style={styles.searchBtnText}>Go</Text>
+      {/* Trope banner */}
+      {tropeBanner && (
+        <View style={styles.tropeBanner}>
+          <Text style={styles.tropeBannerTitle}>Tag tropes for {tropeBanner.title}?</Text>
+          <View style={styles.tropeChips}>
+            {tropeBanner.tropes.slice(0, 3).map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[
+                  styles.tropeChip,
+                  tropeBanner.selected.includes(t) && styles.tropeChipSelected,
+                ]}
+                onPress={() => toggleTrope(t)}
+              >
+                <Text style={styles.tropeChipText}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.tropeBannerActions}>
+            <TouchableOpacity onPress={confirmTropes} style={styles.tropeSaveBtn}>
+              <Text style={styles.tropeSaveBtnText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { if (bannerTimer.current) clearTimeout(bannerTimer.current); setTropeBanner(null); }}>
+              <Text style={styles.tropeDismiss}>Dismiss</Text>
             </TouchableOpacity>
           </View>
-
-          {tropeBanner && (
-            <View style={styles.tropeBanner}>
-              <Text style={styles.tropeBannerTitle}>Tag tropes for {tropeBanner.title}?</Text>
-              <View style={styles.tropeChips}>
-                {tropeBanner.tropes.slice(0, 3).map((t) => (
-                  <TouchableOpacity
-                    key={t}
-                    style={[styles.tropeChip, tropeBanner.selected.includes(t) && styles.tropeChipSelected]}
-                    onPress={() => toggleTrope(t)}
-                  >
-                    <Text style={styles.tropeChipText}>{t}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.tropeBannerActions}>
-                <TouchableOpacity onPress={confirmTropes} style={styles.tropeSaveBtn}>
-                  <Text style={styles.tropeSaveBtnText}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { if (bannerTimer.current) clearTimeout(bannerTimer.current); setTropeBanner(null); }}>
-                  <Text style={styles.tropeDismiss}>Dismiss</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {loading ? (
-            <ActivityIndicator style={{ marginTop: 40 }} />
-          ) : (
-            <FlatList
-              data={results}
-              keyExtractor={(b) => b.key}
-              contentContainerStyle={styles.listContent}
-              renderItem={({ item: book }) => {
-                const cover = book.cover_i ? olCoverUrl(book.cover_i, "S") : null;
-                const alreadyAdded = addedKeys.has(book.key) || addedKeys.has(book.title);
-                return (
-                  <View style={styles.bookRow}>
-                    {cover ? (
-                      <Image source={{ uri: cover }} style={styles.cover} />
-                    ) : (
-                      <View style={[styles.cover, styles.coverPlaceholder]}>
-                        <Text style={styles.coverInitial}>{book.title[0]}</Text>
-                      </View>
-                    )}
-                    <View style={styles.bookInfo}>
-                      <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-                      <Text style={styles.bookAuthor}>{book.author_name?.[0] ?? "Unknown author"}</Text>
-                      {book.first_publish_year && <Text style={styles.bookMeta}>{book.first_publish_year}</Text>}
-                    </View>
-                    <AddButton alreadyAdded={alreadyAdded} onPress={() => handleAdd(book)} />
-                  </View>
-                );
-              }}
-              ListEmptyComponent={
-                results.length === 0 && !loading ? (
-                  <View style={styles.empty}>
-                    <Text style={styles.emptyEmoji}>🧭</Text>
-                    <Text style={styles.emptyTitle}>Find your next trope-filled read</Text>
-                    <Text style={styles.emptyText}>Search by title or author — we'll auto-tag tropes when you add.</Text>
-                  </View>
-                ) : null
-              }
-            />
-          )}
-        </>
+        </View>
       )}
 
-      {(tab === "new" || tab === "upcoming") && (
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 40 }} />
+      ) : (
         <FlatList
-          data={tab === "new" ? newReleases : upcoming}
-          keyExtractor={(i) => i.id}
+          data={results}
+          keyExtractor={(b) => b.key}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => <ReleaseCard item={item} onSubscribe={handleSubscribe} />}
+          renderItem={({ item: book }) => {
+            const cover = book.cover_i ? olCoverUrl(book.cover_i, "S") : null;
+            const alreadyAdded =
+              addedKeys.has(book.key) || addedKeys.has(book.title);
+            return (
+              <View style={styles.bookRow}>
+                {cover ? (
+                  <Image source={{ uri: cover }} style={styles.cover} />
+                ) : (
+                  <View style={[styles.cover, styles.coverPlaceholder]}>
+                    <Text style={styles.coverInitial}>{book.title[0]}</Text>
+                  </View>
+                )}
+                <View style={styles.bookInfo}>
+                  <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
+                  <Text style={styles.bookAuthor}>
+                    {book.author_name?.[0] ?? "Unknown author"}
+                  </Text>
+                  {book.first_publish_year && (
+                    <Text style={styles.bookMeta}>{book.first_publish_year}</Text>
+                  )}
+                </View>
+                <AddButton alreadyAdded={alreadyAdded} onPress={() => handleAdd(book)} />
+              </View>
+            );
+          }}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>{tab === "new" ? "✨" : "📅"}</Text>
-              <Text style={styles.emptyTitle}>{tab === "new" ? "New releases" : "Coming soon"}</Text>
-              <Text style={styles.emptyText}>Loading latest titles…</Text>
-            </View>
+            results.length === 0 && !loading ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🔍</Text>
+                <Text style={styles.emptyTitle}>Find your next trope-filled read</Text>
+                <Text style={styles.emptyText}>
+                  Search by title or author — when you add a book we'll auto-tag its tropes.
+                </Text>
+              </View>
+            ) : null
           }
         />
       )}
     </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fafaf9" },
-  tabBar: { flexDirection: "row", padding: 12, gap: 6 },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: "#f5f0ea", alignItems: "center" },
-  tabActive: { backgroundColor: "#1a1a1a" },
-  tabText: { fontSize: 12, fontWeight: "600", color: "#6b7280" },
-  tabTextActive: { color: "#fff" },
-  searchBar: { flexDirection: "row", paddingHorizontal: 12, paddingBottom: 8, gap: 8 },
-  input: { flex: 1, borderWidth: 1, borderColor: "#f0ede8", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, backgroundColor: "#fff" },
+  safe: { flex: 1 },
+  discoverHeader: { flexDirection: "row", alignItems: "flex-start", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  discoverTitle: { fontSize: 26, fontWeight: "800", color: COLORS.ink },
+  discoverSub: { fontSize: 13, color: COLORS.inkSoft, marginTop: 2 },
+  inboxBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.5)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.6)" },
+  inboxEmoji: { fontSize: 16 },
+  inboxBadge: { position: "absolute", top: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: COLORS.rose, justifyContent: "center", alignItems: "center" },
+  inboxBadgeText: { fontSize: 9, color: "#fff", fontWeight: "700" },
+  searchBar: { flexDirection: "row", padding: 12, gap: 8 },
+  input: { flex: 1, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, backgroundColor: "#fff" },
   searchBtn: { backgroundColor: "#1a1a1a", borderRadius: 10, paddingHorizontal: 16, justifyContent: "center" },
   searchBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  tropeBanner: { margin: 12, backgroundColor: "#fff", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#f0ede8", gap: 10 },
+  tropeBanner: { margin: 12, backgroundColor: "#fff", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "#e5e7eb", gap: 10 },
   tropeBannerTitle: { fontSize: 13, fontWeight: "600", color: "#1a1a1a" },
   tropeChips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  tropeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#f0ede8", backgroundColor: "#f5f0ea" },
+  tropeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: "#e5e7eb", backgroundColor: "#f9fafb" },
   tropeChipSelected: { backgroundColor: "#1a1a1a", borderColor: "#1a1a1a" },
-  tropeChipText: { fontSize: 12, color: "#1a1a1a" },
+  tropeChipText: { fontSize: 12 },
   tropeBannerActions: { flexDirection: "row", alignItems: "center", gap: 16 },
   tropeSaveBtn: { backgroundColor: "#1a1a1a", borderRadius: 8, paddingHorizontal: 16, paddingVertical: 7 },
   tropeSaveBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   tropeDismiss: { fontSize: 13, color: "#9ca3af" },
-  listContent: { padding: 12, gap: 10, paddingBottom: 40 },
+  listContent: { padding: 12, gap: 12 },
   bookRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#fff", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#f0ede8" },
-  releaseCard: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "#fff", borderRadius: 14, padding: 12, borderWidth: 1, borderColor: "#f0ede8" },
-  releaseCover: { width: 64, height: 90, borderRadius: 8 },
-  releaseInfo: { flex: 1, gap: 3 },
-  releaseTitle: { fontSize: 14, fontWeight: "700", color: "#1a1a1a" },
-  releaseAuthor: { fontSize: 12, color: "#6b7280" },
-  releaseDate: { fontSize: 11, color: "#9ca3af" },
-  tropeRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 },
-  subscribeBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: "#f5f0ea", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#f0ede8" },
-  subscribedBtn: { backgroundColor: "#d1fae5", borderColor: "#d1fae5" },
-  subscribeBtnText: { fontSize: 16 },
-  subscribedBtnText: { fontSize: 16 },
   cover: { width: 48, height: 70, borderRadius: 6 },
-  coverPlaceholder: { backgroundColor: "#e8e0d4", justifyContent: "center", alignItems: "center" },
+  coverPlaceholder: { backgroundColor: "#e5e7eb", justifyContent: "center", alignItems: "center" },
   coverInitial: { fontSize: 18, fontWeight: "700", color: "#9ca3af" },
   bookInfo: { flex: 1, gap: 2 },
   bookTitle: { fontSize: 14, fontWeight: "600", color: "#1a1a1a" },
