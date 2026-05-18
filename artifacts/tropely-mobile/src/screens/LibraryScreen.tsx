@@ -14,7 +14,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, useSpoilerLock, type Shelf } from "@/store";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
 import { useAtmosphere } from "@/hooks/useAtmosphere";
 
@@ -142,7 +142,7 @@ export default function LibraryScreen() {
   const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
 
   return (
-    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: textColor }]}>Your shelf</Text>
@@ -366,7 +366,7 @@ export default function LibraryScreen() {
         </ScrollView>
       )}
     </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 

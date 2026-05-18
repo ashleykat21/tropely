@@ -11,7 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, computeStreak } from "@/store";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import {
   COLORS, SHADOW, CARD_STYLE,
   MOOD_ATMOSPHERES, ALL_ATMOSPHERE_KEYS,
@@ -186,11 +186,9 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <LinearGradient
+      <GradientView
         colors={atmosphere.gradient}
         style={styles.gradient}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.7 }}
       >
         <ScrollView
           style={styles.scroll}
@@ -376,7 +374,7 @@ export default function HomeScreen() {
           </View>
 
         </ScrollView>
-      </LinearGradient>
+      </GradientView>
     </SafeAreaView>
   );
 }

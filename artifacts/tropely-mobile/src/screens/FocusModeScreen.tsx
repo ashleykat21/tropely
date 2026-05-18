@@ -7,7 +7,7 @@ import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import type { Mood } from "@/store";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { MOOD_GRADIENTS, COLORS, type MoodKey } from "@/constants/theme";
 
 type Route = RouteProp<RootStackParamList, "FocusMode">;
@@ -69,7 +69,7 @@ export default function FocusModeScreen() {
   }, [bookId, book, elapsed, endPage, mood, note, addSession, nav]);
 
   return (
-    <LinearGradient colors={gradColors} style={styles.flex}>
+    <GradientView colors={gradColors} style={styles.flex}>
       <SafeAreaView style={styles.flex} edges={["top", "bottom"]}>
         {/* Header */}
         <View style={styles.header}>
@@ -167,7 +167,7 @@ export default function FocusModeScreen() {
           </SafeAreaView>
         </Modal>
       </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 

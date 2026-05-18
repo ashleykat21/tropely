@@ -13,7 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import {
   COLORS, GENRES, TROPES_BY_GENRE, READING_VIBE_RESULTS,
   AVATARS, getAvatarById, getAllAvatars,
@@ -117,7 +117,7 @@ export default function OnboardingScreen() {
   const gradColors = COLORS.gradPrimary;
 
   return (
-    <LinearGradient colors={gradColors} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <GradientView colors={gradColors} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         {/* Step dots */}
         {!ageBlocked && (
@@ -364,7 +364,7 @@ export default function OnboardingScreen() {
           </TouchableOpacity>
         )}
       </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 

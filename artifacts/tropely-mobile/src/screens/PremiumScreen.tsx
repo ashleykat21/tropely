@@ -10,7 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { useStore } from "@/store";
 import { COLORS, SHADOW } from "@/constants/theme";
 
@@ -34,11 +34,9 @@ export default function PremiumScreen() {
   const premiumTestingModeEnabled = useStore((s) => s.premiumTestingModeEnabled);
 
   return (
-    <LinearGradient
+    <GradientView
       colors={["#fdf0f5", "#f9e4ee", "#f0d4e8"]}
       style={styles.gradient}
-      start={{ x: 0.5, y: 0 }}
-      end={{ x: 0.5, y: 1 }}
     >
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScrollView
@@ -135,7 +133,7 @@ export default function PremiumScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 

@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { useStore } from "@/store";
 import {
   MOOD_ATMOSPHERES, ALL_ATMOSPHERE_KEYS, DEFAULT_ATMOSPHERE,
@@ -44,7 +44,7 @@ export default function BackgroundThemeScreen() {
   };
 
   return (
-    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }}>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -87,17 +87,15 @@ export default function BackgroundThemeScreen() {
                       activeOpacity={0.8}
                       style={styles.bgCardWrapper}
                     >
-                      <LinearGradient
+                      <GradientView
                         colors={[atm.gradient[0], atm.gradient[1]]}
                         style={[
                           styles.bgCard,
                           isSelected && styles.bgCardSelected,
                         ]}
-                        start={{ x: 0.5, y: 0 }}
-                        end={{ x: 0.5, y: 1 }}
                       >
                         <Text style={styles.bgCardEmoji}>{atm.emoji}</Text>
-                      </LinearGradient>
+                      </GradientView>
                       <Text style={[styles.bgCardLabel, { color: textColorSoft }]} numberOfLines={2}>
                         {atm.label}
                       </Text>
@@ -119,7 +117,7 @@ export default function BackgroundThemeScreen() {
 
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 

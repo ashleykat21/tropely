@@ -18,7 +18,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, useCurrentBook, computeStreak } from "@/store";
 import { COLORS, CARD_STYLE, SHADOW, getAvatarById } from "@/constants/theme";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import * as Notifications from "expo-notifications";
 import { useAtmosphere } from "@/hooks/useAtmosphere";
 
@@ -173,7 +173,7 @@ export default function ProfileScreen() {
   const currentMonth = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`;
 
   return (
-    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
@@ -446,7 +446,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
-    </LinearGradient>
+    </GradientView>
   );
 }
 

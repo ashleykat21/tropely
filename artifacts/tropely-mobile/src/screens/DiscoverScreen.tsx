@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
   StyleSheet,
   Image,
   ActivityIndicator,
@@ -18,13 +19,26 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import { searchBooks, olCoverUrl, moodTagBooks, type OLBook } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { COLORS } from "@/constants/theme";
 import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const TROPE_BANNER_MS = 10_000;
+
+const MOOD_PICKS = [
+  { mood: "Cozy & Romantic", emoji: "🌸", count: "142 books" },
+  { mood: "Mysterious & Dark", emoji: "🌙", count: "98 books" },
+  { mood: "Fantasy & Magical", emoji: "✨", count: "203 books" },
+  { mood: "Emotional & Heartfelt", emoji: "💙", count: "87 books" },
+  { mood: "Light & Fun", emoji: "☀️", count: "156 books" },
+];
+
+const TROPE_PICKS = [
+  "Enemies to Lovers", "Slow Burn", "Found Family", "Forced Proximity",
+  "Second Chance", "Dark Romance", "Grumpy/Sunshine", "Fake Dating",
+];
 const DEBOUNCE_MS = 500;
 
 // Per-item animated add button so each item manages its own scale animation
@@ -164,7 +178,7 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.discoverHeader}>
         <View style={{ flex: 1 }}>
@@ -194,83 +208,133 @@ export default function DiscoverScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Trope banner */}
-      {tropeBanner && (
-        <View style={styles.tropeBanner}>
-          <Text style={styles.tropeBannerTitle}>Tag tropes for {tropeBanner.title}?</Text>
-          <View style={styles.tropeChips}>
-            {tropeBanner.tropes.slice(0, 3).map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[
-                  styles.tropeChip,
-                  tropeBanner.selected.includes(t) && styles.tropeChipSelected,
-                ]}
-                onPress={() => toggleTrope(t)}
-              >
-                <Text style={styles.tropeChipText}>{t}</Text>
-              </TouchableOpacity>
-            ))}
+      {/* Mood & Trope discovery — shown when no search is active */}
+      {!query.trim() && !loading && (
+        <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+          <View style={styles.discoverSection}>
+            <Text style={[styles.discoverSectionTitle, { color: textColor }]}>Browse by mood</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodRow}>
+              {MOOD_PICKS.map((item) => (
+                <TouchableOpacity key={item.mood} style={styles.moodCard} activeOpacity={0.85}>
+                  <Text style={styles.moodCardEmoji}>{item.emoji}</Text>
+                  <Text style={styles.moodCardLabel} numberOfLines={2}>{item.mood}</Text>
+                  <Text style={styles.moodCardCount}>{item.count}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-          <View style={styles.tropeBannerActions}>
-            <TouchableOpacity onPress={confirmTropes} style={styles.tropeSaveBtn}>
-              <Text style={styles.tropeSaveBtnText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { if (bannerTimer.current) clearTimeout(bannerTimer.current); setTropeBanner(null); }}>
-              <Text style={styles.tropeDismiss}>Dismiss</Text>
-            </TouchableOpacity>
+
+          <View style={styles.discoverSection}>
+            <Text style={[styles.discoverSectionTitle, { color: textColor }]}>Browse by trope</Text>
+            <View style={styles.tropeGrid}>
+              {TROPE_PICKS.map((trope) => (
+                <TouchableOpacity key={trope} style={styles.tropePickChip} activeOpacity={0.85}>
+                  <Text style={styles.tropePickChipText}>{trope}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+
+          <View style={styles.discoverSection}>
+            <Text style={[styles.discoverSectionTitle, { color: textColor }]}>Popular right now</Text>
+            <View style={styles.placeholderBooksRow}>
+              {[
+                { emoji: "🌹", title: "The Thorns Between Us", color: "#fecdd3" },
+                { emoji: "🌙", title: "Midnight in the Stacks", color: "#ddd6fe" },
+                { emoji: "⚡", title: "Storm & Fury", color: "#fef9c3" },
+              ].map((book) => (
+                <View key={book.title} style={[styles.placeholderBook, { backgroundColor: book.color }]}>
+                  <Text style={styles.placeholderBookEmoji}>{book.emoji}</Text>
+                  <Text style={styles.placeholderBookTitle} numberOfLines={2}>{book.title}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
       )}
 
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={results}
-          keyExtractor={(b) => b.key}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item: book }) => {
-            const cover = book.cover_i ? olCoverUrl(book.cover_i, "S") : null;
-            const alreadyAdded =
-              addedKeys.has(book.key) || addedKeys.has(book.title);
-            return (
-              <View style={styles.bookRow}>
-                {cover ? (
-                  <Image source={{ uri: cover }} style={styles.cover} />
-                ) : (
-                  <View style={[styles.cover, styles.coverPlaceholder]}>
-                    <Text style={styles.coverInitial}>{book.title[0]}</Text>
+      {/* Search results — shown when query is active */}
+      {query.trim().length > 0 && (
+        <>
+          {/* Trope banner */}
+          {tropeBanner && (
+            <View style={styles.tropeBanner}>
+              <Text style={styles.tropeBannerTitle}>Tag tropes for {tropeBanner.title}?</Text>
+              <View style={styles.tropeChips}>
+                {tropeBanner.tropes.slice(0, 3).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.tropeChip,
+                      tropeBanner.selected.includes(t) && styles.tropeChipSelected,
+                    ]}
+                    onPress={() => toggleTrope(t)}
+                  >
+                    <Text style={styles.tropeChipText}>{t}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.tropeBannerActions}>
+                <TouchableOpacity onPress={confirmTropes} style={styles.tropeSaveBtn}>
+                  <Text style={styles.tropeSaveBtnText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { if (bannerTimer.current) clearTimeout(bannerTimer.current); setTropeBanner(null); }}>
+                  <Text style={styles.tropeDismiss}>Dismiss</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {loading ? (
+            <ActivityIndicator style={{ marginTop: 40 }} />
+          ) : (
+            <FlatList
+              data={results}
+              keyExtractor={(b) => b.key}
+              contentContainerStyle={styles.listContent}
+              renderItem={({ item: book }) => {
+                const cover = book.cover_i ? olCoverUrl(book.cover_i, "S") : null;
+                const alreadyAdded =
+                  addedKeys.has(book.key) || addedKeys.has(book.title);
+                return (
+                  <View style={styles.bookRow}>
+                    {cover ? (
+                      <Image source={{ uri: cover }} style={styles.cover} />
+                    ) : (
+                      <View style={[styles.cover, styles.coverPlaceholder]}>
+                        <Text style={styles.coverInitial}>{book.title[0]}</Text>
+                      </View>
+                    )}
+                    <View style={styles.bookInfo}>
+                      <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
+                      <Text style={styles.bookAuthor}>
+                        {book.author_name?.[0] ?? "Unknown author"}
+                      </Text>
+                      {book.first_publish_year && (
+                        <Text style={styles.bookMeta}>{book.first_publish_year}</Text>
+                      )}
+                    </View>
+                    <AddButton alreadyAdded={alreadyAdded} onPress={() => handleAdd(book)} />
                   </View>
-                )}
-                <View style={styles.bookInfo}>
-                  <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
-                  <Text style={styles.bookAuthor}>
-                    {book.author_name?.[0] ?? "Unknown author"}
-                  </Text>
-                  {book.first_publish_year && (
-                    <Text style={styles.bookMeta}>{book.first_publish_year}</Text>
-                  )}
-                </View>
-                <AddButton alreadyAdded={alreadyAdded} onPress={() => handleAdd(book)} />
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            results.length === 0 && !loading ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyEmoji}>🔍</Text>
-                <Text style={styles.emptyTitle}>Find your next trope-filled read</Text>
-                <Text style={styles.emptyText}>
-                  Search by title or author — when you add a book we'll auto-tag its tropes.
-                </Text>
-              </View>
-            ) : null
-          }
-        />
+                );
+              }}
+              ListEmptyComponent={
+                results.length === 0 && !loading ? (
+                  <View style={styles.empty}>
+                    <Text style={styles.emptyEmoji}>🔍</Text>
+                    <Text style={styles.emptyTitle}>No results found</Text>
+                    <Text style={styles.emptyText}>
+                      Try a different title or author name.
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+          )}
+        </>
       )}
     </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 
@@ -313,4 +377,30 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 36 },
   emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1a1a1a", textAlign: "center" },
   emptyText: { fontSize: 14, color: "#9ca3af", textAlign: "center", lineHeight: 20 },
+  // Discovery sections
+  discoverSection: { paddingHorizontal: 16, paddingBottom: 20 },
+  discoverSectionTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
+  moodRow: { gap: 10, paddingRight: 16 },
+  moodCard: {
+    width: 110, backgroundColor: "rgba(255,255,255,0.85)", borderRadius: 16,
+    padding: 12, alignItems: "center", gap: 4,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.6)",
+  },
+  moodCardEmoji: { fontSize: 26 },
+  moodCardLabel: { fontSize: 11, fontWeight: "600", color: "#1a1a1a", textAlign: "center", lineHeight: 14 },
+  moodCardCount: { fontSize: 10, color: "#9ca3af" },
+  tropeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  tropePickChip: {
+    backgroundColor: "rgba(255,255,255,0.8)", borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: "rgba(167,139,250,0.3)",
+  },
+  tropePickChipText: { fontSize: 13, fontWeight: "600", color: "#7c3aed" },
+  placeholderBooksRow: { flexDirection: "row", gap: 10 },
+  placeholderBook: {
+    flex: 1, borderRadius: 14, padding: 14, alignItems: "center", gap: 8, minHeight: 110,
+    justifyContent: "center",
+  },
+  placeholderBookEmoji: { fontSize: 28 },
+  placeholderBookTitle: { fontSize: 11, fontWeight: "600", color: "#1a1a1a", textAlign: "center", lineHeight: 14 },
 });

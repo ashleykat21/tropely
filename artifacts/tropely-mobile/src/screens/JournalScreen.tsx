@@ -17,7 +17,7 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import { usePremium } from "@/hooks/usePremium";
 import { trackEvent } from "@/lib/analytics";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -103,7 +103,7 @@ export default function JournalScreen() {
   }, [journal, allBooks]);
 
   return (
-    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }}>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
     <SafeAreaView style={[styles.safe, { backgroundColor: "transparent" }]} edges={["top"]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: textColor }]}>Journal</Text>
@@ -322,7 +322,7 @@ export default function JournalScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 

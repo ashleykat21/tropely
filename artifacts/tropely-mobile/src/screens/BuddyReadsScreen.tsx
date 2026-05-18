@@ -17,7 +17,7 @@ import { useBuddyRooms, useBuddyMessages, useSendBuddyMessage } from "@/hooks/us
 import { usePremium } from "@/hooks/usePremium";
 import { trackEvent } from "@/lib/analytics";
 import { FREE_LIMITS } from "@/constants/premiumFeatures";
-import { LinearGradient } from "expo-linear-gradient";
+import { GradientView } from "@/components/GradientView";
 import { COLORS, getAvatarById } from "@/constants/theme";
 import { useAtmosphere } from "@/hooks/useAtmosphere";
 import { useNavigation } from "@react-navigation/native";
@@ -263,7 +263,7 @@ export default function BuddyReadsScreen() {
   }
 
   return (
-    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.buddyHeader}>
@@ -288,10 +288,16 @@ export default function BuddyReadsScreen() {
           <ActivityIndicator style={{ marginTop: 40 }} />
         ) : rooms.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No buddy reads yet</Text>
-            <Text style={styles.emptyText}>
-              Create a room on the web app at usenevora.com and your rooms will appear here.
-            </Text>
+            <Text style={styles.emptyEmoji}>📚</Text>
+            <Text style={[styles.emptyTitle, { color: textColor }]}>No Buddy Reads yet</Text>
+            <Text style={[styles.emptyText, { color: textColorSoft }]}>Start a private reading room with up to 3 friends.</Text>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => { /* placeholder */ }}>
+              <Text style={styles.primaryBtnText}>Start Buddy Read</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryBtn} onPress={() => { /* placeholder */ }}>
+              <Text style={[styles.secondaryBtnText, { color: atmosphere.accentColor }]}>Enter Invite Code</Text>
+            </TouchableOpacity>
+            <Text style={[styles.freeNote, { color: textColorSoft }]}>Free rooms support up to 3 readers</Text>
           </View>
         ) : (
           <>
@@ -327,7 +333,7 @@ export default function BuddyReadsScreen() {
         )}
       </ScrollView>
     </SafeAreaView>
-    </LinearGradient>
+    </GradientView>
   );
 }
 
@@ -344,9 +350,15 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 14, paddingBottom: 32 },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
   subtitle: { fontSize: 14, color: "#9ca3af", marginTop: -4 },
-  empty: { paddingTop: 40, alignItems: "center", gap: 8 },
-  emptyTitle: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
-  emptyText: { fontSize: 13, color: "#9ca3af", textAlign: "center", paddingHorizontal: 20, lineHeight: 20 },
+  empty: { paddingTop: 40, alignItems: "center", gap: 8, paddingHorizontal: 24 },
+  emptyEmoji: { fontSize: 48, marginBottom: 4 },
+  emptyTitle: { fontSize: 18, fontWeight: "700", textAlign: "center" },
+  emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 4 },
+  primaryBtn: { backgroundColor: "#a78bfa", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 32, marginTop: 8 },
+  primaryBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  secondaryBtn: { marginTop: 4, paddingVertical: 8 },
+  secondaryBtnText: { fontSize: 14, fontWeight: "600" },
+  freeNote: { fontSize: 12, marginTop: 8, textAlign: "center" },
   roomCard: { backgroundColor: "#fff", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#f0ede8" },
   roomName: { fontSize: 16, fontWeight: "600", color: "#1a1a1a" },
   roomBook: { fontSize: 12, color: "#6b7280", marginTop: 2 },

@@ -1,8 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { Text } from "react-native";
-
 // Screens
 import HomeScreen from "@/screens/HomeScreen";
 import DiscoverScreen from "@/screens/DiscoverScreen";
@@ -22,7 +20,7 @@ import SettingsScreen from "@/screens/SettingsScreen";
 import PremiumScreen from "@/screens/PremiumScreen";
 import BackgroundThemeScreen from "@/screens/BackgroundThemeScreen";
 import { useStore } from "@/store";
-import { NAV_ICONS } from "@/constants/theme";
+import { TodayIcon, LibraryIcon, DiscoverIcon, BuddyReadsIcon, MeIcon } from "@/components/TabIcons";
 
 // ── Param lists ──────────────────────────────────────────────────────────────
 
@@ -53,18 +51,6 @@ export type RootStackParamList = {
   BackgroundTheme: undefined;
 };
 
-// ── Tab icon ─────────────────────────────────────────────────────────────────
-
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const info = NAV_ICONS[label];
-  const icon = info ? (focused ? info.active : info.inactive) : "●";
-  return (
-    <Text style={{ fontSize: focused ? 22 : 20, opacity: focused ? 1 : 0.5 }}>
-      {icon}
-    </Text>
-  );
-}
-
 // ── Navigators ───────────────────────────────────────────────────────────────
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -73,14 +59,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function TabNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
-        tabBarIcon: ({ focused }) => (
-          <TabIcon label={route.name} focused={focused} />
-        ),
-        tabBarLabel: route.name === "Today" ? "Today"
-          : route.name === "BuddyReads" ? "Buddy"
-          : route.name,
         tabBarActiveTintColor: "#1a1a1a",
         tabBarInactiveTintColor: "#9ca3af",
         tabBarStyle: {
@@ -88,13 +68,48 @@ function TabNavigator() {
           borderTopColor: "rgba(167,139,250,0.15)",
           paddingBottom: 4,
         },
-      })}
+      }}
     >
-      <Tab.Screen name="Today" component={HomeScreen} />
-      <Tab.Screen name="Library" component={LibraryScreen} />
-      <Tab.Screen name="Discover" component={DiscoverScreen} />
-      <Tab.Screen name="BuddyReads" component={BuddyReadsScreen} />
-      <Tab.Screen name="Me" component={ProfileScreen} />
+      <Tab.Screen
+        name="Today"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: "Today",
+          tabBarIcon: ({ focused, color, size }) => <TodayIcon focused={focused} color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="Library"
+        component={LibraryScreen}
+        options={{
+          tabBarLabel: "Library",
+          tabBarIcon: ({ focused, color, size }) => <LibraryIcon focused={focused} color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="Discover"
+        component={DiscoverScreen}
+        options={{
+          tabBarLabel: "Discover",
+          tabBarIcon: ({ focused, color, size }) => <DiscoverIcon focused={focused} color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="BuddyReads"
+        component={BuddyReadsScreen}
+        options={{
+          tabBarLabel: "Buddy",
+          tabBarIcon: ({ focused, color, size }) => <BuddyReadsIcon focused={focused} color={color} size={size} />,
+        }}
+      />
+      <Tab.Screen
+        name="Me"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: "Me",
+          tabBarIcon: ({ focused, color, size }) => <MeIcon focused={focused} color={color} size={size} />,
+        }}
+      />
     </Tab.Navigator>
   );
 }
