@@ -18,7 +18,8 @@ import { useStore } from "@/store";
 import { usePremium } from "@/hooks/usePremium";
 import { trackEvent } from "@/lib/analytics";
 import { GradientView } from "@/components/GradientView";
-import { useAtmosphere } from "@/hooks/useAtmosphere";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,6 +30,7 @@ export default function JournalScreen() {
   const { books, journal, addJournalEntry, deleteJournalEntry } = useStore();
   const { isPremium } = usePremium();
   const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
   const textColor = atmosphere.isDark ? "#ffffff" : "#1a1a1a";
   const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
 
@@ -104,6 +106,7 @@ export default function JournalScreen() {
 
   return (
     <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
     <SafeAreaView style={[styles.safe, { backgroundColor: "transparent" }]} edges={["top"]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: textColor }]}>Journal</Text>

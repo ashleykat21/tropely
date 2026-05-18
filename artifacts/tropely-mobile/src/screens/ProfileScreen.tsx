@@ -19,8 +19,9 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore, useCurrentBook, computeStreak } from "@/store";
 import { COLORS, CARD_STYLE, SHADOW, getAvatarById } from "@/constants/theme";
 import { GradientView } from "@/components/GradientView";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
 import * as Notifications from "expo-notifications";
-import { useAtmosphere } from "@/hooks/useAtmosphere";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -124,6 +125,7 @@ export default function ProfileScreen() {
 
   const avatar = getAvatarById(selectedAvatar);
   const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
   const textColor = atmosphere.isDark ? "#ffffff" : COLORS.ink;
   const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
 
@@ -174,6 +176,7 @@ export default function ProfileScreen() {
 
   return (
     <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 

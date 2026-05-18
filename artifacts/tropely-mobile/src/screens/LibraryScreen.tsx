@@ -15,8 +15,9 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, useSpoilerLock, type Shelf } from "@/store";
 import { GradientView } from "@/components/GradientView";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
-import { useAtmosphere } from "@/hooks/useAtmosphere";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -62,6 +63,7 @@ export default function LibraryScreen() {
   const { books, reflections, inbox } = useStore();
   const spoilerLock = useSpoilerLock();
   const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
   const unreadCount = inbox.filter((i) => !i.read).length;
 
   const [activeShelf, setActiveShelf] = useState<Shelf>("reading");
@@ -143,6 +145,7 @@ export default function LibraryScreen() {
 
   return (
     <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: textColor }]}>Your shelf</Text>

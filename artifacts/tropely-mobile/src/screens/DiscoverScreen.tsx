@@ -20,8 +20,9 @@ import { useStore } from "@/store";
 import { searchBooks, olCoverUrl, moodTagBooks, type OLBook } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
 import { GradientView } from "@/components/GradientView";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
 import { COLORS } from "@/constants/theme";
-import { useAtmosphere } from "@/hooks/useAtmosphere";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -77,6 +78,7 @@ export default function DiscoverScreen() {
   const nav = useNavigation<Nav>();
   const unreadCount = inbox.filter((i) => !i.read).length;
   const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
   const textColor = atmosphere.isDark ? "#ffffff" : COLORS.ink;
   const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
 
@@ -179,6 +181,7 @@ export default function DiscoverScreen() {
 
   return (
     <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.discoverHeader}>
         <View style={{ flex: 1 }}>

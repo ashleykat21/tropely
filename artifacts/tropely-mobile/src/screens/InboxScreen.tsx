@@ -9,6 +9,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore, type InboxItem } from "@/store";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
+import { GradientView } from "@/components/GradientView";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 const TYPE_ICONS: Record<InboxItem["type"], string> = {
   buddy_invite: "👥",
@@ -29,18 +32,23 @@ function relativeDate(iso: string): string {
 
 export default function InboxScreen() {
   const { inbox, markInboxRead, clearInbox } = useStore();
+  const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
 
   const unreadCount = inbox.filter((i) => !i.read).length;
 
   if (inbox.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={["bottom"]}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>✨</Text>
-          <Text style={styles.emptyTitle}>No messages yet</Text>
-          <Text style={styles.emptyDesc}>Buddy reads, achievements, and updates will appear here.</Text>
-        </View>
-      </SafeAreaView>
+      <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+        <AtmosphereDecor atmosphere={atmosphereKey} />
+        <SafeAreaView style={styles.safe} edges={["bottom"]}>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyEmoji}>✨</Text>
+            <Text style={styles.emptyTitle}>No messages yet</Text>
+            <Text style={styles.emptyDesc}>Buddy reads, achievements, and updates will appear here.</Text>
+          </View>
+        </SafeAreaView>
+      </GradientView>
     );
   }
 
@@ -63,6 +71,8 @@ export default function InboxScreen() {
   };
 
   return (
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <View style={styles.headerRow}>
         {unreadCount > 0 && (
@@ -106,11 +116,12 @@ export default function InboxScreen() {
         })}
       </ScrollView>
     </SafeAreaView>
+    </GradientView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
+  safe: { flex: 1 },
   headerRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

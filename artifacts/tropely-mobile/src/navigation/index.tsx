@@ -61,12 +61,15 @@ function TabNavigator() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#1a1a1a",
+        tabBarActiveTintColor: "#e8608a",
         tabBarInactiveTintColor: "#9ca3af",
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginBottom: 2 },
         tabBarStyle: {
           backgroundColor: "rgba(255,255,255,0.95)",
-          borderTopColor: "rgba(167,139,250,0.15)",
+          borderTopColor: "rgba(200,180,220,0.2)",
+          borderTopWidth: 1,
           paddingBottom: 4,
+          height: 60,
         },
       }}
     >

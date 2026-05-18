@@ -12,12 +12,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
 import { useStore, computeStreak } from "@/store";
 import { GradientView } from "@/components/GradientView";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
 import {
-  COLORS, SHADOW, CARD_STYLE,
   MOOD_ATMOSPHERES, ALL_ATMOSPHERE_KEYS,
 } from "@/constants/theme";
-import { useAtmosphere } from "@/hooks/useAtmosphere";
-import { useUser } from "@/context/AuthContext";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,41 +24,28 @@ function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getTimeGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "morning";
-  if (h < 17) return "afternoon";
-  return "evening";
-}
-
 export default function HomeScreen() {
   const nav = useNavigation<Nav>();
-  const user = useUser();
 
   const books = useStore((s) => s.books);
   const sessions = useStore((s) => s.sessions);
   const activeFocusBookId = useStore((s) => s.activeFocusBookId);
   const setActiveFocusBook = useStore((s) => s.setActiveFocusBook);
-  const activeMood = useStore((s) => s.activeMood);
   const moodAtmosphereOverride = useStore((s) => s.moodAtmosphereOverride);
   const setMoodAtmosphereOverride = useStore((s) => s.setMoodAtmosphereOverride);
   const dailyGoalPages = useStore((s) => s.dailyGoalPages);
-  const dailyGoalMinutes = useStore((s) => s.dailyGoalMinutes);
-  const annualGoal = useStore((s) => s.annualGoal);
   const inbox = useStore((s) => s.inbox);
   const activeSession = useStore((s) => s.activeSession);
   const startSession = useStore((s) => s.startSession);
-  const pauseSession = useStore((s) => s.pauseSession);
-  const resumeSession = useStore((s) => s.resumeSession);
 
   const currentBooks = useMemo(() => books.filter((b) => b.shelf === "reading"), [books]);
   const focusBook = useMemo(
     () => currentBooks.find((b) => b.id === activeFocusBookId) ?? currentBooks[0] ?? null,
     [currentBooks, activeFocusBookId],
   );
-  const finishedCount = useMemo(() => books.filter((b) => b.shelf === "finished").length, [books]);
 
   const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
 
   const headline = useMemo(
     () => atmosphere.headlines[Math.floor(Math.random() * atmosphere.headlines.length)],
@@ -67,50 +53,46 @@ export default function HomeScreen() {
   );
 
   const isDark = atmosphere.isDark;
-  const textColor = isDark ? "#ffffff" : COLORS.ink;
-  const textColorSoft = isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
-  const textColorMid = isDark ? "rgba(255,255,255,0.8)" : COLORS.inkMid;
+  const textColor = isDark ? "#ffffff" : "#1a1a1a";
+  const textColorSoft = isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
+  const textColorMid = isDark ? "rgba(255,255,255,0.8)" : "#4a4a5a";
 
   const today = todayKey();
   const todaySessions = sessions.filter((s) => s.date.startsWith(today));
-  const todayPages = todaySessions.reduce((sum, s) => sum + (s.toPage - s.fromPage), 0);
-  const todayMinutes = todaySessions.reduce((sum, s) => sum + (s.minutes ?? 0), 0);
   const streak = useMemo(() => computeStreak(sessions), [sessions]);
+  const sessionsToday = todaySessions.length;
+  const sessionsNeeded = Math.max(0, 3 - sessionsToday);
 
   const unreadCount = inbox.filter((i) => !i.read).length;
-  const displayName = user?.displayName?.split(" ")[0] ?? user?.email?.split("@")[0] ?? "Reader";
 
   const isAudio = (book: typeof focusBook) =>
     book?.consumption === "listen" || book?.readingFormat === "audiobook";
 
+  const hasActiveSession =
+    activeSession &&
+    focusBook &&
+    activeSession.bookId === focusBook.id &&
+    (activeSession.state === "active" || activeSession.state === "paused");
+
   const sessionLabel = (): string => {
     const audio = isAudio(focusBook);
-    if (!activeSession || activeSession.bookId !== focusBook?.id) {
+    if (!hasActiveSession) {
       return audio ? "Start Listening →" : "Start Reading →";
     }
-    if (activeSession.state === "paused") {
-      return audio ? "Resume Listening →" : "Resume Reading →";
-    }
-    return audio ? "Pause Listening" : "Pause Reading";
+    return audio ? "Resume Listening →" : "Resume Reading →";
   };
 
   const handleSessionCTA = () => {
     if (!focusBook) return;
-    if (!activeSession || activeSession.bookId !== focusBook.id) {
-      startSession(focusBook.id, isAudio(focusBook) ? "audiobook" : "physical");
-    } else if (activeSession.state === "active") {
-      pauseSession();
-    } else {
-      resumeSession();
+    if (!hasActiveSession) {
+      startSession(focusBook.id, isAudio(focusBook) ? "audiobook" : "physical", focusBook.progress);
     }
   };
 
-  const challengePct = annualGoal > 0 ? Math.min(1, finishedCount / annualGoal) : 0;
-  const nearMilestone = finishedCount + 2 >= annualGoal && finishedCount < annualGoal;
-  const sessionsToday = todaySessions.length;
-  const sessionsNeeded = Math.max(0, 3 - sessionsToday);
-
-  const cardBg = { backgroundColor: atmosphere.cardTint };
+  const glassCard = [styles.glassCard, {
+    backgroundColor: atmosphere.cardTint,
+    shadowColor: isDark ? "#000" : "#c0a0b0",
+  }];
 
   function BookProgressCard({ book, isFocus }: { book: NonNullable<typeof focusBook>; isFocus: boolean }) {
     const audio = isAudio(book);
@@ -122,91 +104,103 @@ export default function HomeScreen() {
       ? Math.min(1, book.progress / book.pages)
       : 0;
 
+    const progressText = audio
+      ? `${book.audioMinutes ?? 0} / ${book.totalDurationMinutes ?? "?"} min · ${Math.round(pct * 100)}%`
+      : `pg ${book.progress} / ${book.pages} · ${Math.round(pct * 100)}%`;
+
     return (
       <TouchableOpacity
-        style={[styles.bookCard, cardBg, { borderColor: isFocus ? atmosphere.accentColor : "rgba(255,255,255,0.6)" }]}
+        style={[
+          styles.bookCard,
+          {
+            backgroundColor: atmosphere.cardTint,
+            borderColor: isFocus ? atmosphere.accentColor : "rgba(255,255,255,0.5)",
+            shadowColor: isDark ? "#000" : "#c0a0b0",
+          },
+        ]}
         onPress={() => {
           if (!isFocus) setActiveFocusBook(book.id);
         }}
         activeOpacity={0.85}
       >
-        {/* Cover placeholder */}
-        <View style={[styles.bookCover, { backgroundColor: atmosphere.glowColor }]}>
-          <Text style={styles.coverInitial}>{book.title[0]}</Text>
-        </View>
-
-        <View style={styles.bookCardInfo}>
-          <Text style={[styles.bookTitle, { color: textColor }]} numberOfLines={2}>
-            {book.title}
-          </Text>
-          <Text style={[styles.bookAuthor, { color: textColorSoft }]} numberOfLines={1}>
-            {book.author}
-          </Text>
-
-          {/* Format label */}
-          <View style={[styles.formatTag, { backgroundColor: atmosphere.glowColor }]}>
-            <Text style={[styles.formatTagText, { color: atmosphere.accentColor }]}>
-              {audio ? "Listening" : "Reading"}
-            </Text>
+        <View style={styles.bookRow}>
+          {/* Book cover placeholder */}
+          <View style={[styles.bookCover, { backgroundColor: atmosphere.glowColor }]}>
+            <Text style={styles.coverEmoji}>{book.mood ? "📖" : "📚"}</Text>
           </View>
 
-          {/* Progress bar */}
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressBar,
-                { width: `${pct * 100}%`, backgroundColor: atmosphere.progressColor },
-              ]}
-            />
-          </View>
-
-          <Text style={[styles.progressText, { color: textColorSoft }]}>
-            {audio
-              ? `${book.audioMinutes ?? 0} / ${book.totalDurationMinutes ?? "?"} min`
-              : `p. ${book.progress} / ${book.pages}`}
-            {"  "}
-            {Math.round(pct * 100)}%
-          </Text>
-
-          {/* Mood tag */}
-          {book.mood && (
-            <Text style={[styles.moodTag, { color: textColorSoft }]}>{book.mood}</Text>
-          )}
-
-          {/* Set as focus tap hint */}
-          {!isFocus && (
-            <Text style={[styles.setFocusHint, { color: atmosphere.accentColor }]}>
-              Tap to set as focus
+          <View style={styles.bookInfo}>
+            <Text style={[styles.bookTitle, { color: textColor }]} numberOfLines={2}>
+              {book.title}
             </Text>
-          )}
+            <Text style={[styles.bookAuthor, { color: textColorSoft }]} numberOfLines={1}>
+              {book.author}
+            </Text>
+
+            {/* Format tag pill */}
+            <View style={[styles.formatPill, { backgroundColor: atmosphere.glowColor }]}>
+              <Text style={[styles.formatPillText, { color: atmosphere.accentColor }]}>
+                {audio ? "🎧 Listening" : "📖 Reading"}
+              </Text>
+            </View>
+
+            {/* Progress text */}
+            <Text style={[styles.progressText, { color: textColorSoft }]}>
+              {progressText}
+            </Text>
+
+            {/* Progress bar */}
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressBar,
+                  { width: `${Math.round(pct * 100)}%`, backgroundColor: atmosphere.progressColor },
+                ]}
+              />
+            </View>
+          </View>
         </View>
+
+        {isFocus && (
+          <>
+            <TouchableOpacity
+              style={[styles.sessionBtn, { backgroundColor: atmosphere.accentColor }]}
+              onPress={handleSessionCTA}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.sessionBtnText}>{sessionLabel()}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => nav.navigate("BookDetail", { bookId: book.id })}>
+              <Text style={[styles.logManuallyLink, { color: atmosphere.accentColor }]}>
+                Log Manually
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {!isFocus && (
+          <Text style={[styles.tapToFocus, { color: atmosphere.accentColor }]}>
+            Tap to set as focus
+          </Text>
+        )}
       </TouchableOpacity>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <GradientView
-        colors={atmosphere.gradient}
-        style={styles.gradient}
-      >
+    <GradientView colors={atmosphere.gradient} style={styles.gradient}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
+      <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Top row */}
+          {/* Top row: label + inbox icon */}
           <View style={styles.topRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.greeting, { color: textColorMid }]}>
-                Good {getTimeGreeting()}, {displayName} {getTimeGreeting() === "morning" ? "☕" : getTimeGreeting() === "afternoon" ? "📖" : "🌙"}
-              </Text>
-              <Text style={[styles.headline, { color: textColor }]} numberOfLines={2}>
-                {headline}
-              </Text>
-            </View>
+            <Text style={[styles.topLabel, { color: textColorSoft }]}>TODAY'S READING</Text>
             <TouchableOpacity
-              style={[styles.inboxBtn, { backgroundColor: atmosphere.glowColor }]}
+              style={styles.inboxBtn}
               onPress={() => nav.navigate("Inbox")}
               activeOpacity={0.8}
             >
@@ -219,19 +213,18 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Large headline */}
+          <Text style={[styles.headline, { color: textColor }]}>
+            {headline}
+          </Text>
+
           {/* Currently Reading section */}
           <View>
-            <Text style={[styles.sectionLabel, { color: textColorSoft }]}>
-              {currentBooks.length > 0
-                ? currentBooks.length === 1
-                  ? "Currently Reading"
-                  : "Currently Reading"
-                : "Start Your Journey"}
-            </Text>
+            <Text style={[styles.sectionLabel, { color: textColorSoft }]}>Currently Reading</Text>
 
             {currentBooks.length === 0 && (
               <TouchableOpacity
-                style={[styles.emptyCard, cardBg]}
+                style={[...glassCard, styles.emptyCard]}
                 onPress={() => (nav as any).navigate("Discover")}
                 activeOpacity={0.85}
               >
@@ -252,33 +245,18 @@ export default function HomeScreen() {
                 contentContainerStyle={{ gap: 12, paddingRight: 4 }}
               >
                 {currentBooks.map((book) => (
-                  <View key={book.id} style={{ width: 260 }}>
-                    <BookProgressCard book={book} isFocus={book.id === (activeFocusBookId ?? currentBooks[0]?.id)} />
+                  <View key={book.id} style={{ width: 280 }}>
+                    <BookProgressCard
+                      book={book}
+                      isFocus={book.id === (activeFocusBookId ?? currentBooks[0]?.id)}
+                    />
                   </View>
                 ))}
               </ScrollView>
             )}
           </View>
 
-          {/* Session CTA for focus book */}
-          {focusBook && (
-            <View style={styles.ctaBlock}>
-              <TouchableOpacity
-                style={[styles.sessionCTA, { backgroundColor: atmosphere.accentColor }]}
-                onPress={handleSessionCTA}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.sessionCTAText}>{sessionLabel()}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => nav.navigate("BookDetail", { bookId: focusBook.id })}>
-                <Text style={[styles.logManuallyLink, { color: atmosphere.accentColor }]}>
-                  Log Manually
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Mood chip selector */}
+          {/* Today's Vibe section */}
           <View>
             <Text style={[styles.sectionLabel, { color: textColorSoft }]}>Today's Vibe</Text>
             <ScrollView
@@ -288,23 +266,23 @@ export default function HomeScreen() {
             >
               {ALL_ATMOSPHERE_KEYS.map((key) => {
                 const atm = MOOD_ATMOSPHERES[key];
-                const selected = moodAtmosphereOverride === key;
+                const selected = moodAtmosphereOverride === key || (!moodAtmosphereOverride && key === atmosphereKey);
                 return (
                   <TouchableOpacity
                     key={key}
-                    onPress={() => setMoodAtmosphereOverride(selected ? null : key)}
+                    onPress={() => setMoodAtmosphereOverride(selected && moodAtmosphereOverride ? null : key)}
                     style={[
-                      styles.moodChip,
+                      styles.vibeChip,
                       {
-                        backgroundColor: selected ? atm.glowColor : "rgba(255,255,255,0.4)",
-                        borderColor: selected ? atm.accentColor : "rgba(255,255,255,0.5)",
+                        backgroundColor: selected ? atmosphere.accentColor : "rgba(255,255,255,0.25)",
+                        borderColor: selected ? atmosphere.accentColor : "rgba(255,255,255,0.4)",
                       },
                     ]}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.moodChipEmoji}>{atm.emoji}</Text>
-                    <Text style={[styles.moodChipLabel, { color: selected ? atm.accentColor : textColorMid }]}>
-                      {atm.label.split(" & ")[0]}
+                    <Text style={styles.vibeChipEmoji}>{atm.emoji}</Text>
+                    <Text style={[styles.vibeChipLabel, { color: selected ? "#fff" : textColorMid }]}>
+                      {atm.label.split(" & ")[0].split(" / ")[0]}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -312,96 +290,77 @@ export default function HomeScreen() {
               {moodAtmosphereOverride && (
                 <TouchableOpacity
                   onPress={() => setMoodAtmosphereOverride(null)}
-                  style={[styles.moodChip, { backgroundColor: "rgba(255,255,255,0.4)", borderColor: "rgba(255,255,255,0.5)" }]}
+                  style={[styles.vibeChip, { backgroundColor: "rgba(255,255,255,0.25)", borderColor: "rgba(255,255,255,0.4)" }]}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.moodChipEmoji}>📚</Text>
-                  <Text style={[styles.moodChipLabel, { color: textColorMid }]}>Match my book</Text>
+                  <Text style={styles.vibeChipEmoji}>🔄</Text>
+                  <Text style={[styles.vibeChipLabel, { color: textColorMid }]}>Match my book</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
           </View>
 
-          {/* Achievement callout */}
-          <View style={[styles.achievementCard, cardBg, { shadowColor: atmosphere.glowColor }]}>
-            <Text style={styles.achievementEmoji}>✨</Text>
-            <View style={{ flex: 1 }}>
-              {nearMilestone ? (
-                <>
-                  <Text style={[styles.achievementTitle, { color: textColor }]}>Almost there!</Text>
-                  <Text style={[styles.achievementDesc, { color: textColorSoft }]}>
-                    {annualGoal - finishedCount} more book{annualGoal - finishedCount !== 1 ? "s" : ""} to reach your {annualGoal}-book goal
-                  </Text>
-                  <View style={styles.progressTrack}>
-                    <View style={[styles.progressBar, { width: `${challengePct * 100}%`, backgroundColor: atmosphere.progressColor }]} />
-                  </View>
-                </>
-              ) : sessionsNeeded > 0 ? (
-                <>
-                  <Text style={[styles.achievementTitle, { color: textColor }]}>Almost there</Text>
-                  <Text style={[styles.achievementDesc, { color: textColorSoft }]}>
-                    {sessionsNeeded} more session{sessionsNeeded !== 1 ? "s" : ""} for Cozy Starter
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={[styles.achievementTitle, { color: textColor }]}>Great reading day!</Text>
-                  <Text style={[styles.achievementDesc, { color: textColorSoft }]}>
-                    You've logged {sessionsToday} session{sessionsToday !== 1 ? "s" : ""} today
-                  </Text>
-                </>
-              )}
+          {/* Achievement card */}
+          <View style={[...glassCard, styles.achievementCard]}>
+            <Text style={[styles.sectionLabel, { color: textColorSoft }]}>Achievement</Text>
+            <Text style={[styles.achievementText, { color: textColor }]}>
+              {sessionsNeeded > 0
+                ? `✨ Almost there · ${sessionsNeeded} more session${sessionsNeeded !== 1 ? "s" : ""} for Cozy Starter`
+                : "✨ Great reading day! You've hit your session goal."}
+            </Text>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressBar,
+                  {
+                    width: `${Math.min(100, (sessionsToday / 3) * 100)}%`,
+                    backgroundColor: atmosphere.progressColor,
+                  },
+                ]}
+              />
             </View>
           </View>
 
-          {/* Streak + goal pills */}
+          {/* Stats row */}
           <View style={styles.statsRow}>
-            <View style={[styles.statPill, cardBg, { shadowColor: atmosphere.glowColor }]}>
-              <Text style={styles.statPillEmoji}>🔥</Text>
-              <Text style={[styles.statPillValue, { color: textColor }]}>{streak}</Text>
-              <Text style={[styles.statPillLabel, { color: textColorSoft }]}>day streak</Text>
+            <View style={[styles.statPill, { backgroundColor: "rgba(255,255,255,0.35)" }]}>
+              <Text style={[styles.statText, { color: textColor }]}>🔥 {streak} day streak</Text>
             </View>
-            <View style={[styles.statPill, cardBg, { shadowColor: atmosphere.glowColor }]}>
-              <Text style={styles.statPillEmoji}>📖</Text>
-              <Text style={[styles.statPillValue, { color: textColor }]}>{todayPages}</Text>
-              <Text style={[styles.statPillLabel, { color: textColorSoft }]}>/ {dailyGoalPages} pages</Text>
-            </View>
-            <View style={[styles.statPill, cardBg, { shadowColor: atmosphere.glowColor }]}>
-              <Text style={styles.statPillEmoji}>⏱</Text>
-              <Text style={[styles.statPillValue, { color: textColor }]}>{todayMinutes}</Text>
-              <Text style={[styles.statPillLabel, { color: textColorSoft }]}>/ {dailyGoalMinutes} min</Text>
+            <View style={[styles.statPill, { backgroundColor: "rgba(255,255,255,0.35)" }]}>
+              <Text style={[styles.statText, { color: textColor }]}>📖 {dailyGoalPages}pg goal</Text>
             </View>
           </View>
 
         </ScrollView>
-      </GradientView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
   gradient: { flex: 1 },
+  safe: { flex: 1 },
   scroll: { flex: 1 },
-  content: { padding: 16, gap: 16, paddingBottom: 96 },
+  content: { padding: 16, gap: 18, paddingBottom: 96 },
 
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
+    alignItems: "center",
   },
-  greeting: { fontSize: 13, fontWeight: "500", marginBottom: 2 },
-  headline: { fontSize: 20, fontWeight: "700", lineHeight: 26 },
-
+  topLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
   inboxBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.35)",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
   },
   inboxEmoji: { fontSize: 16 },
   inboxBadge: {
@@ -417,115 +376,129 @@ const styles = StyleSheet.create({
   },
   inboxBadgeText: { fontSize: 9, color: "#fff", fontWeight: "700" },
 
+  headline: {
+    fontSize: 28,
+    fontWeight: "700",
+    lineHeight: 34,
+  },
+
   sectionLabel: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     textTransform: "uppercase",
     marginBottom: 8,
   },
 
+  // Glass card base
+  glassCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+    padding: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+
+  // Book card
   bookCard: {
-    flexDirection: "row",
-    gap: 12,
     borderRadius: 20,
     borderWidth: 1,
     padding: 14,
-    ...SHADOW,
+    gap: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  bookRow: {
+    flexDirection: "row",
+    gap: 12,
   },
   bookCover: {
-    width: 56,
-    height: 80,
+    width: 70,
+    height: 90,
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
   },
-  coverInitial: { fontSize: 22, fontWeight: "700", color: "#fff" },
-  bookCardInfo: { flex: 1, gap: 4 },
+  coverEmoji: { fontSize: 28 },
+  bookInfo: { flex: 1, gap: 4, justifyContent: "center" },
   bookTitle: { fontSize: 15, fontWeight: "700", lineHeight: 20 },
   bookAuthor: { fontSize: 12 },
-  formatTag: {
+  formatPill: {
     alignSelf: "flex-start",
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     marginTop: 2,
   },
-  formatTagText: { fontSize: 10, fontWeight: "700" },
+  formatPillText: { fontSize: 11, fontWeight: "600" },
+  progressText: { fontSize: 11, marginTop: 4 },
   progressTrack: {
     height: 4,
     backgroundColor: "rgba(0,0,0,0.1)",
     borderRadius: 2,
     overflow: "hidden",
-    marginTop: 6,
+    marginTop: 4,
   },
   progressBar: { height: "100%", borderRadius: 2 },
-  progressText: { fontSize: 11, marginTop: 2 },
-  moodTag: { fontSize: 10, fontStyle: "italic", marginTop: 2 },
-  setFocusHint: { fontSize: 10, fontWeight: "600", marginTop: 4 },
+
+  sessionBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  sessionBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  logManuallyLink: {
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "600",
+    paddingVertical: 4,
+  },
+  tapToFocus: {
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingTop: 4,
+  },
 
   emptyCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.6)",
-    padding: 28,
     alignItems: "center",
     gap: 8,
-    ...SHADOW,
+    paddingVertical: 28,
   },
   emptyEmoji: { fontSize: 36 },
   emptyTitle: { fontSize: 16, fontWeight: "700" },
   emptyHint: { fontSize: 13, textAlign: "center" },
 
-  ctaBlock: { gap: 8 },
-  sessionCTA: {
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-  sessionCTAText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  logManuallyLink: {
-    textAlign: "center",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  moodChip: {
+  // Vibe chips
+  vibeChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
   },
-  moodChipEmoji: { fontSize: 14 },
-  moodChipLabel: { fontSize: 12, fontWeight: "500" },
+  vibeChipEmoji: { fontSize: 14 },
+  vibeChipLabel: { fontSize: 12, fontWeight: "500" },
 
+  // Achievement card
   achievementCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
-    padding: 16,
-    ...SHADOW,
+    gap: 8,
   },
-  achievementEmoji: { fontSize: 26 },
-  achievementTitle: { fontSize: 14, fontWeight: "700" },
-  achievementDesc: { fontSize: 12, marginTop: 2 },
+  achievementText: { fontSize: 15, fontWeight: "600" },
 
-  statsRow: { flexDirection: "row", gap: 8 },
+  // Stats row
+  statsRow: { flexDirection: "row", gap: 10 },
   statPill: {
-    flex: 1,
-    ...CARD_STYLE,
-    ...SHADOW,
-    alignItems: "center",
-    paddingVertical: 12,
-    gap: 2,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  statPillEmoji: { fontSize: 18 },
-  statPillValue: { fontSize: 18, fontWeight: "700" },
-  statPillLabel: { fontSize: 10, textAlign: "center" },
+  statText: { fontSize: 13, fontWeight: "600" },
 });

@@ -17,7 +17,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/store";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
 import Constants from "expo-constants";
-import { useAtmosphere } from "@/hooks/useAtmosphere";
+import { GradientView } from "@/components/GradientView";
+import { AtmosphereDecor } from "@/components/AtmosphereDecor";
+import { useAtmosphere, useAtmosphereKey } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -41,6 +43,7 @@ export default function SettingsScreen() {
   const premiumTestingModeEnabled = useStore((s) => s.premiumTestingModeEnabled);
   const backgroundMode = useStore((s) => s.backgroundMode);
   const atmosphere = useAtmosphere();
+  const atmosphereKey = useAtmosphereKey();
 
   const backgroundModeLabel = backgroundMode === "mood_adaptive"
     ? "Mood-Adaptive"
@@ -83,6 +86,8 @@ export default function SettingsScreen() {
   ];
 
   return (
+    <GradientView colors={atmosphere.gradient} style={{ flex: 1 }}>
+      <AtmosphereDecor atmosphere={atmosphereKey} />
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Settings</Text>
@@ -167,11 +172,12 @@ export default function SettingsScreen() {
         <Text style={styles.versionText}>Tropely v1.0</Text>
       </ScrollView>
     </SafeAreaView>
+    </GradientView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.bg },
+  safe: { flex: 1 },
   content: { padding: 20, gap: 12, paddingBottom: 48 },
   heading: { fontSize: 26, fontWeight: "800", color: COLORS.ink },
   sectionLabel: {
