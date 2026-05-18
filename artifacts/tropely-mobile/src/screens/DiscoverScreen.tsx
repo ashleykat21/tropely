@@ -20,6 +20,7 @@ import { searchBooks, olCoverUrl, moodTagBooks, type OLBook } from "@/lib/api";
 import { trackEvent } from "@/lib/analytics";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "@/constants/theme";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -61,6 +62,9 @@ export default function DiscoverScreen() {
   const inbox = useStore((s) => s.inbox);
   const nav = useNavigation<Nav>();
   const unreadCount = inbox.filter((i) => !i.read).length;
+  const atmosphere = useAtmosphere();
+  const textColor = atmosphere.isDark ? "#ffffff" : COLORS.ink;
+  const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
 
   const addedKeys = useMemo(
     () => new Set(books.flatMap((b) => [b.openLibraryKey, b.title].filter(Boolean) as string[])),
@@ -160,12 +164,12 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.discoverHeader}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.discoverTitle}>Discover</Text>
-          <Text style={styles.discoverSub}>What kind of story are you craving?</Text>
+          <Text style={[styles.discoverTitle, { color: textColor }]}>Discover</Text>
+          <Text style={[styles.discoverSub, { color: textColorSoft }]}>What kind of story are you craving?</Text>
         </View>
         <TouchableOpacity style={styles.inboxBtn} onPress={() => nav.navigate("Inbox")} activeOpacity={0.8}>
           <Text style={styles.inboxEmoji}>💬</Text>

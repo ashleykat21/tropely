@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useStore } from "@/store";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
 import Constants from "expo-constants";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -38,6 +39,14 @@ export default function SettingsScreen() {
   const nav = useNavigation<Nav>();
   const { signOut } = useAuth();
   const premiumTestingModeEnabled = useStore((s) => s.premiumTestingModeEnabled);
+  const backgroundMode = useStore((s) => s.backgroundMode);
+  const atmosphere = useAtmosphere();
+
+  const backgroundModeLabel = backgroundMode === "mood_adaptive"
+    ? "Mood-Adaptive"
+    : backgroundMode === "static"
+    ? atmosphere.label
+    : "Minimal / Neutral";
 
   const sections = [
     {
@@ -77,6 +86,25 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.heading}>Settings</Text>
+
+        {/* Background & Theme section */}
+        <View>
+          <Text style={styles.sectionLabel}>Background & Theme</Text>
+          <View style={styles.sectionCard}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => (nav as any).navigate("BackgroundTheme")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.settingEmoji}>🎨</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingLabel}>Background & Theme</Text>
+                <Text style={styles.settingSubLabel}>{backgroundModeLabel}</Text>
+              </View>
+              <Text style={styles.settingArrow}>→</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Feedback & Support section */}
         <View>
@@ -155,6 +183,7 @@ const styles = StyleSheet.create({
   settingRowDivider: { borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.05)" },
   settingEmoji: { fontSize: 18, width: 28 },
   settingLabel: { flex: 1, fontSize: 14, fontWeight: "500", color: COLORS.ink },
+  settingSubLabel: { fontSize: 11, color: COLORS.inkSoft, marginTop: 1 },
   settingArrow: { fontSize: 14, color: COLORS.inkSoft },
   settingBadge: { fontSize: 11, color: COLORS.lavender, fontWeight: "600", marginRight: 4 },
   signOutBtn: {

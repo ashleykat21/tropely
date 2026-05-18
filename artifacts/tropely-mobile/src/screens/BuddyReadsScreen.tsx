@@ -19,6 +19,7 @@ import { trackEvent } from "@/lib/analytics";
 import { FREE_LIMITS } from "@/constants/premiumFeatures";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, getAvatarById } from "@/constants/theme";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@/navigation";
@@ -62,6 +63,9 @@ export default function BuddyReadsScreen() {
   const inbox = useStore((s) => s.inbox);
   const avatar = getAvatarById(selectedAvatar);
   const unreadCount = inbox.filter((i) => !i.read).length;
+  const atmosphere = useAtmosphere();
+  const textColor = atmosphere.isDark ? "#ffffff" : "#1a1a1a";
+  const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
 
   const BADGE_EMOJIS: Record<string, string> = {
     first_book: "📖", consistent_reader: "🔥", bookmarker: "🔖", finisher: "🏁",
@@ -259,13 +263,13 @@ export default function BuddyReadsScreen() {
   }
 
   return (
-    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.buddyHeader}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Buddy Reads</Text>
-            <Text style={styles.subtitle}>Read together, share reactions in real time.</Text>
+            <Text style={[styles.title, { color: textColor }]}>Buddy Reads</Text>
+            <Text style={[styles.subtitle, { color: textColorSoft }]}>Read together, share reactions in real time.</Text>
           </View>
           <View style={[styles.myAvatarBubble, { backgroundColor: avatar.bg }]}>
             <Text style={styles.myAvatarEmoji}>{avatar.emoji}</Text>

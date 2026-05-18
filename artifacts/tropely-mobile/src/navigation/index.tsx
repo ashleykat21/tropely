@@ -20,6 +20,7 @@ import AvatarPickerScreen from "@/screens/AvatarPickerScreen";
 import InboxScreen from "@/screens/InboxScreen";
 import SettingsScreen from "@/screens/SettingsScreen";
 import PremiumScreen from "@/screens/PremiumScreen";
+import BackgroundThemeScreen from "@/screens/BackgroundThemeScreen";
 import { useStore } from "@/store";
 import { NAV_ICONS } from "@/constants/theme";
 
@@ -49,6 +50,7 @@ export type RootStackParamList = {
   Inbox: undefined;
   Insights: undefined;
   Premium: undefined;
+  BackgroundTheme: undefined;
 };
 
 // ── Tab icon ─────────────────────────────────────────────────────────────────
@@ -171,6 +173,11 @@ export function RootNavigator() {
         name="Premium"
         component={PremiumScreen}
         options={{ headerShown: false, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="BackgroundTheme"
+        component={BackgroundThemeScreen}
+        options={{ headerShown: true, title: "Background & Theme" }}
       />
     </Stack.Navigator>
   );

@@ -14,10 +14,9 @@ import { useStore, computeStreak } from "@/store";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   COLORS, SHADOW, CARD_STYLE,
-  MOOD_ATMOSPHERES, MOOD_ATMOSPHERE_KEYS, DEFAULT_ATMOSPHERE,
-  moodToAtmosphere,
-  type MoodAtmosphere,
+  MOOD_ATMOSPHERES, ALL_ATMOSPHERE_KEYS,
 } from "@/constants/theme";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 import { useUser } from "@/context/AuthContext";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -60,28 +59,14 @@ export default function HomeScreen() {
   );
   const finishedCount = useMemo(() => books.filter((b) => b.shelf === "finished").length, [books]);
 
-  // Determine atmosphere
-  const atmosphere = useMemo(() => {
-    if (moodAtmosphereOverride && MOOD_ATMOSPHERES[moodAtmosphereOverride as MoodAtmosphere]) {
-      return MOOD_ATMOSPHERES[moodAtmosphereOverride as MoodAtmosphere];
-    }
-    if (focusBook?.mood) {
-      return MOOD_ATMOSPHERES[moodToAtmosphere(focusBook.mood)];
-    }
-    if (activeMood) {
-      return MOOD_ATMOSPHERES[moodToAtmosphere(activeMood)];
-    }
-    return MOOD_ATMOSPHERES[DEFAULT_ATMOSPHERE];
-  }, [moodAtmosphereOverride, focusBook, activeMood]);
+  const atmosphere = useAtmosphere();
 
   const headline = useMemo(
     () => atmosphere.headlines[Math.floor(Math.random() * atmosphere.headlines.length)],
     [atmosphere],
   );
 
-  const isDark = moodAtmosphereOverride === "mysterious_dark" || moodAtmosphereOverride === "dark_intense"
-    || (!moodAtmosphereOverride && focusBook?.mood && ["eerie", "tense", "intense"].includes(focusBook.mood));
-
+  const isDark = atmosphere.isDark;
   const textColor = isDark ? "#ffffff" : COLORS.ink;
   const textColorSoft = isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
   const textColorMid = isDark ? "rgba(255,255,255,0.8)" : COLORS.inkMid;
@@ -303,7 +288,7 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8, paddingRight: 8 }}
             >
-              {MOOD_ATMOSPHERE_KEYS.map((key) => {
+              {ALL_ATMOSPHERE_KEYS.map((key) => {
                 const atm = MOOD_ATMOSPHERES[key];
                 const selected = moodAtmosphereOverride === key;
                 return (

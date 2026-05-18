@@ -171,7 +171,12 @@ export const MOOD_COLORS: Record<string, string> = {
 
 // ── Mood Atmospheres ──────────────────────────────────────────────────────────
 
-export type MoodAtmosphere = "cozy_romantic" | "mysterious_dark" | "fantasy_magical" | "emotional_heartfelt" | "dark_intense" | "light_fun";
+export type MoodAtmosphere =
+  | "cozy_romantic" | "mysterious_dark" | "fantasy_magical"
+  | "emotional_heartfelt" | "dark_intense" | "light_fun"
+  | "minimal_neutral" | "dark_moody_neutral" | "cottagecore_botanical" | "classic_literary";
+
+export type BackgroundMode = "mood_adaptive" | "static" | "minimal_neutral";
 
 export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
   label: string;
@@ -182,6 +187,7 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
   progressColor: string;
   headlines: string[];
   emoji: string;
+  isDark: boolean;
 }> = {
   cozy_romantic: {
     label: "Cozy & Romantic",
@@ -196,6 +202,7 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
       "Lost in soft pages and sweet moments",
     ],
     emoji: "🌸",
+    isDark: false,
   },
   mysterious_dark: {
     label: "Mysterious & Dark",
@@ -210,6 +217,7 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
       "The shadows hold the best stories",
     ],
     emoji: "🌙",
+    isDark: true,
   },
   fantasy_magical: {
     label: "Fantasy & Magical",
@@ -224,6 +232,7 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
       "Between pages, magic lives",
     ],
     emoji: "✨",
+    isDark: false,
   },
   emotional_heartfelt: {
     label: "Emotional & Heartfelt",
@@ -238,6 +247,7 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
       "Reading with your whole heart",
     ],
     emoji: "💙",
+    isDark: false,
   },
   dark_intense: {
     label: "Dark & Intense",
@@ -252,6 +262,7 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
       "Nothing ordinary survives tonight",
     ],
     emoji: "⚡",
+    isDark: true,
   },
   light_fun: {
     label: "Light & Fun",
@@ -266,6 +277,51 @@ export const MOOD_ATMOSPHERES: Record<MoodAtmosphere, {
       "Good vibes and happy endings",
     ],
     emoji: "☀️",
+    isDark: false,
+  },
+  minimal_neutral: {
+    label: "Minimal / Neutral",
+    gradient: ["#faf9f7", "#f5f0e8", "#ede8df"],
+    accentColor: "#78716c",
+    glowColor: "rgba(120,113,108,0.12)",
+    cardTint: "rgba(250,249,247,0.92)",
+    progressColor: "#78716c",
+    headlines: ["Focus. Read. Reflect.", "Your next chapter starts here.", "A quiet space for great stories."],
+    emoji: "📖",
+    isDark: false,
+  },
+  dark_moody_neutral: {
+    label: "Dark / Moody Neutral",
+    gradient: ["#1a1a1a", "#1f2420", "#1a1d22"],
+    accentColor: "#6b7280",
+    glowColor: "rgba(107,114,128,0.2)",
+    cardTint: "rgba(31,36,32,0.82)",
+    progressColor: "#9ca3af",
+    headlines: ["In the mood for something deep", "Quiet pages, darker thoughts.", "Still and serious."],
+    emoji: "🌲",
+    isDark: true,
+  },
+  cottagecore_botanical: {
+    label: "Cottagecore / Botanical",
+    gradient: ["#f5f0e8", "#ede8d0", "#e8f0e0"],
+    accentColor: "#65a34e",
+    glowColor: "rgba(101,163,78,0.18)",
+    cardTint: "rgba(245,240,232,0.88)",
+    progressColor: "#65a34e",
+    headlines: ["A soft story for a slow afternoon", "Let's get lost in something beautiful.", "Petals between the pages."],
+    emoji: "🌿",
+    isDark: false,
+  },
+  classic_literary: {
+    label: "Classic Literary",
+    gradient: ["#fdf8f0", "#f5ead8", "#efe0c4"],
+    accentColor: "#92400e",
+    glowColor: "rgba(146,64,14,0.15)",
+    cardTint: "rgba(253,248,240,0.9)",
+    progressColor: "#92400e",
+    headlines: ["For the love of a well-worn page", "A quiet shelf, a good story.", "Words worth keeping."],
+    emoji: "📚",
+    isDark: false,
   },
 };
 
@@ -274,6 +330,12 @@ export const DEFAULT_ATMOSPHERE: MoodAtmosphere = "cozy_romantic";
 export const MOOD_ATMOSPHERE_KEYS: MoodAtmosphere[] = [
   "cozy_romantic", "mysterious_dark", "fantasy_magical",
   "emotional_heartfelt", "dark_intense", "light_fun",
+];
+
+export const ALL_ATMOSPHERE_KEYS: MoodAtmosphere[] = [
+  "cozy_romantic", "mysterious_dark", "fantasy_magical", "emotional_heartfelt",
+  "dark_intense", "light_fun", "minimal_neutral", "dark_moody_neutral",
+  "cottagecore_botanical", "classic_literary",
 ];
 
 // Helper: map a book's Mood to a MoodAtmosphere

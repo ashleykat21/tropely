@@ -1,7 +1,8 @@
 import { create, StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { MoodKey } from "@/constants/theme";
+import type { MoodKey, BackgroundMode, MoodAtmosphere as MoodAtmosphereType } from "@/constants/theme";
+export type { BackgroundMode };
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -210,6 +211,15 @@ type SettingsSlice = {
   // Mood atmosphere override
   moodAtmosphereOverride: string | null;
   setMoodAtmosphereOverride: (a: string | null) => void;
+  // Background system
+  backgroundMode: BackgroundMode;
+  selectedStaticBackground: MoodAtmosphereType;
+  themeOverrideEnabled: boolean;
+  matchCurrentBookMood: boolean;
+  setBackgroundMode: (mode: BackgroundMode) => void;
+  setSelectedStaticBackground: (bg: MoodAtmosphereType) => void;
+  setThemeOverrideEnabled: (v: boolean) => void;
+  setMatchCurrentBookMood: (v: boolean) => void;
   // Premium setters
   setPremiumTestingMode: (v: boolean) => void;
   setPremiumSource: (s: "testing" | "referral" | "subscription" | "admin" | "none") => void;
@@ -348,6 +358,10 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   advancedRecommendationsEnabled: false,
   activeFocusBookId: null,
   moodAtmosphereOverride: null,
+  backgroundMode: "mood_adaptive",
+  selectedStaticBackground: "cozy_romantic",
+  themeOverrideEnabled: false,
+  matchCurrentBookMood: true,
 
   setSelectedAvatar: (id) => set({ selectedAvatar: id }),
   setAdultConfirmed: (v) => set({ adultConfirmed: v }),
@@ -415,6 +429,10 @@ const createSettingsSlice: StateCreator<AllSlices, [], [], SettingsSlice> = (set
   setDefaultShareVisibility: (v) => set({ defaultShareVisibility: v }),
   setActiveFocusBook: (id) => set({ activeFocusBookId: id }),
   setMoodAtmosphereOverride: (a) => set({ moodAtmosphereOverride: a }),
+  setBackgroundMode: (mode) => set({ backgroundMode: mode }),
+  setSelectedStaticBackground: (bg) => set({ selectedStaticBackground: bg }),
+  setThemeOverrideEnabled: (v) => set({ themeOverrideEnabled: v }),
+  setMatchCurrentBookMood: (v) => set({ matchCurrentBookMood: v }),
   setPremiumTestingMode: (v) => set({ premiumTestingModeEnabled: v }),
   setPremiumSource: (s) => set({ premiumSource: s }),
 

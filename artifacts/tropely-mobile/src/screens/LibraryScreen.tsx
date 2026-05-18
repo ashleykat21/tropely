@@ -16,6 +16,7 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore, useSpoilerLock, type Shelf } from "@/store";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, CARD_STYLE, SHADOW } from "@/constants/theme";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -60,6 +61,7 @@ export default function LibraryScreen() {
   const nav = useNavigation<Nav>();
   const { books, reflections, inbox } = useStore();
   const spoilerLock = useSpoilerLock();
+  const atmosphere = useAtmosphere();
   const unreadCount = inbox.filter((i) => !i.read).length;
 
   const [activeShelf, setActiveShelf] = useState<Shelf>("reading");
@@ -136,11 +138,14 @@ export default function LibraryScreen() {
   const isSpoiled = (book: (typeof books)[0]) =>
     spoilerLock && activeShelf === "reading" && book.progress === 0;
 
+  const textColor = atmosphere.isDark ? "#ffffff" : "#1a1a1a";
+  const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
+
   return (
-    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your shelf</Text>
+        <Text style={[styles.title, { color: textColor }]}>Your shelf</Text>
         <View style={styles.headerRight}>
         <View style={styles.viewToggle}>
           <TouchableOpacity
@@ -317,7 +322,7 @@ export default function LibraryScreen() {
             return (
               <TouchableOpacity
                 key={b.id}
-                style={styles.spineRow}
+                style={[styles.spineRow, { backgroundColor: atmosphere.cardTint }]}
                 onPress={() => nav.navigate("BookDetail", { bookId: b.id })}
                 activeOpacity={0.7}
               >
@@ -330,10 +335,10 @@ export default function LibraryScreen() {
                 )}
                 <View style={styles.spineRowInfo}>
                   <View style={styles.spineRowTitle}>
-                    <Text style={styles.spineRowTitleText} numberOfLines={1}>{b.title}</Text>
+                    <Text style={[styles.spineRowTitleText, { color: textColor }]} numberOfLines={1}>{b.title}</Text>
                     {b.consumption === "listen" && <Text style={styles.audioIcon}>🎧</Text>}
                   </View>
-                  <Text style={styles.spineRowAuthor} numberOfLines={1}>{b.author}</Text>
+                  <Text style={[styles.spineRowAuthor, { color: textColorSoft }]} numberOfLines={1}>{b.author}</Text>
                   {activeShelf === "reading" && !spoiled && (
                     <View style={styles.progressTrack}>
                       <View style={[styles.progressBar, { width: `${pct}%` }]} />

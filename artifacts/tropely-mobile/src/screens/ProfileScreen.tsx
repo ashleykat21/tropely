@@ -9,6 +9,7 @@ import {
   Platform,
   TextInput,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useUser, useAuth } from "@/context/AuthContext";
@@ -19,6 +20,7 @@ import { useStore, useCurrentBook, computeStreak } from "@/store";
 import { COLORS, CARD_STYLE, SHADOW, getAvatarById } from "@/constants/theme";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -80,6 +82,21 @@ const LIFETIME_BADGES: Badge[] = [
   { id: "dnf_queen", emoji: "💔", label: "DNF Queen", desc: "Move 5 books to DNF", check: (s) => s.books.filter((b) => b.shelf === "dnf").length >= 5, progress: (s) => ({ current: Math.min(s.books.filter((b) => b.shelf === "dnf").length, 5), total: 5 }) },
 ];
 
+const COMING_SOON_ITEMS = [
+  { id: "wrapped", emoji: "🎁", title: "Yearly Wrapped", isPremium: false,
+    desc: "See your top moods, tropes, books, buddy reads, and reading personality at the end of the year." },
+  { id: "challenges", emoji: "🍂", title: "Seasonal Reading Challenges", isPremium: false,
+    desc: "Join cozy monthly and seasonal challenges like Spooky Reader, Cozy Winter, and Summer Romance." },
+  { id: "insights", emoji: "📊", title: "Advanced Insights", isPremium: true,
+    desc: "Discover deeper patterns like reading speed by genre, best reading time, and audiobook vs ebook habits." },
+  { id: "cards", emoji: "🖼️", title: "Shareable Reading Cards", isPremium: false,
+    desc: "Create beautiful cards for finished books, favorite quotes, achievements, and buddy read milestones." },
+  { id: "buddy", emoji: "💬", title: "Expanded Buddy Read Rooms", isPremium: true,
+    desc: "Host larger rooms with polls, checkpoints, pace planning, and custom room themes." },
+  { id: "themes", emoji: "🎨", title: "Custom Theme Packs", isPremium: true,
+    desc: "Unlock extra styles like Dark Academia, Cozy Winter, Rainy Day, Coffee Shop, and Celestial Night." },
+];
+
 const MONTHLY_CHALLENGES = [
   { id: "month_starter", emoji: "📅", label: "Month Starter", desc: "Log a session in the first 3 days of the month" },
   { id: "deep_dive", emoji: "🌊", label: "Deep Dive", desc: "Finish a book this month" },
@@ -106,6 +123,11 @@ export default function ProfileScreen() {
   } = store;
 
   const avatar = getAvatarById(selectedAvatar);
+  const atmosphere = useAtmosphere();
+  const textColor = atmosphere.isDark ? "#ffffff" : COLORS.ink;
+  const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : COLORS.inkSoft;
+
+  const [comingSoonModal, setComingSoonModal] = useState<typeof COMING_SOON_ITEMS[0] | null>(null);
   const [activeAchievementTab, setActiveAchievementTab] = useState<"lifetime" | "monthly">("lifetime");
   const [editingReminderTime, setEditingReminderTime] = useState(false);
   const [reminderTimeInput, setReminderTimeInput] = useState(reminderTime);
@@ -151,13 +173,13 @@ export default function ProfileScreen() {
   const currentMonth = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, "0")}`;
 
   return (
-    <LinearGradient colors={["#fff", "#f5f0ff"]} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
+    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}>
       <SafeAreaView style={styles.safe} edges={["top"]}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
 
           {/* Top row with inbox */}
           <View style={styles.topRow}>
-            <Text style={styles.screenTitle}>Me</Text>
+            <Text style={[styles.screenTitle, { color: textColor }]}>Me</Text>
             <TouchableOpacity style={styles.inboxBtn} onPress={() => nav.navigate("Inbox")} activeOpacity={0.8}>
               <Text style={styles.inboxEmoji}>💬</Text>
               {unreadCount > 0 && (
@@ -385,8 +407,45 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
+          {/* Coming Soon */}
+          <Text style={[styles.comingSoonLabel, { color: atmosphere.isDark ? "rgba(255,255,255,0.5)" : "#9ca3af" }]}>
+            Coming Soon
+          </Text>
+          {COMING_SOON_ITEMS.map((item) => (
+            <TouchableOpacity key={item.id} onPress={() => setComingSoonModal(item)} activeOpacity={0.85}>
+              <View style={[styles.comingSoonCard, { backgroundColor: atmosphere.cardTint }]}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                  <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+                      <Text style={[styles.comingSoonTitle, { color: atmosphere.isDark ? "#fff" : "#1a1a1a" }]}>{item.title}</Text>
+                      <View style={styles.comingSoonBadge}><Text style={styles.badgeText}>Coming Soon</Text></View>
+                      {item.isPremium && <View style={styles.premiumBadgePill}><Text style={styles.badgeText}>Premium</Text></View>}
+                    </View>
+                    <Text style={[styles.comingSoonDesc, { color: atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#6b7280" }]}>{item.desc}</Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+
         </ScrollView>
       </SafeAreaView>
+
+      {/* Coming Soon Modal */}
+      <Modal visible={!!comingSoonModal} transparent animationType="fade" onRequestClose={() => setComingSoonModal(null)}>
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setComingSoonModal(null)}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalEmoji}>{comingSoonModal?.emoji}</Text>
+            <Text style={styles.modalTitle}>{comingSoonModal?.title}</Text>
+            <Text style={styles.modalBody}>This feature is planned for a future update. Stay tuned!</Text>
+            <TouchableOpacity style={styles.modalBtn} onPress={() => setComingSoonModal(null)}>
+              <Text style={styles.modalBtnText}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </LinearGradient>
   );
 }
@@ -465,4 +524,35 @@ const styles = StyleSheet.create({
   linkTitle: { fontSize: 14, fontWeight: "700", color: COLORS.ink },
   linkSub: { fontSize: 11, color: COLORS.inkSoft, marginTop: 2 },
   linkArrow: { fontSize: 16, color: COLORS.inkSoft },
+  // Coming Soon
+  comingSoonLabel: {
+    fontSize: 11, fontWeight: "700",
+    letterSpacing: 0.8, textTransform: "uppercase", marginTop: 4, marginBottom: 2,
+  },
+  comingSoonCard: {
+    borderRadius: 16, padding: 14, borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.4)",
+    ...SHADOW,
+  },
+  comingSoonTitle: { fontSize: 14, fontWeight: "700" },
+  comingSoonDesc: { fontSize: 12, lineHeight: 18 },
+  comingSoonBadge: {
+    backgroundColor: "#e0e7ff", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  premiumBadgePill: {
+    backgroundColor: "rgba(244,114,182,0.2)", borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  badgeText: { fontSize: 9, fontWeight: "700", color: "#4f46e5" },
+  // Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", alignItems: "center", padding: 32,
+  },
+  modalCard: {
+    backgroundColor: "#fff", borderRadius: 20, padding: 24, alignItems: "center", gap: 10, width: "100%",
+  },
+  modalEmoji: { fontSize: 40 },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#1a1a1a", textAlign: "center" },
+  modalBody: { fontSize: 14, color: "#6b7280", textAlign: "center", lineHeight: 20 },
+  modalBtn: { backgroundColor: "#1a1a1a", borderRadius: 12, paddingHorizontal: 28, paddingVertical: 12, marginTop: 4 },
+  modalBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });

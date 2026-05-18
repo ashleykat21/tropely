@@ -17,6 +17,8 @@ import type { RootStackParamList } from "@/navigation";
 import { useStore } from "@/store";
 import { usePremium } from "@/hooks/usePremium";
 import { trackEvent } from "@/lib/analytics";
+import { LinearGradient } from "expo-linear-gradient";
+import { useAtmosphere } from "@/hooks/useAtmosphere";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -26,6 +28,9 @@ export default function JournalScreen() {
   const nav = useNavigation<Nav>();
   const { books, journal, addJournalEntry, deleteJournalEntry } = useStore();
   const { isPremium } = usePremium();
+  const atmosphere = useAtmosphere();
+  const textColor = atmosphere.isDark ? "#ffffff" : "#1a1a1a";
+  const textColorSoft = atmosphere.isDark ? "rgba(255,255,255,0.6)" : "#9ca3af";
 
   const [showAdd, setShowAdd] = useState(false);
   const [kind, setKind] = useState<"quote" | "note">("note");
@@ -98,9 +103,10 @@ export default function JournalScreen() {
   }, [journal, allBooks]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+    <LinearGradient colors={atmosphere.gradient} style={{ flex: 1 }}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: "transparent" }]} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Journal</Text>
+        <Text style={[styles.title, { color: textColor }]}>Journal</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[styles.exportBtn, !isPremium && styles.exportBtnLocked]}
@@ -316,11 +322,12 @@ export default function JournalScreen() {
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f0ff" },
+  safe: { flex: 1 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   title: { fontSize: 26, fontWeight: "700", color: "#1a1a1a" },
   headerActions: { flexDirection: "row", gap: 8, alignItems: "center" },
