@@ -63,3 +63,6 @@ artifacts/feltly/node_modules/.vite
 # Generated native projects (EAS regenerates these)
 artifacts/tropely-mobile/ios/
 artifacts/tropely-mobile/android/
+
+.claude/
+.claire/
