@@ -1,7 +1,20 @@
 import React, { useMemo } from "react";
-import { View, StyleSheet, StyleProp, ViewStyle } from "react-native";
+import { View, StyleSheet, StyleProp, ViewStyle, Image } from "react-native";
 import { getMoodTheme } from "./moodThemes";
 import type { MoodAtmosphere } from "@/constants/theme";
+
+const MOOD_DESIGN_IMAGES: Record<MoodAtmosphere, any> = {
+  cozy_romantic: require("../assets/mood-designs/cozy.png"),
+  mysterious_dark: require("../assets/mood-designs/mysterious.png"),
+  fantasy_magical: require("../assets/mood-designs/fantasy.png"),
+  emotional_heartfelt: require("../assets/mood-designs/emotional.png"),
+  dark_intense: require("../assets/mood-designs/intense.png"),
+  light_fun: require("../assets/mood-designs/fun.png"),
+  minimal_neutral: require("../assets/mood-designs/minimal.png"),
+  dark_moody_neutral: require("../assets/mood-designs/moody neutral.png"),
+  cottagecore_botanical: require("../assets/mood-designs/cottagecore.png"),
+  classic_literary: require("../assets/mood-designs/classic literary.png"),
+};
 
 // No expo-linear-gradient. Pure React Native stacked View gradient + blob decorations.
 
@@ -141,10 +154,18 @@ function DecorBlobs({ themeId }: { themeId: string }) {
 
 export default function MoodBackground({ themeId, style, children }: Props) {
   const theme = getMoodTheme(themeId);
+  const designImage = MOOD_DESIGN_IMAGES[themeId as MoodAtmosphere];
 
   return (
     <View style={[s.container, style]}>
       <GradientLayers gradient={theme.gradient} />
+      {designImage && (
+        <Image
+          source={designImage}
+          style={s.designImage}
+          resizeMode="cover"
+        />
+      )}
       {theme.decorative && <DecorBlobs themeId={themeId} />}
       {children}
     </View>
@@ -155,4 +176,5 @@ const s = StyleSheet.create({
   container: { flex: 1, overflow: "hidden" },
   blob: { position: "absolute" },
   star: { position: "absolute", width: 2, height: 2, borderRadius: 1, backgroundColor: "rgba(255,255,255,0.6)" },
+  designImage: { ...StyleSheet.absoluteFillObject, opacity: 0.85 },
 });

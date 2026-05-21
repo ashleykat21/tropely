@@ -20,7 +20,8 @@ import SettingsScreen from "@/screens/SettingsScreen";
 import PremiumScreen from "@/screens/PremiumScreen";
 import BackgroundThemeScreen from "@/screens/BackgroundThemeScreen";
 import { useStore } from "@/store";
-import { TodayIcon, LibraryIcon, DiscoverIcon, BuddyReadsIcon, MeIcon } from "@/components/TabIcons";
+import { TodayIcon, LibraryIcon, DiscoverIcon, BuddyReadsIcon, MeIcon } from "@/components/FantasyTabIcons";
+import { useTheme } from "@/theme/ThemeContext";
 
 // ── Param lists ──────────────────────────────────────────────────────────────
 
@@ -57,20 +58,32 @@ const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function TabNavigator() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#e8608a",
-        tabBarActiveTintColor: "#d8b4fe", // Consistent fantasy accent for active icons
-        tabBarInactiveTintColor: "#9ca3af",
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginBottom: 2 },
+        tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.subtext,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginBottom: 4, marginTop: 2 },
         tabBarStyle: {
-          backgroundColor: "rgba(255,255,255,0.95)",
-          borderTopColor: "rgba(200,180,220,0.2)",
-          borderTopWidth: 1,
-          paddingBottom: 4,
-          height: 60,
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.button,
+          borderTopWidth: 0.5,
+          borderRadius: 20,
+          paddingBottom: 8,
+          paddingTop: 8,
+          height: 65,
+          marginHorizontal: 12,
+          marginBottom: 8,
+          borderCurve: "continuous" as any,
+        },
+        tabBarItemStyle: {
+          borderRadius: 16,
+          marginHorizontal: 4,
+          paddingVertical: 8,
+          backgroundColor: theme.colors.card,
         },
       }}
     >
