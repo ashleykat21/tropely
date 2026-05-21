@@ -1,10 +1,13 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
+import Svg, { Path, Circle, Rect } from "react-native-svg";
 
 type IconProps = { focused: boolean; color: string; size: number };
 
 // Today: open book with sunrise rays
 export function TodayIcon({ focused, color }: IconProps) {
+  const activeColor = "#d8b4fe"; // Consistent fantasy accent
   return (
     <View style={styles.wrapper}>
       {/* sun rays */}
@@ -17,12 +20,25 @@ export function TodayIcon({ focused, color }: IconProps) {
       <View style={[styles.bookLeft, { backgroundColor: focused ? "#a78bfa" : "#9ca3af" }]} />
       <View style={[styles.bookRight, { backgroundColor: focused ? "#c4b5fd" : "#d1d5db" }]} />
       <View style={[styles.bookSpine, { backgroundColor: focused ? "#7c3aed" : "#6b7280" }]} />
+      <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <Circle cx="12" cy="12" r="4" stroke={focused ? activeColor : color} strokeWidth="2" />
+        {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => (
+          <Rect
+            key={angle}
+            x="11.5" y="2" width="1" height="4" rx="0.5"
+            fill={focused ? activeColor : color}
+            transform={`rotate(${angle}, 12, 12)`}
+          />
+        ))}
+        {focused && <Circle cx="12" cy="12" r="2" fill={activeColor} opacity={0.5} />}
+      </Svg>
     </View>
   );
 }
 
 // Library: crescent moon over book
 export function LibraryIcon({ focused, color }: IconProps) {
+  const activeColor = "#d8b4fe"; // Consistent fantasy accent
   return (
     <View style={styles.wrapper}>
       {/* moon */}
@@ -33,12 +49,23 @@ export function LibraryIcon({ focused, color }: IconProps) {
       <View style={[styles.bookLeft, { backgroundColor: focused ? "#a78bfa" : "#9ca3af" }]} />
       <View style={[styles.bookRight, { backgroundColor: focused ? "#c4b5fd" : "#d1d5db" }]} />
       <View style={[styles.bookSpine, { backgroundColor: focused ? "#7c3aed" : "#6b7280" }]} />
+      <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M12 3a9 9 0 1 0 9 9 9 9 0 0 1-9-9Z"
+          stroke={focused ? activeColor : color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {focused && <Path d="M12 3a9 9 0 1 0 9 9 9 9 0 0 1-9-9Z" fill={activeColor} opacity={0.2} />}
+      </Svg>
     </View>
   );
 }
 
 // Discover: compass star
 export function DiscoverIcon({ focused, color }: IconProps) {
+  const activeColor = "#d8b4fe"; // Consistent fantasy accent
   return (
     <View style={styles.wrapper}>
       {/* compass circle */}
@@ -50,12 +77,18 @@ export function DiscoverIcon({ focused, color }: IconProps) {
       </View>
       {/* star dot center */}
       <View style={[styles.compassDot, { backgroundColor: focused ? "#fbbf24" : "#9ca3af" }]} />
+      <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <Path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+          stroke={focused ? activeColor : color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {focused && <Circle cx="12" cy="12" r="3" fill={activeColor} opacity={0.3} />}
+      </Svg>
     </View>
   );
 }
 
 // Buddy Reads: two chat bubbles with heart
 export function BuddyReadsIcon({ focused, color }: IconProps) {
+  const activeColor = "#d8b4fe"; // Consistent fantasy accent
   return (
     <View style={styles.wrapper}>
       {/* main bubble */}
@@ -64,18 +97,38 @@ export function BuddyReadsIcon({ focused, color }: IconProps) {
       <View style={[styles.bubble2, { backgroundColor: focused ? "#a78bfa" : "#e5e7eb" }]} />
       {/* heart */}
       <Text style={[styles.heart, { color: focused ? "#fff" : "#9ca3af" }]}>♥</Text>
+      <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-13.3 8.38 8.38 0 0 1 3.8.9L21 3z"
+          stroke={focused ? activeColor : color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {focused && <Circle cx="12" cy="11" r="3" fill={activeColor} opacity={0.3} />}
+      </Svg>
     </View>
   );
 }
 
 // Me: crescent profile silhouette
 export function MeIcon({ focused, color }: IconProps) {
+  const activeColor = "#d8b4fe"; // Consistent fantasy accent
   return (
     <View style={styles.wrapper}>
       {/* head circle */}
       <View style={[styles.head, { backgroundColor: focused ? "#a78bfa" : "#d1d5db" }]} />
       {/* shoulders arc */}
       <View style={[styles.shoulders, { backgroundColor: focused ? "#c4b5fd" : "#e5e7eb" }]} />
+      <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <Path
+          d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"
+          stroke={focused ? activeColor : color}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
     </View>
   );
 }

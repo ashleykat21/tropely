@@ -62,6 +62,7 @@ function TabNavigator() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#e8608a",
+        tabBarActiveTintColor: "#d8b4fe", // Consistent fantasy accent for active icons
         tabBarInactiveTintColor: "#9ca3af",
         tabBarLabelStyle: { fontSize: 10, fontWeight: "600", marginBottom: 2 },
         tabBarStyle: {
