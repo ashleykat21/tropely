@@ -11,12 +11,6 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {
-      "url": "https://u.expo.dev/c1cf53d3-29fc-4d08-9d0a-b6ad79f1fadd",
-      "enabled": true,
-      "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_LOAD"
-    },
     "ios": {
       "bundleIdentifier": "com.nevora.tropely",
       "supportsTablet": false,
